@@ -1,0 +1,42 @@
+// axe-core scan of key pages (mobile). Usage: node scripts/a11y.mjs
+import { chromium } from "playwright-core";
+import { readdirSync, readFileSync } from "node:fs";
+const BASE = process.env.BASE ?? "http://localhost:3000";
+const exe = "/opt/pw-browsers/" + readdirSync("/opt/pw-browsers").filter((d) => d.startsWith("chromium-"))[0] + "/chrome-linux/chrome";
+const axe = readFileSync("node_modules/axe-core/axe.min.js", "utf8");
+const b = await chromium.launch({ executablePath: exe });
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+const p = await ctx.newPage();
+const scan = async (name) => {
+  await p.waitForLoadState("networkidle"); await p.waitForTimeout(1300);
+  await p.evaluate(axe);
+  const r = await p.evaluate(() => axe.run({ exclude: ["nextjs-portal"] }));
+  console.log(`${name}: ${r.violations.length} violations`);
+  for (const v of r.violations) console.log("  -", v.id, v.impact, v.nodes.length, v.nodes[0].target.join(" "), "|", v.nodes[0].failureSummary?.split("\n")[1]);
+  return r.violations.length;
+};
+let n = 0;
+await p.goto(BASE); n += await scan("landing");
+await p.goto(BASE + "/check?city=&attendance=100"); n += await scan("check");
+await p.goto(BASE + "/plan"); n += await scan("wizard step 1");
+await p.goto(BASE + "/login"); n += await scan("login");
+// build a plan to scan dashboard, vendors, pack
+const cityId = await p.locator("#city").count();
+await p.goto(BASE + "/plan"); await p.waitForLoadState("networkidle");
+await p.selectOption("#city", { index: 1 });
+const next = () => p.getByRole("button", { name: "Next", exact: true }).click();
+await next(); await p.fill("#name", "A11y check"); await p.fill("#date", new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10));
+n += await scan("wizard step 2"); await next();
+await p.fill("#startLoc", "Somewhere"); await next(); await p.fill("#att", "300"); await next(); await p.locator("#sound").click();
+n += await scan("wizard step 5"); await next();
+await p.fill("#oname", "Ola Test"); await p.fill("#oemail", "ola@example.com");
+await p.getByRole("button", { name: /show my readiness/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
+await p.screenshot({ path: "shots/d-top.png" });
+n += await scan("dashboard");
+await p.evaluate(() => window.scrollTo(0, 1100)); await p.screenshot({ path: "shots/d-mid.png" });
+const url = p.url();
+await p.goto(url + "/vendors"); n += await scan("vendors");
+await p.goto(url + "/vendors?category=sound"); n += await scan("quote form");
+await p.goto(url + "/pack"); await p.getByRole("button", { name: /generate my/i }).click(); await p.waitForURL(/ready=1/); n += await scan("pack");
+console.log("TOTAL violations:", n);
+await b.close();
