@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { recheckPlanAction } from "@/app/actions";
 import { Footer, TrustNote, Wordmark } from "@/components/chrome";
-import { Score, Tracker } from "@/components/client";
+import { Score, SubmitButton, Tracker } from "@/components/client";
 import { EmptyState } from "@/components/empty";
 import { Arrow, Glyph } from "@/components/icons";
 import { RequirementRow } from "@/components/requirement";
@@ -14,9 +15,10 @@ export const metadata = { title: "Your readiness" };
 
 const CAT_LABEL = { permissions: "Permissions", documents: "Documents", logistics: "Logistics", safety: "Safety" } as const;
 
-export default async function Dashboard({ params }: { params: Promise<{ id: string }> }) {
+export default async function Dashboard({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ rechecked?: string }> }) {
   const { id } = await params;
-  const { event, city, cityLabel, items, readiness: r } = await loadPlan(id);
+  const sp = await searchParams;
+  const { event, city, cityLabel, items, readiness: r, evaluation, rulesChanged, overlays, verifiedOn } = await loadPlan(id);
   const user = await getUser();
   const a = event.answers;
   const h = headline(r);
@@ -69,6 +71,21 @@ export default async function Dashboard({ params }: { params: Promise<{ id: stri
           {city?.isDevSeed && (
             <p className="panel p-4 text-sm" role="note"><span className="chip chip-note mr-2">Development sample</span>These requirements are placeholder data for testing and have not been verified. Do not rely on them.</p>
           )}
+          {sp.rechecked && <p className="panel p-4 text-sm" role="status"><span className="chip chip-required mr-2">Rechecked</span>Your plan now uses the latest rules.</p>}
+          {rulesChanged && (
+            <aside className="panel flex flex-col gap-3 bg-paper-2 p-5 sm:flex-row sm:items-center sm:justify-between" role="note">
+              <div><p className="heading text-lg">Rules have changed since this plan was generated.</p><p className="text-mute">Your checklist below still uses the earlier versions. Recheck to see what is current.</p></div>
+              <form action={recheckPlanAction}><input type="hidden" name="eventId" value={event.id} /><SubmitButton className="btn btn-sm shrink-0" pending="Rechecking…">Recheck my plan</SubmitButton></form>
+            </aside>
+          )}
+          {overlays.map((o) => (
+            <aside key={o.restriction.id} className="card p-5" role="note">
+              <p className="label">Temporary restriction may apply</p>
+              <p className="heading mt-1 text-lg">{o.restriction.title}</p>
+              <p className="mt-1 text-mute">{o.restriction.plainExplanation || "A time-limited order may affect your plans."} Affects: {o.matchedActivities.join(", ").toLowerCase()}.</p>
+              <p className="mt-1 text-sm">{o.restriction.legalBasis && <>Basis: {o.restriction.legalBasis}. </>}Please verify with the relevant authority.</p>
+            </aside>
+          ))}
           {!user && (
             <aside className="panel flex flex-col gap-4 bg-paper-2 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div><p className="heading text-xl">Save your plan</p><p className="text-mute">Create a free account to keep it safe and come back from any device.</p></div>
@@ -134,6 +151,7 @@ export default async function Dashboard({ params }: { params: Promise<{ id: stri
             <div>
               <h2 id="req-h" className="heading text-2xl sm:text-3xl">What needs doing</h2>
               <p className="mt-2 text-mute">Based on currently configured local requirements for {cityLabel}.</p>
+              <p className="mt-1 text-sm text-mute">Generated {formatDate(evaluation.evaluatedAt.slice(0, 10))} using {verifiedOn ? `rules verified on ${formatDate(verifiedOn)}` : "rules that have not yet been verified"}.</p>
             </div>
             {groups.filter((g) => g.items.length).map((g) => (
               <div key={g.key}>

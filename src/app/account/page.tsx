@@ -4,10 +4,8 @@ import { logoutAction } from "@/app/actions";
 import { Footer, Header } from "@/components/chrome";
 import { EmptyState } from "@/components/empty";
 import { getAnonId, getUser } from "@/lib/auth";
-import { evaluate } from "@/lib/engine/evaluate";
-import { computeReadiness } from "@/lib/engine/readiness";
-import { formatDate } from "@/lib/plan";
-import { doneRuleIds, eventsFor, rulesForJurisdiction } from "@/lib/store";
+import { computePlan, formatDate } from "@/lib/plan";
+import { eventsFor } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My plans" };
@@ -16,7 +14,7 @@ export default async function Account() {
   const user = await getUser();
   if (!user) redirect("/login?next=/account");
   const events = await eventsFor(await getAnonId(), user.id);
-  const cards = await Promise.all(events.map(async (e) => ({ e, pct: computeReadiness(evaluate(await rulesForJurisdiction(e.jurisdictionId), e.answers, await doneRuleIds(e.id))).pct })));
+  const cards = await Promise.all(events.map(async (e) => ({ e, pct: (await computePlan(e)).readiness.pct })));
   return (
     <>
       <Header />

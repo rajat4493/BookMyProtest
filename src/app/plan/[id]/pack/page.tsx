@@ -4,6 +4,7 @@ import { Footer, Header } from "@/components/chrome";
 import { PrintButton, SubmitButton } from "@/components/client";
 import { Arrow, Back } from "@/components/icons";
 import { DOC_KINDS, buildAll, type BuiltDoc } from "@/lib/documents";
+import { chainFor, selectTemplateMap } from "@/lib/knowledge";
 import { formatDate, loadPlan } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ function Sheet({ d, n, total, eventName, generatedOn }: { d: BuiltDoc; n: number
       </div>
       <footer className="mt-12 border-t border-ink pt-3">
         <p className="text-sm font-semibold">{d.disclaimer}</p>
-        <p className="label mt-1 text-mute">BookMyProtest · {d.title}</p>
+        <p className="label mt-1 text-mute">BookMyProtest · {d.title}{d.templateVersion > 0 ? ` · template v${d.templateVersion}` : ""}</p>
       </footer>
     </article>
   );
@@ -45,7 +46,8 @@ export default async function Pack({ params, searchParams }: { params: Promise<{
   const { ready } = await searchParams;
   const plan = await loadPlan(id);
   const generatedOn = new Date().toISOString().slice(0, 10);
-  const docs = ready ? buildAll({ answers: plan.event.answers, cityLabel: plan.cityLabel, items: plan.items, readiness: plan.readiness, generatedOn }) : [];
+  const templates = ready ? await selectTemplateMap(await chainFor(plan.event), plan.event.date) : undefined;
+  const docs = ready ? buildAll({ answers: plan.event.answers, cityLabel: plan.cityLabel, items: plan.items, readiness: plan.readiness, generatedOn, templates }) : [];
   return (
     <>
       <div className="no-print"><Header /></div>

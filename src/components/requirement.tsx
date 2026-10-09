@@ -6,22 +6,47 @@ import { Arrow, Bang, Check } from "./icons";
 
 export function EvidenceLine({ item }: { item: EvaluatedItem }) {
   const r = item.rule;
-  const src = r.sources.find((s) => s.url);
-  if (item.evidence === "verified") {
-    return (
-      <p className="text-sm text-mute">
-        <span className="font-semibold text-ink">Last verified: {formatDate(r.lastVerifiedAt!)}</span>
-        {src && <> · <a className="underline underline-offset-2" href={src.url!} target="_blank" rel="noopener noreferrer">{src.title || "Source"}</a></>}
-        {r.confidence === "medium" && <> · Medium confidence. Please verify with the relevant authority.</>}
-      </p>
-    );
-  }
-  return (
-    <p className="text-sm">
-      <span className="chip chip-note mr-2">Needs verification</span>
-      <span className="text-mute">Please verify with the relevant authority.{r.lastVerifiedAt ? ` Last checked: ${formatDate(r.lastVerifiedAt)}.` : " Not yet verified."}</span>
-    </p>
+  const src = r.sources.find((s) => s.url && s.sourceType !== "SECONDARY_LEAD");
+  const restricted = item.restrictedBy.length > 0 && (
+    <p className="text-sm"><span className="chip chip-critical mr-2">Temporary restriction</span><span className="text-mute">A temporary restriction may change this requirement. Please verify with the relevant authority.</span></p>
   );
+  let main: React.ReactNode;
+  switch (item.freshness) {
+    case "CURRENT":
+      main = (
+        <p className="text-sm text-mute">
+          <span className="font-semibold text-ink">Current · Last verified: {formatDate(r.lastVerifiedAt!)}</span>
+          {src && <> · <a className="underline underline-offset-2" href={src.url!} target="_blank" rel="noopener noreferrer">{src.title || "Source"}</a></>}
+          {r.confidence === "medium" && <> · Medium confidence. Please verify with the relevant authority.</>}
+        </p>
+      );
+      break;
+    case "CHANGE_UNDER_REVIEW":
+      main = (
+        <p className="text-sm"><span className="chip chip-required mr-2">Change under review</span>
+          <span className="text-mute">A possible regulatory change has been detected. Please verify this requirement with the relevant authority.{r.lastVerifiedAt ? ` Last verified: ${formatDate(r.lastVerifiedAt)}.` : ""}</span></p>
+      );
+      break;
+    case "SUPERSEDED":
+      main = (
+        <p className="text-sm"><span className="chip chip-note mr-2">Superseded</span>
+          <span className="text-mute">A newer version of this requirement exists. Recheck your plan.</span></p>
+      );
+      break;
+    case "UNKNOWN":
+      main = (
+        <p className="text-sm"><span className="chip chip-note mr-2">Unknown</span><span className="text-mute">We could not determine this. Please verify with the relevant authority.</span></p>
+      );
+      break;
+    default:
+      main = (
+        <p className="text-sm">
+          <span className="chip chip-note mr-2">Needs verification</span>
+          <span className="text-mute">Please verify with the relevant authority.{r.lastVerifiedAt ? ` Last checked: ${formatDate(r.lastVerifiedAt)}.` : " Not yet verified."}</span>
+        </p>
+      );
+  }
+  return <>{main}{restricted}</>;
 }
 
 /** Border hierarchy: critical = 2px, required = 1px hairline, recommended = whitespace + bottom hairline. */

@@ -5,7 +5,8 @@ import { EmptyState } from "@/components/empty";
 import { Arrow } from "@/components/icons";
 import { evaluate } from "@/lib/engine/evaluate";
 import { LEVEL_LABEL, SEVERITY_LABEL } from "@/lib/plan";
-import { listSupportedCities, rulesForJurisdiction } from "@/lib/store";
+import { applicableFor } from "@/lib/knowledge";
+import { jurisdictionChain, listSupportedCities } from "@/lib/store";
 import type { Answers } from "@/lib/engine/types";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,9 @@ export default async function Check({ searchParams }: { searchParams: Promise<SP
     organizerType: "individual", organizerName: "", organizerEmail: "", organizerPhone: "",
   };
   // Document/identity items that depend on a saved plan are left out of this quick check.
-  const items = city ? evaluate(await rulesForJurisdiction(city.id), answers).filter((i) => i.rule.category === "permissions" && (i.level === "REQUIRED" || i.level === "LIKELY_REQUIRED" || i.level === "RECOMMENDED")) : [];
+  const today = new Date().toISOString().slice(0, 10);
+  const applicable = city ? await applicableFor(await jurisdictionChain(city.id), today, answers) : null;
+  const items = applicable ? evaluate(applicable.rules, answers, new Set(), applicable.overlays).filter((i) => i.rule.category === "permissions" && (i.level === "REQUIRED" || i.level === "LIKELY_REQUIRED" || i.level === "RECOMMENDED")) : [];
   const checks = [["stage", "Stage"], ["sound", "Loudspeaker / sound"], ["vehicles", "Vehicles"], ["food", "Food or water"]] as const;
 
   return (

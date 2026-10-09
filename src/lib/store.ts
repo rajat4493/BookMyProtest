@@ -1,21 +1,26 @@
 import { one, query } from "./db";
-import type { Answers, AssemblyType, Category, Condition, Confidence, Level, Rule, RuleSource, Severity } from "./engine/types";
+import type { Answers, AssemblyType, Category, Condition, Confidence, DeadlineDef, Level, Rule, RuleSource, RuleStatus, Severity } from "./engine/types";
 
 /* ---------------- Jurisdictions ---------------- */
+
+export const JURISDICTION_LEVELS = ["country", "state", "region", "district", "city", "zone", "venue"] as const;
+export type JurisdictionLevel = (typeof JURISDICTION_LEVELS)[number];
 
 export interface Jurisdiction {
   id: string;
   parentId: string | null;
-  level: "country" | "state" | "city";
+  level: JurisdictionLevel;
   name: string;
   supported: boolean;
   isDevSeed: boolean;
+  code: string | null;
+  archived: boolean;
 }
 
-const mapJ = (r: any): Jurisdiction => ({ id: r.id, parentId: r.parent_id, level: r.level, name: r.name, supported: r.supported, isDevSeed: r.is_dev_seed });
+const mapJ = (r: any): Jurisdiction => ({ id: r.id, parentId: r.parent_id, level: r.level, name: r.name, supported: r.supported, isDevSeed: r.is_dev_seed, code: r.code ?? null, archived: !!r.archived_at });
 
-export async function listJurisdictions(): Promise<Jurisdiction[]> {
-  return (await query("SELECT * FROM jurisdictions ORDER BY level, name")).map(mapJ);
+export async function listJurisdictions(includeArchived = false): Promise<Jurisdiction[]> {
+  return (await query(`SELECT * FROM jurisdictions WHERE ($1 OR archived_at IS NULL) ORDER BY level, name`, [includeArchived])).map(mapJ);
 }
 
 export async function getJurisdiction(id: string): Promise<Jurisdiction | null> {
@@ -28,14 +33,14 @@ export async function listSupportedCities(): Promise<{ id: string; label: string
   const rows = await query(
     `SELECT c.id, c.name AS city, s.name AS state, k.name AS country, c.is_dev_seed
        FROM jurisdictions c JOIN jurisdictions s ON s.id=c.parent_id JOIN jurisdictions k ON k.id=s.parent_id
-      WHERE c.level='city' AND c.supported ORDER BY k.name, s.name, c.name`,
+      WHERE c.level='city' AND c.supported AND c.archived_at IS NULL ORDER BY k.name, s.name, c.name`,
   );
   return rows.map((r: any) => ({ id: r.id, city: r.city, state: r.state, country: r.country, isDevSeed: r.is_dev_seed, label: `${r.city}, ${r.state}` }));
 }
 
-export async function addJurisdiction(input: { parentId: string | null; level: "country" | "state" | "city"; name: string; supported: boolean; isDevSeed?: boolean }) {
-  const r = await one("INSERT INTO jurisdictions (parent_id, level, name, supported, is_dev_seed) VALUES ($1,$2,$3,$4,$5) RETURNING id", [
-    input.parentId, input.level, input.name.trim(), input.supported, input.isDevSeed ?? false,
+export async function addJurisdiction(input: { parentId: string | null; level: JurisdictionLevel; name: string; supported: boolean; isDevSeed?: boolean; code?: string }) {
+  const r = await one("INSERT INTO jurisdictions (parent_id, level, name, supported, is_dev_seed, code) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id", [
+    input.parentId, input.level, input.name.trim(), input.supported, input.isDevSeed ?? false, input.code ?? null,
   ]);
   return r!.id as string;
 }
@@ -44,12 +49,17 @@ export async function setJurisdictionSupported(id: string, supported: boolean) {
   await query("UPDATE jurisdictions SET supported=$2 WHERE id=$1", [id, supported]);
 }
 
-async function ancestorIds(id: string): Promise<string[]> {
-  const rows = await query<{ id: string }>(
+export async function archiveJurisdiction(id: string, archived: boolean) {
+  await query("UPDATE jurisdictions SET archived_at = CASE WHEN $2 THEN now() ELSE NULL END, supported = supported AND NOT $2 WHERE id=$1", [id, archived]);
+}
+
+/** Ordered general -> specific: [country, region, ..., this]. Works for any depth; nothing assumes states or districts exist. */
+export async function jurisdictionChain(id: string): Promise<string[]> {
+  const rows = await query<{ id: string; depth: number }>(
     `WITH RECURSIVE up AS (
-       SELECT id, parent_id FROM jurisdictions WHERE id=$1
-       UNION ALL SELECT j.id, j.parent_id FROM jurisdictions j JOIN up ON j.id=up.parent_id
-     ) SELECT id FROM up`, [id]);
+       SELECT id, parent_id, 0 AS depth FROM jurisdictions WHERE id=$1
+       UNION ALL SELECT j.id, j.parent_id, up.depth+1 FROM jurisdictions j JOIN up ON j.id=up.parent_id
+     ) SELECT id, depth FROM up ORDER BY depth DESC`, [id]);
   return rows.map((r) => r.id);
 }
 
@@ -57,114 +67,80 @@ async function ancestorIds(id: string): Promise<string[]> {
 
 const EMPTY: Condition = { all: [], any: [] };
 const normCond = (c: any): Condition => ({ all: c?.all ?? [], any: c?.any ?? [] });
+const normDeadline = (d: any): DeadlineDef => ({ kind: d?.kind ?? "UNKNOWN", ...(d ?? {}) });
 
-function mapRule(r: any, sources: RuleSource[]): Rule {
+function mapRule(r: any, sources: RuleSource[], docs: string[]): Rule {
+  const deadline = normDeadline(r.deadline_definition);
   return {
-    id: r.id, jurisdictionId: r.jurisdiction_id, authorityName: r.authority_name ?? null,
+    id: r.id, ruleFamilyId: r.rule_family_id, version: r.version, status: r.rule_status as RuleStatus,
+    effectiveFrom: r.effective_from ?? null, effectiveUntil: r.effective_until ?? null, supersedesRuleId: r.supersedes_rule_id,
+    inheritanceMode: r.inheritance_mode, overridesFamilyId: r.overrides_family_id,
+    legalStatement: r.legal_statement, userAction: r.user_action, submissionMethod: r.submission_method, deadline,
+    reviewedAt: r.reviewed_at ? new Date(r.reviewed_at).toISOString() : null,
+    jurisdictionId: r.jurisdiction_id, authorityName: r.authority_name ?? null,
     assemblyType: r.assembly_type as AssemblyType, title: r.title, description: r.description,
     category: r.category as Category, requirementType: r.requirement_type, level: r.level as Level,
     elseLevel: (r.else_level as Level) ?? null, severity: r.severity as Severity,
     condition: normCond(r.condition ?? EMPTY), completeWhen: r.complete_when ? normCond(r.complete_when) : null,
-    deadlineDaysBefore: r.deadline_days_before, deadlineNote: r.deadline_note, officialLink: r.official_link,
-    requiredDocuments: r.required_documents ?? [], vendorCategory: r.vendor_category,
-    lastVerifiedAt: r.last_verified_at ? new Date(r.last_verified_at).toISOString().slice(0, 10) : null,
+    deadlineDaysBefore: deadline.kind === "STRUCTURED" ? deadline.minimumDaysBeforeEvent ?? null : null, deadlineNote: deadline.specialNotes ?? "",
+    officialLink: r.official_link, requiredDocuments: docs, vendorCategory: r.vendor_category,
+    lastVerifiedAt: r.last_verified_at ?? null,
     needsReview: r.needs_review, confidence: r.confidence as Confidence, ruleOwner: r.rule_owner,
     adminNotes: r.admin_notes, sources, sort: r.sort,
   };
 }
 
-const RULE_SELECT = `SELECT r.*, to_char(r.last_verified_at,'YYYY-MM-DD') AS last_verified_at, a.name AS authority_name
+const RULE_SELECT = `SELECT r.*, to_char(r.last_verified_at,'YYYY-MM-DD') AS last_verified_at, to_char(r.effective_from,'YYYY-MM-DD') AS effective_from,
+  to_char(r.effective_until,'YYYY-MM-DD') AS effective_until, a.name AS authority_name
   FROM rules r LEFT JOIN authorities a ON a.id=r.authority_id`;
 
-async function attachSources(rows: any[]): Promise<Rule[]> {
+async function attachRelations(rows: any[]): Promise<Rule[]> {
   if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
   const src = await query(
-    `SELECT id, rule_id, url, title, to_char(retrieved_at,'YYYY-MM-DD') AS retrieved_at, notes FROM rule_sources WHERE rule_id = ANY($1)`,
-    [rows.map((r) => r.id)],
-  );
+    `SELECT rs.rule_id, rs.evidence_strength, rs.interpretation_note, rs.excerpt, rs.section_ref, s.id AS source_id, s.title, s.source_type, s.canonical_url,
+            to_char(s.retrieved_at,'YYYY-MM-DD') AS retrieved_at
+       FROM rule_sources rs JOIN sources s ON s.id=rs.source_id WHERE rs.rule_id = ANY($1) AND s.active ORDER BY s.title`, [ids]);
+  const docs = await query("SELECT rule_id, name FROM rule_documents WHERE rule_id = ANY($1) AND required ORDER BY name", [ids]);
   return rows.map((r) =>
-    mapRule(r, src.filter((s: any) => s.rule_id === r.id).map((s: any) => ({ id: s.id, url: s.url, title: s.title, retrievedAt: s.retrieved_at, notes: s.notes }))),
+    mapRule(
+      r,
+      src.filter((s: any) => s.rule_id === r.id).map((s: any): RuleSource => ({
+        sourceId: s.source_id, sourceType: s.source_type, strength: s.evidence_strength, url: s.canonical_url, title: s.title,
+        retrievedAt: s.retrieved_at, notes: s.interpretation_note, excerpt: s.excerpt, sectionRef: s.section_ref,
+      })),
+      docs.filter((d: any) => d.rule_id === r.id).map((d: any) => d.name),
+    ),
   );
 }
 
-/** Active rules that apply to a city (its own plus those inherited from state and country). */
-export async function rulesForJurisdiction(jurisdictionId: string): Promise<Rule[]> {
-  const ids = await ancestorIds(jurisdictionId);
-  const rows = await query(`${RULE_SELECT} WHERE r.jurisdiction_id = ANY($1) AND r.archived_at IS NULL ORDER BY r.sort`, [ids]);
-  return attachSources(rows);
+/** Every rule row attached to jurisdictions in the chain, in any lifecycle status. Selection by status/date is the engine's job (selectRules). */
+export async function rulesForChain(chain: string[]): Promise<Rule[]> {
+  if (chain.length === 0) return [];
+  return attachRelations(await query(`${RULE_SELECT} WHERE r.jurisdiction_id = ANY($1) ORDER BY r.sort`, [chain]));
 }
 
-export async function listRulesAdmin(jurisdictionId?: string, includeArchived = true): Promise<Rule[]> {
-  const rows = await query(
-    `${RULE_SELECT} WHERE ($1::uuid IS NULL OR r.jurisdiction_id=$1) AND ($2 OR r.archived_at IS NULL) ORDER BY r.archived_at NULLS FIRST, r.category, r.sort`,
-    [jurisdictionId ?? null, includeArchived],
-  );
-  return attachSources(rows);
+export async function getRulesByIds(ids: string[]): Promise<Rule[]> {
+  if (ids.length === 0) return [];
+  return attachRelations(await query(`${RULE_SELECT} WHERE r.id = ANY($1) ORDER BY r.sort`, [ids]));
 }
 
-export async function getRule(id: string): Promise<(Rule & { archived: boolean }) | null> {
-  const rows = await query(`${RULE_SELECT} WHERE r.id=$1`, [id]);
-  if (!rows[0]) return null;
-  const [rule] = await attachSources(rows);
-  return { ...rule, archived: !!rows[0].archived_at };
+export async function listRulesAdmin(opts: { jurisdictionId?: string; status?: string } = {}): Promise<Rule[]> {
+  return attachRelations(await query(
+    `${RULE_SELECT} WHERE ($1::uuid IS NULL OR r.jurisdiction_id=$1) AND ($2::text IS NULL OR r.rule_status=$2)
+      ORDER BY r.rule_family_id, r.version DESC`, [opts.jurisdictionId ?? null, opts.status ?? null]));
 }
 
-export interface RuleInput {
-  jurisdictionId: string;
-  assemblyType: AssemblyType;
-  title: string;
-  description: string;
-  category: Category;
-  requirementType: string;
-  level: Level;
-  elseLevel: Level | null;
-  severity: Severity;
-  condition: Condition;
-  completeWhen: Condition | null;
-  deadlineDaysBefore: number | null;
-  deadlineNote: string;
-  officialLink: string | null;
-  requiredDocuments: string[];
-  vendorCategory: string | null;
-  lastVerifiedAt: string | null;
-  needsReview: boolean;
-  confidence: Confidence;
-  ruleOwner: string;
-  adminNotes: string;
-  sort: number;
-  sources: { url: string | null; title: string; retrievedAt: string | null; notes: string }[];
+export async function getRule(id: string): Promise<Rule | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const [rule] = await attachRelations(await query(`${RULE_SELECT} WHERE r.id=$1`, [id]));
+  return rule ?? null;
 }
 
-export async function saveRule(id: string | null, i: RuleInput): Promise<string> {
-  const params = [i.jurisdictionId, i.assemblyType, i.title, i.description, i.category, i.requirementType, i.level, i.elseLevel, i.severity,
-    JSON.stringify(i.condition), i.completeWhen ? JSON.stringify(i.completeWhen) : null, i.deadlineDaysBefore, i.deadlineNote, i.officialLink,
-    i.requiredDocuments, i.vendorCategory, i.lastVerifiedAt, i.needsReview, i.confidence, i.ruleOwner, i.adminNotes, i.sort];
-  let ruleId = id;
-  if (id) {
-    await query(
-      `UPDATE rules SET jurisdiction_id=$2, assembly_type=$3, title=$4, description=$5, category=$6, requirement_type=$7, level=$8, else_level=$9,
-        severity=$10, condition=$11, complete_when=$12, deadline_days_before=$13, deadline_note=$14, official_link=$15, required_documents=$16,
-        vendor_category=$17, last_verified_at=$18, needs_review=$19, confidence=$20, rule_owner=$21, admin_notes=$22, sort=$23, updated_at=now() WHERE id=$1`,
-      [id, ...params],
-    );
-  } else {
-    const r = await one(
-      `INSERT INTO rules (jurisdiction_id, assembly_type, title, description, category, requirement_type, level, else_level, severity, condition,
-        complete_when, deadline_days_before, deadline_note, official_link, required_documents, vendor_category, last_verified_at, needs_review,
-        confidence, rule_owner, admin_notes, sort) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING id`,
-      params,
-    );
-    ruleId = r!.id as string;
-  }
-  await query("DELETE FROM rule_sources WHERE rule_id=$1", [ruleId]);
-  for (const s of i.sources) {
-    await query("INSERT INTO rule_sources (rule_id,url,title,retrieved_at,notes) VALUES ($1,$2,$3,$4,$5)", [ruleId, s.url, s.title, s.retrievedAt, s.notes]);
-  }
-  return ruleId!;
-}
-
-export async function setRuleArchived(id: string, archived: boolean) {
-  await query("UPDATE rules SET archived_at = CASE WHEN $2 THEN now() ELSE NULL END, updated_at=now() WHERE id=$1", [id, archived]);
+export async function ruleVersions(familyId: string): Promise<{ id: string; version: number; status: RuleStatus; effectiveFrom: string | null; effectiveUntil: string | null }[]> {
+  return (await query(
+    `SELECT id, version, rule_status, to_char(effective_from,'YYYY-MM-DD') AS ef, to_char(effective_until,'YYYY-MM-DD') AS eu FROM rules WHERE rule_family_id=$1 ORDER BY version DESC`, [familyId]))
+    .map((r: any) => ({ id: r.id, version: r.version, status: r.rule_status, effectiveFrom: r.ef, effectiveUntil: r.eu }));
 }
 
 /* ---------------- Events ---------------- */
@@ -174,6 +150,7 @@ export interface EventRow {
   userId: string | null;
   anonId: string;
   jurisdictionId: string;
+  venueJurisdictionId: string | null;
   name: string;
   date: string;
   answers: Answers;
@@ -181,7 +158,7 @@ export interface EventRow {
 }
 
 const mapEvent = (r: any): EventRow => ({
-  id: r.id, userId: r.user_id, anonId: r.anon_id, jurisdictionId: r.jurisdiction_id, name: r.name, date: r.date,
+  id: r.id, userId: r.user_id, anonId: r.anon_id, jurisdictionId: r.jurisdiction_id, venueJurisdictionId: r.venue_jurisdiction_id ?? null, name: r.name, date: r.date,
   answers: r.answers, createdAt: new Date(r.created_at).toISOString(),
 });
 const EVENT_SELECT = "SELECT *, to_char(event_date,'YYYY-MM-DD') AS date FROM events";
@@ -229,8 +206,8 @@ export async function setRequirementDone(eventId: string, ruleId: string, done: 
 
 /* ---------------- Documents ---------------- */
 
-export async function recordDocument(eventId: string, kind: string) {
-  await query("INSERT INTO documents (event_id, kind) VALUES ($1,$2)", [eventId, kind]);
+export async function recordDocument(eventId: string, kind: string, templateId: string | null = null, templateVersion: number | null = null) {
+  await query("INSERT INTO documents (event_id, kind, template_id, template_version) VALUES ($1,$2,$3,$4)", [eventId, kind, templateId, templateVersion]);
 }
 
 /* ---------------- Vendors ---------------- */
@@ -277,8 +254,16 @@ export async function addWaitlist(email: string, country: string, state: string,
   await query("INSERT INTO waitlist (email,country,state,city) VALUES ($1,$2,$3,$4)", [email, country, state, city]);
 }
 
-export async function audit(actorUserId: string | null, action: string, entity: string, entityId: string, detail: Record<string, unknown> = {}) {
-  await query("INSERT INTO audit_log (actor_user_id, action, entity, entity_id, detail) VALUES ($1,$2,$3,$4,$5)", [actorUserId, action, entity, entityId, JSON.stringify(detail)]);
+/** Audit entry. `detail.before` / `detail.after` / `detail.reason` are promoted to their own columns. */
+export async function audit(actorUserId: string | null, action: string, entity: string, entityId: string, detail: Record<string, unknown> & { before?: unknown; after?: unknown; reason?: string } = {}) {
+  const { before, after, reason, ...rest } = detail;
+  await query("INSERT INTO audit_log (actor_user_id, action, entity, entity_id, detail, before, after, reason) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)", [
+    actorUserId, action, entity, entityId, JSON.stringify(rest), before === undefined ? null : JSON.stringify(before), after === undefined ? null : JSON.stringify(after), reason ?? "",
+  ]);
+}
+
+export async function listAudit(limit = 200) {
+  return query(`SELECT a.*, u.email AS actor_email FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.id DESC LIMIT $1`, [limit]);
 }
 
 export const ANALYTICS_EVENTS = [

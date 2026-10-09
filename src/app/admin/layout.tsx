@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <Wordmark /><span className="label">Admin</span>
           <nav className="label flex flex-wrap gap-x-5 gap-y-1" aria-label="Admin">
-            {[["/admin", "Overview"], ["/admin/rules", "Rules"], ["/admin/jurisdictions", "Jurisdictions"], ["/admin/events", "Events"], ["/admin/vendor-requests", "Vendor requests"]].map(([h, l]) => <Link key={h} href={h} className="underline-offset-4 hover:underline">{l}</Link>)}
+            {[["/admin", "Overview"], ["/admin/rules", "Rules"], ["/admin/sources", "Sources"], ["/admin/review", "Review queue"], ["/admin/authorities", "Authorities"], ["/admin/jurisdictions", "Jurisdictions"], ["/admin/templates", "Templates"], ["/admin/restrictions", "Restrictions"], ["/admin/audit", "Audit"], ["/admin/events", "Events"], ["/admin/vendor-requests", "Vendor requests"]].map(([h, l]) => <Link key={h} href={h} className="underline-offset-4 hover:underline">{l}</Link>)}
           </nav>
         </div>
       </header>

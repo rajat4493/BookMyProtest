@@ -1,4 +1,5 @@
-import type { Answers, Clause, Condition, EvaluatedItem, EvidenceStatus, Rule } from "./types";
+import { restrictionsBearingOn } from "./select";
+import type { Answers, Clause, Condition, DeadlineDef, EvaluatedItem, EvidenceStatus, Freshness, RestrictionOverlay, Rule } from "./types";
 
 /** Reads a field the way rules see it. */
 export function fieldValue(a: Answers, field: Clause["field"]): string | number | boolean {
@@ -38,14 +39,35 @@ export function conditionMatches(a: Answers, cond: Condition | null | undefined)
 }
 
 /**
- * Non-negotiable: a rule only counts as verified when it has a real source URL, a
- * verification date, is not flagged for review and is not low confidence.
+ * Non-negotiable: a rule only counts as verified when it is ACTIVE, has a linked source with a real URL
+ * that is NOT merely a secondary lead, has a verification date, is not flagged for review and is not low confidence.
  * Everything else must be surfaced as "Needs verification".
  */
 export function evidenceStatus(rule: Rule): EvidenceStatus {
-  const hasSource = rule.sources.some((s) => !!s.url && s.url.trim() !== "");
-  if (hasSource && rule.lastVerifiedAt && !rule.needsReview && rule.confidence !== "low") return "verified";
+  const hasPrimary = rule.sources.some((s) => !!s.url && s.url.trim() !== "" && !!s.sourceType && s.sourceType !== "SECONDARY_LEAD" && s.strength !== "LEAD");
+  if (rule.status === "ACTIVE" && hasPrimary && rule.lastVerifiedAt && !rule.needsReview && rule.confidence !== "low") return "verified";
   return "needs_verification";
+}
+
+export function freshnessOf(rule: Rule, level: EvaluatedItem["level"], evidence: EvidenceStatus): Freshness {
+  if (level === "UNKNOWN") return "UNKNOWN";
+  if (rule.status === "CHANGE_DETECTED") return "CHANGE_UNDER_REVIEW";
+  if (rule.status === "SUPERSEDED") return "SUPERSEDED";
+  return evidence === "verified" ? "CURRENT" : "VERIFY_REQUIRED";
+}
+
+/** Structured deadline -> concrete date. Never invents one: only STRUCTURED definitions with a minimum produce a date. */
+export function computeDeadline(def: DeadlineDef, eventDate: string): string | null {
+  if (!eventDate || def.kind !== "STRUCTURED" || def.minimumDaysBeforeEvent == null) return null;
+  const n = def.minimumDaysBeforeEvent;
+  if (def.dayType !== "BUSINESS") return addDays(eventDate, -n);
+  let d = eventDate;
+  for (let left = n; left > 0; ) {
+    d = addDays(d, -1);
+    const dow = new Date(`${d}T00:00:00Z`).getUTCDay();
+    if (dow !== 0 && dow !== 6) left--; // business days skip weekends (public holidays are not modelled)
+  }
+  return d;
 }
 
 export function addDays(isoDate: string, days: number): string {
@@ -55,7 +77,7 @@ export function addDays(isoDate: string, days: number): string {
 }
 
 /** Evaluates all rules against the answers. Rules that do not apply (and have no else_level) are dropped. */
-export function evaluate(rules: Rule[], answers: Answers, doneRuleIds: ReadonlySet<string> = new Set()): EvaluatedItem[] {
+export function evaluate(rules: Rule[], answers: Answers, doneRuleIds: ReadonlySet<string> = new Set(), overlays: RestrictionOverlay[] = []): EvaluatedItem[] {
   const out: EvaluatedItem[] = [];
   for (const rule of rules) {
     if (rule.assemblyType !== "any" && rule.assemblyType !== answers.kind) continue;
@@ -63,13 +85,16 @@ export function evaluate(rules: Rule[], answers: Answers, doneRuleIds: ReadonlyS
     const level = matched ? rule.level : rule.elseLevel;
     if (!level) continue;
     const autoComplete = rule.completeWhen ? conditionMatches(answers, rule.completeWhen) : false;
+    const evidence = evidenceStatus(rule);
     out.push({
       rule,
       level,
-      evidence: evidenceStatus(rule),
+      evidence,
+      freshness: freshnessOf(rule, level, evidence),
+      restrictedBy: restrictionsBearingOn(rule, overlays),
       autoComplete,
       done: autoComplete || doneRuleIds.has(rule.id),
-      deadline: rule.deadlineDaysBefore != null && answers.date ? addDays(answers.date, -rule.deadlineDaysBefore) : null,
+      deadline: computeDeadline(rule.deadline, answers.date),
     });
   }
   return out.sort((a, b) => a.rule.sort - b.rule.sort || a.rule.title.localeCompare(b.rule.title));

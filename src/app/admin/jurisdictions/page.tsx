@@ -1,9 +1,11 @@
-import { addJurisdictionAction, toggleSupportedAction } from "@/app/actions";
-import { listJurisdictions } from "@/lib/store";
+import { addJurisdictionAction, archiveJurisdictionAction, toggleSupportedAction } from "@/app/actions";
+import { Flash } from "@/components/admin-ui";
+import { JURISDICTION_LEVELS, listJurisdictions } from "@/lib/store";
 import { adminWaitlist } from "@/lib/store";
 
-export default async function Jurisdictions() {
-  const js = await listJurisdictions();
+export default async function Jurisdictions({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const sp = await searchParams;
+  const js = await listJurisdictions(true);
   const byId = new Map(js.map((j) => [j.id, j]));
   const path = (j: (typeof js)[number]): string => (j.parentId ? `${path(byId.get(j.parentId)!)} › ` : "") + j.name;
   const wl = await adminWaitlist();
@@ -11,15 +13,17 @@ export default async function Jurisdictions() {
     <>
       <h1 className="heading text-3xl">Jurisdictions</h1>
       <p className="mt-2 text-mute">Add a city here and write its rules under Rules. No code change needed. Only cities marked live appear in the planner.</p>
+      <Flash sp={sp} />
       <table className="mt-6 w-full border-2 border-ink text-left"><thead className="bg-paper-2"><tr><th className="p-2">Jurisdiction</th><th className="p-2">Level</th><th className="p-2">Live</th><th className="p-2" /></tr></thead>
         <tbody>{js.map((j) => (
           <tr key={j.id} className="border-t border-ink"><td className="p-2">{path(j)}{j.isDevSeed && <span className="chip chip-note ml-2">dev seed</span>}</td><td className="p-2">{j.level}</td><td className="p-2">{j.level === "city" ? (j.supported ? "Yes" : "No") : "—"}</td>
-            <td className="p-2">{j.level === "city" && <form action={toggleSupportedAction}><input type="hidden" name="id" value={j.id} /><input type="hidden" name="supported" value={String(!j.supported)} /><button className="underline">{j.supported ? "Take offline" : "Go live"}</button></form>}</td></tr>))}</tbody></table>
+            <td className="p-2 flex gap-3"><form action={archiveJurisdictionAction}><input type="hidden" name="id" value={j.id} /><input type="hidden" name="archived" value={String(!j.archived)} /><button className="underline">{j.archived ? "Restore" : "Archive"}</button></form>{j.level === "city" && <form action={toggleSupportedAction}><input type="hidden" name="id" value={j.id} /><input type="hidden" name="supported" value={String(!j.supported)} /><button className="underline">{j.supported ? "Take offline" : "Go live"}</button></form>}</td></tr>))}</tbody></table>
       <h2 className="heading mt-10 text-xl">Add jurisdiction</h2>
       <form action={addJurisdictionAction} className="mt-3 grid max-w-xl gap-3">
-        <label>Level<select name="level" className="field"><option value="country">Country</option><option value="state">State / region</option><option value="city">City</option></select></label>
-        <label>Parent (required for state and city)<select name="parentId" className="field"><option value="">—</option>{js.filter((j) => j.level !== "city").map((j) => <option key={j.id} value={j.id}>{path(j)}</option>)}</select></label>
+        <label>Level<select name="level" className="field">{JURISDICTION_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}</select></label>
+        <label>Parent (required for state and city)<select name="parentId" className="field"><option value="">—</option>{js.map((j) => <option key={j.id} value={j.id}>{path(j)}</option>)}</select></label>
         <label>Name<input name="name" required className="field" /></label>
+        <label>Code (optional)<input name="code" className="field" /></label>
         <label className="flex items-center gap-2"><input type="checkbox" name="supported" /> Live in planner (cities only; add rules first)</label>
         <button className="btn w-fit">Add</button>
       </form>

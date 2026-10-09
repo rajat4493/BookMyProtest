@@ -2,6 +2,7 @@ import { Pool } from "pg";
 import { loadEnv } from "./env";
 import { SEED_RULES, VENDOR_CATEGORIES } from "../src/lib/seed-data";
 import { hashPassword } from "../src/lib/password";
+import { ensureDefaultTemplates } from "../src/lib/default-templates";
 
 loadEnv();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -14,6 +15,7 @@ async function main() {
     );
   }
 
+  await ensureDefaultTemplates((q, p) => pool.query(q, p));
   const existing = await pool.query("SELECT 1 FROM jurisdictions WHERE is_dev_seed LIMIT 1");
   if (existing.rowCount === 0) {
     const country = (await pool.query("INSERT INTO jurisdictions (level,name,supported,is_dev_seed) VALUES ('country','India',false,true) RETURNING id")).rows[0].id;
@@ -22,13 +24,16 @@ async function main() {
     await pool.query("INSERT INTO authorities (jurisdiction_id,name) VALUES ($1,'Local police authority (to be confirmed)')", [city]);
     for (const r of SEED_RULES) {
       await pool.query(
-        `INSERT INTO rules (jurisdiction_id, assembly_type, title, description, category, level, else_level, severity, condition, complete_when,
-           deadline_days_before, deadline_note, required_documents, vendor_category, needs_review, confidence, rule_owner, admin_notes, sort)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true,'low','unassigned','DEV SEED — unverified placeholder. Replace with a sourced rule.',$15)`,
-        [city, r.assemblyType ?? "any", r.title, r.description, r.category, r.level, r.elseLevel ?? null, r.severity,
+        `INSERT INTO rules (rule_family_id, version, rule_status, jurisdiction_id, assembly_type, title, description, category, level, else_level, severity, condition, complete_when,
+           deadline_definition, vendor_category, needs_review, confidence, rule_owner, admin_notes, sort)
+         VALUES ($1,1,'ACTIVE',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true,'low','unassigned','DEV SEED — unverified placeholder. Replace with a sourced rule.',$14) RETURNING id`,
+        [`DEV-${String(r.sort).padStart(3, "0")}`, city, r.assemblyType ?? "any", r.title, r.description, r.category, r.level, r.elseLevel ?? null, r.severity,
           JSON.stringify(r.condition ?? { all: [], any: [] }), r.completeWhen ? JSON.stringify(r.completeWhen) : null,
-          r.deadlineDaysBefore ?? null, r.deadlineNote ?? "", r.requiredDocuments ?? [], r.vendorCategory ?? null, r.sort],
-      );
+          JSON.stringify(r.deadlineDaysBefore != null ? { kind: "STRUCTURED", minimumDaysBeforeEvent: r.deadlineDaysBefore, dayType: "CALENDAR", specialNotes: r.deadlineNote ?? "" } : { kind: "UNKNOWN", specialNotes: r.deadlineNote ?? "" }),
+          r.vendorCategory ?? null, r.sort],
+      ).then(async (res) => {
+        for (const d of r.requiredDocuments ?? []) await pool.query("INSERT INTO rule_documents (rule_id, name, required) VALUES ($1,$2,true)", [res.rows[0].id, d]);
+      });
     }
     console.log(`seeded dev jurisdiction + ${SEED_RULES.length} rules`);
   } else console.log("dev jurisdiction already present");

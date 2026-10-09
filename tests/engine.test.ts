@@ -62,7 +62,7 @@ describe("evaluate", () => {
     expect(evaluate([r], a, new Set(["desc"]))[0].done).toBe(true);
   });
   it("computes deadlines from event date", () => {
-    expect(evaluate([rule({ id: "d", deadlineDaysBefore: 14 })], a)[0].deadline).toBe("2026-11-17");
+    expect(evaluate([rule({ id: "d", deadline: { kind: "STRUCTURED", minimumDaysBeforeEvent: 14, dayType: "CALENDAR" } })], a)[0].deadline).toBe("2026-11-17");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
   });
   it("UNKNOWN stays UNKNOWN", () => {
@@ -71,7 +71,7 @@ describe("evaluate", () => {
 });
 
 describe("evidence ledger", () => {
-  const src = { url: "https://example.gov/rule", title: "T", retrievedAt: "2026-01-01", notes: "" };
+  const src = { url: "https://example.gov/rule", title: "T", retrievedAt: "2026-01-01", notes: "", sourceType: "OFFICIAL_ADMINISTRATIVE_RULE" as const, strength: "PRIMARY" as const };
   const good = { sources: [src], lastVerifiedAt: "2026-01-01", needsReview: false, confidence: "high" as const };
   it("verified only with url + date + not review + not low confidence", () => {
     expect(evidenceStatus(rule({ id: "x", ...good }))).toBe("verified");
@@ -80,6 +80,12 @@ describe("evidence ledger", () => {
     expect(evidenceStatus(rule({ id: "x", ...good, lastVerifiedAt: null }))).toBe("needs_verification");
     expect(evidenceStatus(rule({ id: "x", ...good, needsReview: true }))).toBe("needs_verification");
     expect(evidenceStatus(rule({ id: "x", ...good, confidence: "low" }))).toBe("needs_verification");
+    // secondary reporting alone never verifies a rule
+    expect(evidenceStatus(rule({ id: "x", ...good, sources: [{ ...src, sourceType: "SECONDARY_LEAD" }] }))).toBe("needs_verification");
+    expect(evidenceStatus(rule({ id: "x", ...good, sources: [{ ...src, strength: "LEAD" }] }))).toBe("needs_verification");
+    // only ACTIVE rules are verified guidance
+    expect(evidenceStatus(rule({ id: "x", ...good, status: "CHANGE_DETECTED" }))).toBe("needs_verification");
+    expect(evidenceStatus(rule({ id: "x", ...good, status: "DRAFT" }))).toBe("needs_verification");
   });
 });
 
