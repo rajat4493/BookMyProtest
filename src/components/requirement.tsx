@@ -24,12 +24,19 @@ export function EvidenceLine({ item }: { item: EvaluatedItem }) {
   );
 }
 
+/** Border hierarchy: critical = 2px, required = 1px hairline, recommended = whitespace + bottom hairline. */
+const TIER = {
+  CRITICAL: "border-2 border-ink p-4 sm:p-5",
+  REQUIRED: "border border-hair p-4 sm:p-5",
+  RECOMMENDED: "border-b border-hair px-0 py-5",
+} as const;
+
 export function RequirementRow({ item, eventId }: { item: EvaluatedItem; eventId: string }) {
   const r = item.rule;
   const chip = r.severity === "CRITICAL" ? "chip-critical" : r.severity === "REQUIRED" ? "chip-required" : "chip-recommended";
   const mark = r.severity === "CRITICAL" ? "■" : r.severity === "REQUIRED" ? "▲" : "●";
   return (
-    <li id={`r-${r.id}`} className={`card flex gap-4 p-4 sm:p-5 ${item.done ? "bg-paper-2/60" : ""}`}>
+    <li id={`r-${r.id}`} className={`flex gap-4 ${TIER[r.severity]} ${item.done ? "opacity-70" : ""}`}>
       {item.autoComplete ? (
         <span className="grid size-12 shrink-0 place-items-center border-2 border-ink bg-accent" title="Completed from your answers" role="img" aria-label="Complete (from your answers)"><Check /></span>
       ) : (
@@ -45,7 +52,7 @@ export function RequirementRow({ item, eventId }: { item: EvaluatedItem; eventId
       )}
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className={`display-wide text-xl ${item.done ? "line-through decoration-2" : ""}`}>{r.title}</h3>
+          <h3 className={`heading text-lg ${item.done ? "line-through decoration-1" : ""}`}>{r.title}</h3>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className={`chip ${chip}`}><span aria-hidden="true">{mark}</span>{SEVERITY_LABEL[r.severity]}</span>

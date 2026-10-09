@@ -20,13 +20,13 @@ export function SampleCard() {
   const left = items.filter((i) => !i.done).length;
   return (
     <div className="card relative bg-paper text-ink shadow-[10px_10px_0_var(--color-ink)]">
-      <div className="flex items-center justify-between border-b-2 border-ink px-5 py-3">
+      <div className="flex items-center justify-between border-b border-hair px-5 py-3">
         <span className="label">Climate March — Bengaluru</span>
         <span className="chip chip-note">Sample</span>
       </div>
       <div className="px-5 pt-6">
         <div className="flex items-end gap-4">
-          <span className="numeral text-[7.5rem] sm:text-[9rem]" aria-live="polite">{pct}<span className="text-[0.4em] align-top">%</span></span>
+          <span className="numeral text-[6.2rem] sm:text-[7.4rem]" aria-live="polite">{pct}<span className="text-[0.4em] align-top">%</span></span>
           <span className="label pb-3">Ready</span>
         </div>
         <div className="mt-4 h-3 w-full border-2 border-ink" role="presentation">
@@ -34,7 +34,7 @@ export function SampleCard() {
         </div>
         <p className="mt-2 text-sm text-mute">{left === 0 ? "Everything on this sample list is done." : `${left} ${left === 1 ? "item" : "items"} left. Tap one to see the score move.`}</p>
       </div>
-      <ul className="mt-5 divide-y-2 divide-ink border-t-2 border-ink">
+      <ul className="mt-5 divide-y divide-hair border-t border-hair">
         {items.map((it, idx) => (
           <li key={it.label}>
             <button
@@ -52,7 +52,7 @@ export function SampleCard() {
           </li>
         ))}
       </ul>
-      <div className="border-t-2 border-ink p-5">
+      <div className="border-t border-hair p-5">
         <Link href="/plan" className="btn btn-accent w-full">Build my plan <Arrow /></Link>
       </div>
     </div>

@@ -13,8 +13,8 @@ export function QuoteForm({ eventId, category, categoryLabel, summary, defaults 
   const err = (k: string) => errors[k] && <p role="alert" className="mt-2 font-semibold">{errors[k]}</p>;
   return (
     <form noValidate className="space-y-5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await requestQuoteAction(eventId, { category, ...v }); if (r && !r.ok) setErrors(r.errors); }); }}>
-      <dl className="card grid grid-cols-2 gap-px bg-ink sm:grid-cols-4">
-        {summary.map(([k, val]) => (<div key={k} className="bg-paper p-3"><dt className="label text-mute">{k}</dt><dd className="font-bold">{val}</dd></div>))}
+      <dl className="panel grid grid-cols-2 divide-hair sm:grid-cols-4 sm:divide-x">
+        {summary.map(([k, val]) => (<div key={k} className="p-3"><dt className="label text-mute">{k}</dt><dd className="font-bold">{val}</dd></div>))}
       </dl>
       <div><label htmlFor="q-qty" className="label mb-2 block">Quantity</label><input id="q-qty" className="field" placeholder={`How many / how much ${categoryLabel.toLowerCase()}?`} value={v.quantity} onChange={set("quantity")} maxLength={100} /></div>
       <div><label htmlFor="q-notes" className="label mb-2 block">Notes</label><textarea id="q-notes" className="field" placeholder="Anything the vendor should know: timings, access, power, budget range." value={v.notes} onChange={set("notes")} maxLength={1000} /></div>

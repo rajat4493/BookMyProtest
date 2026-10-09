@@ -9,7 +9,7 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
   const name = new Map(js.map((x) => [x.id, x.name]));
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="display text-5xl">Rules</h1><Link href="/admin/rules/new" className="btn btn-sm">Add rule</Link></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="heading text-3xl">Rules</h1><Link href="/admin/rules/new" className="btn btn-sm">Add rule</Link></div>
       <form className="mt-4 flex gap-2"><select name="j" defaultValue={j ?? ""} className="field !min-h-11 max-w-xs"><option value="">All jurisdictions</option>{js.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.level})</option>)}</select><button className="btn btn-sm">Filter</button></form>
       <table className="mt-6 w-full border-2 border-ink text-left text-sm"><thead className="bg-paper-2"><tr>{["Rule", "Where", "Category", "Level", "Severity", "Evidence", "Verified", ""].map((h) => <th key={h} className="p-2">{h}</th>)}</tr></thead>
         <tbody>{rules.map((r) => (

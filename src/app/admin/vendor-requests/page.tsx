@@ -5,7 +5,7 @@ export default async function VendorRequests() {
   const rows = await listVendorRequests();
   return (
     <>
-      <h1 className="display text-5xl">Vendor requests</h1>
+      <h1 className="heading text-3xl">Vendor requests</h1>
       <p className="mt-2 text-mute">Match vendors manually, then update the status. Contact details are visible to admins only.</p>
       <ul className="mt-6 space-y-4">
         {rows.length === 0 && <li>No requests yet.</li>}

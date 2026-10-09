@@ -12,6 +12,8 @@
   --color-line: #cfcabd;
   --color-accent: #d6f43c;
   --color-accent-deep: #a9c41a;
+  /* Hairline: the existing ink at low opacity. Not a new hue. */
+  --color-hair: rgb(13 13 11 / 0.22);
   --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
@@ -41,6 +43,7 @@ body::before {
 /* Type */
 .display { font-weight: 900; font-stretch: 68%; letter-spacing: -0.02em; line-height: 0.88; text-transform: uppercase; text-wrap: balance; }
 .display-wide { font-weight: 800; font-stretch: 112%; letter-spacing: -0.03em; line-height: 0.95; text-wrap: balance; }
+.heading { font-weight: 700; font-stretch: 100%; letter-spacing: -0.015em; line-height: 1.12; text-wrap: balance; }
 .numeral { font-weight: 900; font-stretch: 62%; line-height: 0.8; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .label { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
 
@@ -67,7 +70,11 @@ select.field { appearance: none; background-image: linear-gradient(45deg, transp
 
 .card { border: 2px solid var(--color-ink); background: var(--color-paper); }
 .tile { border: 2px solid var(--color-ink); transition: transform 0.3s var(--ease-out-quint), box-shadow 0.3s var(--ease-out-quint), background 0.2s; }
-a.tile:hover { transform: translate(-4px, -4px); box-shadow: 6px 6px 0 var(--color-ink); background: var(--color-accent); }
+a.tile:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0 var(--color-ink); background: var(--color-paper-2); }
+/* Secondary tier: 1px hairline. Tertiary: no border, whitespace only. */
+.tile-quiet { border: 1px solid var(--color-hair); transition: border-color 0.2s, background 0.2s; }
+a.tile-quiet:hover { border-color: var(--color-ink); background: var(--color-paper-2); }
+.panel { border: 1px solid var(--color-hair); }
 
 .marker { background: var(--color-accent); padding: 0 0.12em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 

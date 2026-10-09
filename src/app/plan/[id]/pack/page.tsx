@@ -4,27 +4,38 @@ import { Footer, Header } from "@/components/chrome";
 import { PrintButton, SubmitButton } from "@/components/client";
 import { Arrow, Back } from "@/components/icons";
 import { DOC_KINDS, buildAll, type BuiltDoc } from "@/lib/documents";
-import { loadPlan } from "@/lib/plan";
+import { formatDate, loadPlan } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Preparation pack" };
 
-function Doc({ d }: { d: BuiltDoc }) {
+function Sheet({ d, n, total, eventName, generatedOn }: { d: BuiltDoc; n: number; total: number; eventName: string; generatedOn: string }) {
   return (
-    <article id={d.slug} className="print-doc card bg-white p-6 sm:p-10">
-      <p className="label text-mute">Draft · not an official document</p>
-      <h2 className="display-wide mt-2 text-3xl">{d.title}</h2>
-      <div className="mt-6 space-y-6">
+    <article id={d.slug} className="print-doc mx-auto w-full max-w-[48rem] scroll-mt-6 border border-hair bg-white px-6 py-8 sm:px-14 sm:py-14">
+      <header className="flex items-baseline justify-between gap-4 border-b border-ink pb-3">
+        <p className="label">Draft · not an official document</p>
+        <p className="label text-mute">{String(n).padStart(2, "0")} / {String(total).padStart(2, "0")}</p>
+      </header>
+      <h2 className="heading mt-8 text-2xl sm:text-3xl">{d.title}</h2>
+      <p className="label mt-2 text-mute">{eventName} · generated {generatedOn}</p>
+      <div className="mt-8 space-y-8 leading-relaxed">
         {d.blocks.map((b, i) => (
           <section key={i}>
-            {b.heading && <h3 className="label mb-2 border-b-2 border-ink pb-1">{b.heading}</h3>}
-            {b.rows && <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-[12rem_1fr]">{b.rows.map(([k, v]) => (<div key={k} className="contents"><dt className="font-semibold text-mute">{k}</dt><dd>{v}</dd></div>))}</dl>}
-            {b.paragraphs?.map((p, j) => <p key={j} className="mt-2 whitespace-pre-line">{p}</p>)}
-            {b.bullets && <ul className="mt-1 space-y-1">{b.bullets.map((x, j) => <li key={j} className="whitespace-pre-line">{x.startsWith("[") ? x : `• ${x}`}</li>)}</ul>}
+            {b.heading && <h3 className="label mb-3 border-b border-hair pb-1 text-mute">{b.heading}</h3>}
+            {b.rows && (
+              <dl className="divide-y divide-hair border-y border-hair">
+                {b.rows.map(([k, v]) => (<div key={k} className="grid gap-x-6 py-2 sm:grid-cols-[11rem_1fr]"><dt className="text-mute">{k}</dt><dd className="font-medium">{v}</dd></div>))}
+              </dl>
+            )}
+            {b.paragraphs?.map((p, j) => <p key={j} className="mt-3 whitespace-pre-line first:mt-0">{p}</p>)}
+            {b.bullets && <ul className="space-y-1.5">{b.bullets.map((x, j) => <li key={j} className={`whitespace-pre-line ${x.startsWith("[") ? "font-mono text-[0.9rem]" : "list-inside list-disc"}`}>{x}</li>)}</ul>}
           </section>
         ))}
       </div>
-      <p className="mt-8 border-t-2 border-ink pt-3 text-sm font-semibold">{d.disclaimer}</p>
+      <footer className="mt-12 border-t border-ink pt-3">
+        <p className="text-sm font-semibold">{d.disclaimer}</p>
+        <p className="label mt-1 text-mute">BookMyProtest · {d.title}</p>
+      </footer>
     </article>
   );
 }
@@ -33,30 +44,43 @@ export default async function Pack({ params, searchParams }: { params: Promise<{
   const { id } = await params;
   const { ready } = await searchParams;
   const plan = await loadPlan(id);
-  const docs = ready ? buildAll({ answers: plan.event.answers, cityLabel: plan.cityLabel, items: plan.items, readiness: plan.readiness, generatedOn: new Date().toISOString().slice(0, 10) }) : [];
+  const generatedOn = new Date().toISOString().slice(0, 10);
+  const docs = ready ? buildAll({ answers: plan.event.answers, cityLabel: plan.cityLabel, items: plan.items, readiness: plan.readiness, generatedOn }) : [];
   return (
     <>
       <div className="no-print"><Header /></div>
-      <main id="main" className="mx-auto max-w-4xl px-4 pb-10 pt-6 sm:px-8">
+      <main id="main" className="mx-auto max-w-5xl px-4 pb-10 pt-6 sm:px-8">
         <Link href={`/plan/${plan.event.id}`} className="no-print label inline-flex items-center gap-2 underline-offset-4 hover:underline"><Back width={16} height={16} /> Back to {plan.event.name}</Link>
-        <h1 className="display no-print mt-6 text-[clamp(2.8rem,11vw,7rem)]">{ready ? "Your preparation pack." : "Generate your pack."}</h1>
+        <h1 className="display no-print mt-6 text-[clamp(2.3rem,9vw,5.6rem)]">{ready ? "Your preparation pack." : "Generate your pack."}</h1>
+        <p className="no-print mt-3 max-w-xl text-lg text-mute">
+          {ready ? "Six drafts built from your answers. Review, adapt, and sign anything yourself." : "Six printable drafts built from your answers. Nothing here is submitted anywhere."}
+        </p>
+
+        <ol className="no-print mt-10 divide-y divide-hair border-y border-hair" aria-label="Contents">
+          {DOC_KINDS.map((d, i) => (
+            <li key={d.slug}>
+              {ready ? (
+                <a href={`#${d.slug}`} className="flex items-baseline gap-4 py-3 hover:bg-paper-2"><span className="label w-8 text-mute">{String(i + 1).padStart(2, "0")}</span><span className="heading text-lg">{d.title}</span><span className="hidden text-mute sm:inline">{d.blurb}</span></a>
+              ) : (
+                <div className="flex items-baseline gap-4 py-3"><span className="label w-8 text-mute">{String(i + 1).padStart(2, "0")}</span><span className="heading text-lg">{d.title}</span><span className="hidden text-mute sm:inline">{d.blurb}</span></div>
+              )}
+            </li>
+          ))}
+        </ol>
+
         {!ready ? (
-          <div className="mt-8 space-y-8">
-            <p className="max-w-xl text-lg text-mute">Six printable drafts built from your answers. Review them, adapt them, and sign anything yourself. Nothing here is submitted anywhere.</p>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {DOC_KINDS.map((d, i) => (<li key={d.slug} className="card p-4"><span className="numeral text-4xl text-ink/20">0{i + 1}</span><p className="display-wide mt-2 text-xl">{d.title}</p><p className="text-sm text-mute">{d.blurb}</p></li>))}
-            </ul>
-            <form action={generatePackAction}><input type="hidden" name="eventId" value={plan.event.id} /><SubmitButton className="btn btn-accent" pending="Generating…">Generate my preparation pack <Arrow /></SubmitButton></form>
-          </div>
+          <form action={generatePackAction} className="no-print mt-8"><input type="hidden" name="eventId" value={plan.event.id} /><SubmitButton className="btn btn-accent" pending="Generating…">Generate my preparation pack <Arrow /></SubmitButton></form>
         ) : (
-          <div className="mt-6 space-y-6">
-            <div className="no-print flex flex-wrap gap-3">
+          <>
+            <div className="no-print mt-8 flex flex-wrap gap-3">
               <PrintButton className="btn" />
               <a className="btn btn-ghost" href={`/plan/${plan.event.id}/pack/download`} download>Download all (.txt)</a>
             </div>
-            <p className="no-print text-mute">Draft generated by BookMyProtest. Verify requirements with the relevant authority before submission.</p>
-            {docs.map((d) => <Doc key={d.slug} d={d} />)}
-          </div>
+            <p className="no-print mt-4 text-sm text-mute">Draft generated by BookMyProtest. Verify requirements with the relevant authority before submission. Event date: {formatDate(plan.event.date)}.</p>
+            <div className="mt-8 space-y-8 bg-paper-2 p-3 sm:p-10 print:bg-white print:p-0">
+              {docs.map((d, i) => <Sheet key={d.slug} d={d} n={i + 1} total={docs.length} eventName={plan.event.name} generatedOn={generatedOn} />)}
+            </div>
+          </>
         )}
       </main>
       <div className="no-print"><Footer /></div>

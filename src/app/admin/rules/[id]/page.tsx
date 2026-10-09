@@ -43,7 +43,7 @@ export default async function EditRule({ params, searchParams }: { params: Promi
   );
   return (
     <>
-      <h1 className="display text-5xl">{rule ? "Edit rule" : "New rule"}</h1>
+      <h1 className="heading text-3xl">{rule ? "Edit rule" : "New rule"}</h1>
       {saved && <p role="status" className="card mt-3 bg-accent p-3 font-semibold">Saved.</p>}
       {rule?.archived && <p className="card mt-3 bg-paper-2 p-3">This rule is archived and not shown to users.</p>}
       <form action={saveRuleAction} className="mt-6 grid max-w-3xl gap-4">

@@ -9,7 +9,7 @@ export const metadata = { title: "Admin", robots: { index: false } };
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser();
   if (!user) redirect("/login?next=/admin");
-  if (user.role !== "admin") return <main className="p-8"><h1 className="display text-5xl">Forbidden</h1><p className="mt-2">This area is for administrators.</p></main>;
+  if (user.role !== "admin") return <main className="p-8"><h1 className="heading text-3xl">Forbidden</h1><p className="mt-2">This area is for administrators.</p></main>;
   return (
     <div className="min-h-dvh">
       <header className="border-b-2 border-ink bg-paper-2">
