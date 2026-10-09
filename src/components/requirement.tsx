@@ -15,7 +15,7 @@ export function EvidenceLine({ item }: { item: EvaluatedItem }) {
     case "CURRENT":
       main = (
         <p className="text-sm text-mute">
-          <span className="font-semibold text-ink">Current · Last verified: {formatDate(r.lastVerifiedAt!)}</span>
+          <span className="font-semibold text-ink">Current · {r.legalCertainty === "PRIMARY_VERIFIED" ? "Primary source verified" : "Official guidance"} · Last verified: {formatDate(r.lastVerifiedAt!)}</span>
           {src && <> · <a className="underline underline-offset-2" href={src.url!} target="_blank" rel="noopener noreferrer">{src.title || "Source"}</a></>}
           {r.confidence === "medium" && <> · Medium confidence. Please verify with the relevant authority.</>}
         </p>

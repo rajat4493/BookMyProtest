@@ -35,7 +35,7 @@ beforeEach(async () => {
 
 const input = (over: Partial<RuleInput> = {}): RuleInput => ({
   jurisdictionId: city, authorityId: null, assemblyType: "any", title: "Sound approval", description: "plain", legalStatement: "legal", userAction: "act", category: "permissions",
-  requirementType: "permission", level: "REQUIRED", elseLevel: null, severity: "CRITICAL", condition: { all: [], any: [] }, completeWhen: null, deadline: { kind: "UNKNOWN" },
+  requirementType: "permission", level: "REQUIRED", elseLevel: null, severity: "CRITICAL", legalCertainty: "PRIMARY_VERIFIED", condition: { all: [], any: [] }, completeWhen: null, deadline: { kind: "UNKNOWN" },
   submissionMethod: "", officialLink: null, documents: [], vendorCategory: null, effectiveFrom: "2026-01-01", effectiveUntil: null, lastVerifiedAt: "2026-09-01", needsReview: false,
   confidence: "high", ruleOwner: "ops", adminNotes: "", sort: 10, inheritanceMode: "ADD", overridesFamilyId: null, ...over,
 });
@@ -91,6 +91,12 @@ describe("rule lifecycle", () => {
     const news = await officialSource("News report", { sourceType: "SECONDARY_LEAD" });
     await linkSource(id, news, { strength: "LEAD" }, admin);
     await expect(publishRule(id, admin)).rejects.toThrow(/official source/);
+    const unc = await saveRuleDraft(null, input({ legalCertainty: "UNVERIFIED" }), admin);
+    await linkSource(unc, await officialSource("Order 0"), { strength: "PRIMARY" }, admin);
+    await expect(publishRule(unc, admin)).rejects.toThrow(/legal certainty/);
+    const sup = await saveRuleDraft(null, input(), admin);
+    await linkSource(sup, await officialSource("Order S"), { strength: "SUPPORTING" }, admin);
+    await expect(publishRule(sup, admin)).rejects.toThrow(/PRIMARY evidence/); // PRIMARY_VERIFIED needs primary-strength evidence
     const id2 = await saveRuleDraft(null, input({ lastVerifiedAt: null }), admin);
     await linkSource(id2, await officialSource("Order 2"), { strength: "PRIMARY" }, admin);
     await expect(publishRule(id2, admin)).rejects.toThrow(/last-verified/);
@@ -116,7 +122,9 @@ describe("rule lifecycle", () => {
   it("audit log records before/after for publish and supersede", async () => {
     const v1 = await liveRule();
     const v2 = await cloneAsNewVersion(v1, admin);
-    await expect(publishRule(v2, admin)).rejects.toThrow(/last-verified/); // a new version must be re-verified
+    await expect(publishRule(v2, admin)).rejects.toThrow(/legal certainty/); // a clone loses its certainty until a human re-confirms it
+    await saveRuleDraft(v2, input({ lastVerifiedAt: null }), admin);
+    await expect(publishRule(v2, admin)).rejects.toThrow(/last-verified/); // ...and must be re-verified
     await saveRuleDraft(v2, input({ lastVerifiedAt: "2026-10-01" }), admin);
     await publishRule(v2, admin, "deadline changed");
     const rows = await query("SELECT action, before, after, reason, actor_user_id FROM audit_log WHERE entity='rule' ORDER BY id");
@@ -307,8 +315,8 @@ describe("document templates are data", () => {
 describe("migration of V0-shaped data", () => {
   it("rules table keeps the V0 columns and the new model coexists", async () => {
     const cols = (await query("SELECT column_name FROM information_schema.columns WHERE table_name='rules'")).map((r) => r.column_name);
-    expect(cols).toEqual(expect.arrayContaining(["description", "required_documents", "deadline_days_before", "rule_family_id", "version", "rule_status", "supersedes_rule_id", "deadline_definition"]));
-    expect((await query("SELECT name FROM schema_migrations ORDER BY name")).map((r) => r.name)).toEqual(["db/migrations/002_rules_platform.sql", "db/schema.sql"]);
+    expect(cols).toEqual(expect.arrayContaining(["description", "required_documents", "deadline_days_before", "rule_family_id", "version", "rule_status", "supersedes_rule_id", "deadline_definition", "legal_certainty"]));
+    expect((await query("SELECT name FROM schema_migrations ORDER BY name")).map((r) => r.name)).toEqual(["db/migrations/002_rules_platform.sql", "db/migrations/003_legal_certainty.sql", "db/schema.sql"]);
     expect(await rulesForChain([city])).toEqual([]);
   });
 });

@@ -31,3 +31,10 @@ Where the data lives is noted so the capture is a query, not a research project.
 - Spec statements that were testable as invariants (e.g. "AI may never publish") became code-level guards and tests; keep writing specs this way.
 - The migration against the *real* dev database found issues a clean test database would not (stale data shapes). Make "run against the previous version's real data" a standard milestone check.
 - Record, per milestone: what was verified, what was only inspected, what remains unverified (see `docs/ARCHITECTURE-DELTA.md` §7).
+
+## Delhi / Jantar Mantar (v0.4.0)
+- Which Delhi rules produced support questions or manual clarification (expect: land-owner NOC, designated parking, how to submit to the DCP, Traffic NOC steps).
+- How often 1,000+ plans hit the Ramlila routing, and whether users then asked for the booking workflow we have deliberately not published (DEL-RAM-002).
+- How often DEL-TRAFFIC-001 and DEL-JM-022 stayed incomplete: these have no verified procedure, so they are the likeliest drop-off points.
+- Notifications-feed change events: how many were real new Section 163 orders vs noise, and the lag from order published to recorded as a temporary restriction.
+- Method note: summarised corpus handed over without the source document. The platform's "no URL → nothing published" guard turned a missing input into a safe partial load instead of a guess. Keep that pattern.

@@ -32,6 +32,15 @@ export interface DeadlineDef {
   specialNotes?: string;
 }
 
+/**
+ * How firmly the rule's content is established:
+ * PRIMARY_VERIFIED = taken directly from a primary/official instrument (a human has checked it against the source);
+ * OFFICIAL_GUIDANCE = official current practice/guidance, not a binding instrument;
+ * UNVERIFIED = anything else. Only the first two can ever render as current verified guidance.
+ */
+export const LEGAL_CERTAINTIES = ["PRIMARY_VERIFIED", "OFFICIAL_GUIDANCE", "UNVERIFIED"] as const;
+export type LegalCertainty = (typeof LEGAL_CERTAINTIES)[number];
+
 export const ASSEMBLY_TYPES = ["any", "static", "march"] as const;
 export type AssemblyType = (typeof ASSEMBLY_TYPES)[number];
 
@@ -103,6 +112,7 @@ export interface RuleSource {
   notes: string;
   excerpt?: string;
   sectionRef?: string;
+  flagOnChange?: boolean;
 }
 
 export interface Rule {
@@ -111,6 +121,7 @@ export interface Rule {
   ruleFamilyId: string;
   version: number;
   status: RuleStatus;
+  legalCertainty: LegalCertainty;
   effectiveFrom: string | null;
   effectiveUntil: string | null; // exclusive
   supersedesRuleId: string | null;

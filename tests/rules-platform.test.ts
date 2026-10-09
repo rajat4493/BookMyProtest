@@ -75,7 +75,7 @@ describe("versions and lifecycle windows", () => {
 });
 
 describe("freshness states", () => {
-  const verified = { sources: [{ url: "https://x.gov/a", title: "A", retrievedAt: "2026-01-01", notes: "", sourceType: "PRIMARY_LAW" as const, strength: "PRIMARY" as const }], lastVerifiedAt: "2026-01-01", needsReview: false, confidence: "high" as const };
+  const verified = { legalCertainty: "PRIMARY_VERIFIED" as const, sources: [{ url: "https://x.gov/a", title: "A", retrievedAt: "2026-01-01", notes: "", sourceType: "PRIMARY_LAW" as const, strength: "PRIMARY" as const }], lastVerifiedAt: "2026-01-01", needsReview: false, confidence: "high" as const };
   it("CURRENT / VERIFY_REQUIRED / CHANGE_UNDER_REVIEW / UNKNOWN / SUPERSEDED", () => {
     const f = (over: Parameters<typeof rule>[0]) => evaluate([rule(over)], a)[0].freshness;
     expect(f({ id: "1", ...verified })).toBe("CURRENT");

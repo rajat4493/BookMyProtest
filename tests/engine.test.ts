@@ -72,7 +72,7 @@ describe("evaluate", () => {
 
 describe("evidence ledger", () => {
   const src = { url: "https://example.gov/rule", title: "T", retrievedAt: "2026-01-01", notes: "", sourceType: "OFFICIAL_ADMINISTRATIVE_RULE" as const, strength: "PRIMARY" as const };
-  const good = { sources: [src], lastVerifiedAt: "2026-01-01", needsReview: false, confidence: "high" as const };
+  const good = { sources: [src], lastVerifiedAt: "2026-01-01", needsReview: false, confidence: "high" as const, legalCertainty: "PRIMARY_VERIFIED" as const };
   it("verified only with url + date + not review + not low confidence", () => {
     expect(evidenceStatus(rule({ id: "x", ...good }))).toBe("verified");
     expect(evidenceStatus(rule({ id: "x", ...good, sources: [] }))).toBe("needs_verification");
@@ -83,6 +83,8 @@ describe("evidence ledger", () => {
     // secondary reporting alone never verifies a rule
     expect(evidenceStatus(rule({ id: "x", ...good, sources: [{ ...src, sourceType: "SECONDARY_LEAD" }] }))).toBe("needs_verification");
     expect(evidenceStatus(rule({ id: "x", ...good, sources: [{ ...src, strength: "LEAD" }] }))).toBe("needs_verification");
+    expect(evidenceStatus(rule({ id: "x", ...good, legalCertainty: "UNVERIFIED" }))).toBe("needs_verification");
+    expect(evidenceStatus(rule({ id: "x", ...good, legalCertainty: "OFFICIAL_GUIDANCE" }))).toBe("verified");
     // only ACTIVE rules are verified guidance
     expect(evidenceStatus(rule({ id: "x", ...good, status: "CHANGE_DETECTED" }))).toBe("needs_verification");
     expect(evidenceStatus(rule({ id: "x", ...good, status: "DRAFT" }))).toBe("needs_verification");

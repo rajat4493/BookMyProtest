@@ -109,6 +109,7 @@ await admin.selectOption('select[name="cond_all_op_0"]', "gt");
 await admin.fill('input[name="cond_all_value_0"]', "50");
 await admin.fill('input[name="lastVerifiedAt"]', today);
 await admin.selectOption('select[name="confidence"]', "high");
+await admin.selectOption('select[name="legalCertainty"]', "PRIMARY_VERIFIED");
 await admin.uncheck('input[name="needsReview"]');
 await admin.getByRole("button", { name: "Create draft" }).click();
 await admin.waitForURL(/\/admin\/rules\/[0-9a-f-]{36}\?saved=1/);
@@ -135,8 +136,8 @@ await shot(admin, "admin-6-rule-active", true);
 // user plan uses the rule; verified + current
 const planUrl = await makePlan(`Testville${stamp}, Testregion${stamp}`, 80);
 ok((await user.getByText(`Notice of assembly ${stamp}`).count()) > 0, "   a user in the new city sees the new rule (rule evaluated from data, no code)");
-ok(await user.getByText(/Current · Last verified/).first().isVisible(), "   user sees it as Current with a verification date");
-await user.getByText(/Current · Last verified/).first().scrollIntoViewIfNeeded();
+ok(await user.getByText(/Current · .*Last verified/).first().isVisible(), "   user sees it as Current with a verification date");
+await user.getByText(/Current · .*Last verified/).first().scrollIntoViewIfNeeded();
 await shot(user, "user-1-dashboard-current");
 const planId = planUrl.split("/").pop();
 
@@ -149,6 +150,7 @@ ok(ruleV2Url !== ruleV1Url && (await admin.getByText(/v2/).first().isVisible()),
 await admin.selectOption('select[name="deadlineKind"]', "STRUCTURED");
 await admin.fill('input[name="deadlineMin"]', "14");
 await admin.fill('input[name="effectiveFrom"]', today);
+await admin.selectOption('select[name="legalCertainty"]', "PRIMARY_VERIFIED");
 await admin.fill('input[name="lastVerifiedAt"]', today);
 await admin.uncheck('input[name="needsReview"]');
 await admin.getByRole("button", { name: "Save draft" }).click(); await settle(admin);
@@ -193,6 +195,7 @@ await shot(user, "user-3-change-under-review");
 await admin.getByRole("button", { name: "Start new version" }).first().click();
 await admin.waitForURL(/\/admin\/rules\/[0-9a-f-]{36}\?saved=1/); await settle(admin);
 await admin.fill('input[name="lastVerifiedAt"]', today);
+await admin.selectOption('select[name="legalCertainty"]', "PRIMARY_VERIFIED");
 await admin.fill('input[name="deadlineMin"]', "21");
 await admin.uncheck('input[name="needsReview"]');
 await admin.getByRole("button", { name: "Save draft" }).click(); await settle(admin);

@@ -1,6 +1,6 @@
 # BookMyProtest V0 — milestone handover
 
-> **v0.3.0 update:** the rules platform architecture delta is documented in [ARCHITECTURE-DELTA.md](ARCHITECTURE-DELTA.md). TheDuck learning capture: [THEDUCK-LEARNING-CAPTURE.md](THEDUCK-LEARNING-CAPTURE.md). Where this document conflicts with those (rule editing, rule sources, test counts), they win.
+> **v0.3.0 update:** the rules platform architecture delta is documented in [ARCHITECTURE-DELTA.md](ARCHITECTURE-DELTA.md). TheDuck learning capture: [THEDUCK-LEARNING-CAPTURE.md](THEDUCK-LEARNING-CAPTURE.md). Delhi / Jantar Mantar corpus: [DELHI-JANTAR-MANTAR.md](DELHI-JANTAR-MANTAR.md). Where this document conflicts with those (rule editing, rule sources, test counts), they win.
 
 Vertical slice **plus** auth, documents, admin and polish, built as a Next.js modular monolith on PostgreSQL.
 

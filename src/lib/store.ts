@@ -28,14 +28,21 @@ export async function getJurisdiction(id: string): Promise<Jurisdiction | null> 
   return r ? mapJ(r) : null;
 }
 
-/** Cities the planner is live for, with "City, State, Country" labels. */
-export async function listSupportedCities(): Promise<{ id: string; label: string; city: string; state: string; country: string; isDevSeed: boolean }[]> {
+/** Places the planner is live for (any non-venue jurisdiction flagged supported), labelled "Name, Parent". */
+export async function listSupportedCities(): Promise<{ id: string; label: string; isDevSeed: boolean }[]> {
   const rows = await query(
-    `SELECT c.id, c.name AS city, s.name AS state, k.name AS country, c.is_dev_seed
-       FROM jurisdictions c JOIN jurisdictions s ON s.id=c.parent_id JOIN jurisdictions k ON k.id=s.parent_id
-      WHERE c.level='city' AND c.supported AND c.archived_at IS NULL ORDER BY k.name, s.name, c.name`,
+    `SELECT j.id, j.name, p.name AS parent, j.is_dev_seed FROM jurisdictions j LEFT JOIN jurisdictions p ON p.id=j.parent_id
+      WHERE j.supported AND j.archived_at IS NULL AND j.level <> 'venue' ORDER BY p.name NULLS LAST, j.name`,
   );
-  return rows.map((r: any) => ({ id: r.id, city: r.city, state: r.state, country: r.country, isDevSeed: r.is_dev_seed, label: `${r.city}, ${r.state}` }));
+  return rows.map((r: any) => ({ id: r.id, isDevSeed: r.is_dev_seed, label: r.parent ? `${r.name}, ${r.parent}` : r.name }));
+}
+
+/** Venues (direct children at level 'venue') per place, for the optional venue question. */
+export async function listVenuesByPlace(): Promise<Record<string, { id: string; label: string }[]>> {
+  const rows = await query(`SELECT id, name, parent_id FROM jurisdictions WHERE level='venue' AND archived_at IS NULL ORDER BY name`);
+  const out: Record<string, { id: string; label: string }[]> = {};
+  for (const r of rows as any[]) (out[r.parent_id] ??= []).push({ id: r.id, label: r.name });
+  return out;
 }
 
 export async function addJurisdiction(input: { parentId: string | null; level: JurisdictionLevel; name: string; supported: boolean; isDevSeed?: boolean; code?: string }) {
@@ -72,7 +79,7 @@ const normDeadline = (d: any): DeadlineDef => ({ kind: d?.kind ?? "UNKNOWN", ...
 function mapRule(r: any, sources: RuleSource[], docs: string[]): Rule {
   const deadline = normDeadline(r.deadline_definition);
   return {
-    id: r.id, ruleFamilyId: r.rule_family_id, version: r.version, status: r.rule_status as RuleStatus,
+    id: r.id, ruleFamilyId: r.rule_family_id, version: r.version, status: r.rule_status as RuleStatus, legalCertainty: r.legal_certainty,
     effectiveFrom: r.effective_from ?? null, effectiveUntil: r.effective_until ?? null, supersedesRuleId: r.supersedes_rule_id,
     inheritanceMode: r.inheritance_mode, overridesFamilyId: r.overrides_family_id,
     legalStatement: r.legal_statement, userAction: r.user_action, submissionMethod: r.submission_method, deadline,
@@ -98,7 +105,7 @@ async function attachRelations(rows: any[]): Promise<Rule[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const src = await query(
-    `SELECT rs.rule_id, rs.evidence_strength, rs.interpretation_note, rs.excerpt, rs.section_ref, s.id AS source_id, s.title, s.source_type, s.canonical_url,
+    `SELECT rs.rule_id, rs.flag_on_change, rs.evidence_strength, rs.interpretation_note, rs.excerpt, rs.section_ref, s.id AS source_id, s.title, s.source_type, s.canonical_url,
             to_char(s.retrieved_at,'YYYY-MM-DD') AS retrieved_at
        FROM rule_sources rs JOIN sources s ON s.id=rs.source_id WHERE rs.rule_id = ANY($1) AND s.active ORDER BY s.title`, [ids]);
   const docs = await query("SELECT rule_id, name FROM rule_documents WHERE rule_id = ANY($1) AND required ORDER BY name", [ids]);
@@ -107,7 +114,7 @@ async function attachRelations(rows: any[]): Promise<Rule[]> {
       r,
       src.filter((s: any) => s.rule_id === r.id).map((s: any): RuleSource => ({
         sourceId: s.source_id, sourceType: s.source_type, strength: s.evidence_strength, url: s.canonical_url, title: s.title,
-        retrievedAt: s.retrieved_at, notes: s.interpretation_note, excerpt: s.excerpt, sectionRef: s.section_ref,
+        retrievedAt: s.retrieved_at, notes: s.interpretation_note, excerpt: s.excerpt, sectionRef: s.section_ref, flagOnChange: s.flag_on_change,
       })),
       docs.filter((d: any) => d.rule_id === r.id).map((d: any) => d.name),
     ),
@@ -163,10 +170,10 @@ const mapEvent = (r: any): EventRow => ({
 });
 const EVENT_SELECT = "SELECT *, to_char(event_date,'YYYY-MM-DD') AS date FROM events";
 
-export async function createEvent(anonId: string, userId: string | null, jurisdictionId: string, a: Answers): Promise<string> {
+export async function createEvent(anonId: string, userId: string | null, jurisdictionId: string, a: Answers, venueJurisdictionId: string | null = null): Promise<string> {
   const r = await one(
-    "INSERT INTO events (user_id, anon_id, jurisdiction_id, name, event_date, answers) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
-    [userId, anonId, jurisdictionId, a.name, a.date, JSON.stringify(a)],
+    "INSERT INTO events (user_id, anon_id, jurisdiction_id, venue_jurisdiction_id, name, event_date, answers) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id",
+    [userId, anonId, jurisdictionId, venueJurisdictionId, a.name, a.date, JSON.stringify(a)],
   );
   return r!.id as string;
 }

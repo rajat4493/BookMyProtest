@@ -10,7 +10,7 @@ import { overlaysFor, selectRules } from "./engine/select";
 import { selectTemplate, type DocTemplate } from "./engine/templates";
 import { hashText, heuristicAssistant, normalizeText, type ChangeAssistant, type ChangeSuggestion } from "./engine/watch";
 import type {
-  Answers, AssemblyType, Category, Condition, Confidence, DeadlineDef, EvidenceStrength, InheritanceMode, Level, Rule, RestrictionOverlay,
+  Answers, AssemblyType, Category, LegalCertainty, Condition, Confidence, DeadlineDef, EvidenceStrength, InheritanceMode, Level, Rule, RestrictionOverlay,
   RuleStatus, Severity, SourceType, TemporaryRestriction,
 } from "./engine/types";
 import { doneRuleIds, getRule, getRulesByIds, jurisdictionChain, rulesForChain, type EventRow } from "./store";
@@ -116,14 +116,14 @@ export async function listSnapshots(sourceId: string) {
 }
 
 /** Link evidence to a rule. Only draft/under-review rules can gain evidence; live rules change via a new version. */
-export async function linkSource(ruleId: string, sourceId: string, link: { strength: EvidenceStrength; relevance?: string; excerpt?: string; sectionRef?: string; note?: string }, actor: Actor) {
+export async function linkSource(ruleId: string, sourceId: string, link: { strength: EvidenceStrength; relevance?: string; excerpt?: string; sectionRef?: string; note?: string; flagOnChange?: boolean }, actor: Actor) {
   assertHuman(actor);
   await tx(async (q) => {
     const [rule] = await q("SELECT rule_status FROM rules WHERE id=$1", [ruleId]);
     if (!rule || !["DRAFT", "UNDER_REVIEW"].includes(rule.rule_status)) throw new Error("Evidence can only be changed on a draft. Clone the rule as a new version first.");
-    await q(`INSERT INTO rule_sources (rule_id, source_id, evidence_strength, relevance, excerpt, section_ref, interpretation_note) VALUES ($1,$2,$3,$4,$5,$6,$7)
-      ON CONFLICT (rule_id, source_id) DO UPDATE SET evidence_strength=$3, relevance=$4, excerpt=$5, section_ref=$6, interpretation_note=$7`,
-      [ruleId, sourceId, link.strength, link.relevance ?? "", link.excerpt ?? "", link.sectionRef ?? "", link.note ?? ""]);
+    await q(`INSERT INTO rule_sources (rule_id, source_id, evidence_strength, relevance, excerpt, section_ref, interpretation_note, flag_on_change) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      ON CONFLICT (rule_id, source_id) DO UPDATE SET evidence_strength=$3, relevance=$4, excerpt=$5, section_ref=$6, interpretation_note=$7, flag_on_change=$8`,
+      [ruleId, sourceId, link.strength, link.relevance ?? "", link.excerpt ?? "", link.sectionRef ?? "", link.note ?? "", link.flagOnChange ?? true]);
     await auditQ(q, actor.userId, "rule.evidence.link", "rule", ruleId, { after: { sourceId, ...link } });
   });
 }
@@ -153,6 +153,7 @@ export interface RuleInput {
   level: Level;
   elseLevel: Level | null;
   severity: Severity;
+  legalCertainty: LegalCertainty;
   condition: Condition;
   completeWhen: Condition | null;
   deadline: DeadlineDef;
@@ -185,7 +186,7 @@ export async function saveRuleDraft(id: string | null, i: RuleInput, actor: Acto
   return tx(async (q) => {
     const params = [i.jurisdictionId, i.authorityId, i.assemblyType, i.title, i.description, i.legalStatement, i.userAction, i.category, i.requirementType, i.level, i.elseLevel, i.severity,
       JSON.stringify(i.condition), i.completeWhen ? JSON.stringify(i.completeWhen) : null, JSON.stringify(i.deadline), i.submissionMethod, i.officialLink, i.vendorCategory,
-      i.effectiveFrom, i.effectiveUntil, i.lastVerifiedAt, i.needsReview, i.confidence, i.ruleOwner, i.adminNotes, i.sort, i.inheritanceMode, i.overridesFamilyId];
+      i.effectiveFrom, i.effectiveUntil, i.lastVerifiedAt, i.needsReview, i.confidence, i.ruleOwner, i.adminNotes, i.sort, i.inheritanceMode, i.overridesFamilyId, i.legalCertainty];
     let ruleId = id;
     let before: unknown = null;
     if (id) {
@@ -196,14 +197,14 @@ export async function saveRuleDraft(id: string | null, i: RuleInput, actor: Acto
       await q(`UPDATE rules SET jurisdiction_id=$2, authority_id=$3, assembly_type=$4, title=$5, description=$6, legal_statement=$7, user_action=$8, category=$9, requirement_type=$10,
         level=$11, else_level=$12, severity=$13, condition=$14, complete_when=$15, deadline_definition=$16, submission_method=$17, official_link=$18, vendor_category=$19,
         effective_from=$20, effective_until=$21, last_verified_at=$22, needs_review=$23, confidence=$24, rule_owner=$25, admin_notes=$26, sort=$27, inheritance_mode=$28,
-        overrides_family_id=$29, updated_at=now() WHERE id=$1`, [id, ...params]);
+        overrides_family_id=$29, legal_certainty=$30, updated_at=now() WHERE id=$1`, [id, ...params]);
     } else {
       const family = (i.ruleFamilyId ?? "").trim().toUpperCase() || newFamilyId();
       if ((await q("SELECT 1 FROM rules WHERE rule_family_id=$1", [family])).length) throw new Error(`Rule family ${family} already exists. Clone it as a new version instead.`);
       ruleId = (await q(`INSERT INTO rules (rule_family_id, version, rule_status, jurisdiction_id, authority_id, assembly_type, title, description, legal_statement, user_action, category,
         requirement_type, level, else_level, severity, condition, complete_when, deadline_definition, submission_method, official_link, vendor_category, effective_from, effective_until,
-        last_verified_at, needs_review, confidence, rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id)
-        VALUES ($29,1,'DRAFT',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28) RETURNING id`, [...params, family]))[0].id;
+        last_verified_at, needs_review, confidence, rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, legal_certainty)
+        VALUES ($30,1,'DRAFT',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29) RETURNING id`, [...params.slice(0, 28), i.legalCertainty, family]))[0].id;
     }
     await replaceDocs(q, ruleId!, i.documents);
     await auditQ(q, actor.userId, id ? "rule.update_draft" : "rule.create", "rule", ruleId!, { before, after: { title: i.title, jurisdictionId: i.jurisdictionId } });
@@ -257,6 +258,12 @@ export async function publishRule(ruleId: string, actor: Actor, reason = ""): Pr
     const [{ n }] = await q(`SELECT count(*)::int AS n FROM rule_sources rs JOIN sources s ON s.id=rs.source_id
       WHERE rs.rule_id=$1 AND s.active AND s.canonical_url IS NOT NULL AND s.source_type <> 'SECONDARY_LEAD' AND rs.evidence_strength <> 'LEAD'`, [ruleId]);
     if (n < 1) throw new Error("Attach at least one official source with a URL (secondary reporting alone cannot support a rule).");
+    if (r.legal_certainty === "UNVERIFIED") throw new Error("Set the legal certainty (primary-verified or official guidance) before publishing.");
+    if (r.legal_certainty === "PRIMARY_VERIFIED") {
+      const [{ p }] = await q(`SELECT count(*)::int AS p FROM rule_sources rs JOIN sources s ON s.id=rs.source_id
+        WHERE rs.rule_id=$1 AND s.active AND s.canonical_url IS NOT NULL AND s.source_type <> 'SECONDARY_LEAD' AND rs.evidence_strength = 'PRIMARY'`, [ruleId]);
+      if (p < 1) throw new Error("PRIMARY_VERIFIED needs at least one source attached with PRIMARY evidence strength.");
+    }
     if (!r.last_verified_at) throw new Error("Record the last-verified date before publishing.");
     const [{ eff }] = await q("SELECT COALESCE($1::date, current_date)::text AS eff", [r.effective_from]);
     await q("UPDATE rules SET rule_status='ACTIVE', needs_review=false, effective_from=$2, reviewed_by=$3, reviewed_at=now(), updated_at=now() WHERE id=$1", [ruleId, eff, actor.userId]);
@@ -309,7 +316,7 @@ export async function recordSourceContent(sourceId: string, text: string, assist
     await q("UPDATE sources SET last_checked_at=now(), content_hash=$2 WHERE id=$1", [sourceId, hash]);
     if (!prev || !suggestion) return { kind: "BASELINE" as const, snapshotId: snap };
 
-    const linked = await q(`SELECT r.id, r.rule_status FROM rules r JOIN rule_sources rs ON rs.rule_id=r.id WHERE rs.source_id=$1 AND r.rule_status IN ('ACTIVE','CHANGE_DETECTED')`, [sourceId]);
+    const linked = await q(`SELECT r.id, r.rule_status FROM rules r JOIN rule_sources rs ON rs.rule_id=r.id WHERE rs.source_id=$1 AND rs.flag_on_change AND r.rule_status IN ('ACTIVE','CHANGE_DETECTED')`, [sourceId]);
     const affected = linked.map((r) => r.id as string);
     const ev = (await q(
       `INSERT INTO change_events (source_id, previous_snapshot_id, current_snapshot_id, change_summary, summary_origin, diff_excerpt, materiality, review_priority, affected_rule_ids)

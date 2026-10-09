@@ -39,13 +39,13 @@ export function conditionMatches(a: Answers, cond: Condition | null | undefined)
 }
 
 /**
- * Non-negotiable: a rule only counts as verified when it is ACTIVE, has a linked source with a real URL
+ * Non-negotiable: a rule only counts as verified when it is ACTIVE, has a legal certainty above UNVERIFIED, has a linked source with a real URL
  * that is NOT merely a secondary lead, has a verification date, is not flagged for review and is not low confidence.
  * Everything else must be surfaced as "Needs verification".
  */
 export function evidenceStatus(rule: Rule): EvidenceStatus {
   const hasPrimary = rule.sources.some((s) => !!s.url && s.url.trim() !== "" && !!s.sourceType && s.sourceType !== "SECONDARY_LEAD" && s.strength !== "LEAD");
-  if (rule.status === "ACTIVE" && hasPrimary && rule.lastVerifiedAt && !rule.needsReview && rule.confidence !== "low") return "verified";
+  if (rule.status === "ACTIVE" && rule.legalCertainty !== "UNVERIFIED" && hasPrimary && rule.lastVerifiedAt && !rule.needsReview && rule.confidence !== "low") return "verified";
   return "needs_verification";
 }
 

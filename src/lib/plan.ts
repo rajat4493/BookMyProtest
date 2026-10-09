@@ -30,7 +30,8 @@ export async function computePlan(event: EventRow) {
   const rulesChanged = (await currentFingerprint(event)) !== evaluation.fingerprint;
   const verifiedOn = items.map((i) => i.rule.lastVerifiedAt).filter((d): d is string => !!d).sort().pop() ?? null;
   const cityLabel = city ? (parent ? `${city.name}, ${parent.name}` : city.name) : "";
-  return { event, city, cityLabel, items, readiness, evaluation, rulesChanged, overlays, verifiedOn };
+  const venueName = event.venueJurisdictionId ? (await getJurisdiction(event.venueJurisdictionId))?.name ?? null : null;
+  return { event, city, cityLabel, venueName, items, readiness, evaluation, rulesChanged, overlays, verifiedOn };
 }
 
 export async function loadPlan(id: string) {

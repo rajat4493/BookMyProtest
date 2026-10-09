@@ -9,13 +9,13 @@ export interface CityOption { id: string; label: string; isDevSeed: boolean }
 const STEPS = ["Where?", "When?", "What kind of gathering?", "How many people?", "What will you use?", "Who's organising?"] as const;
 
 interface Form {
-  cityId: string; name: string; date: string; startTime: string; endTime: string; kind: "static" | "march"; startLocation: string; destination: string;
+  cityId: string; venueId: string; name: string; date: string; startTime: string; endTime: string; kind: "static" | "march"; startLocation: string; destination: string;
   description: string; attendance: string; stage: boolean; sound: boolean; vehicles: boolean; food: boolean;
   organizerType: string; organizerName: string; organizerEmail: string; organizerPhone: string;
 }
 
 const EMPTY: Form = {
-  cityId: "", name: "", date: "", startTime: "10:00", endTime: "13:00", kind: "static", startLocation: "", destination: "", description: "", attendance: "",
+  cityId: "", venueId: "", name: "", date: "", startTime: "10:00", endTime: "13:00", kind: "static", startLocation: "", destination: "", description: "", attendance: "",
   stage: false, sound: false, vehicles: false, food: false, organizerType: "individual", organizerName: "", organizerEmail: "", organizerPhone: "",
 };
 
@@ -83,7 +83,7 @@ function Waitlist({ onBack }: { onBack: () => void }) {
   );
 }
 
-export function Wizard({ cities, today }: { cities: CityOption[]; today: string }) {
+export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; venues?: Record<string, { id: string; label: string }[]>; today: string }) {
   const [step, setStep] = useState(0);
   const [f, setF] = useState<Form>({ ...EMPTY, cityId: cities.length === 1 ? cities[0].id : "" });
   const [elsewhere, setElsewhere] = useState(false);
@@ -134,9 +134,9 @@ export function Wizard({ cities, today }: { cities: CityOption[]; today: string 
     if (Object.keys(e).length) return;
     if (step < STEPS.length - 1) { setStep(step + 1); return; }
     start(async () => {
-      const { cityId, ...rest } = f;
+      const { cityId, venueId, ...rest } = f;
       try { localStorage.removeItem(STORAGE); } catch { /* ignore */ }
-      const r = await createPlanAction(cityId, rest);
+      const r = await createPlanAction(cityId, rest, venueId || null);
       // On success the action redirects; we only get here with errors.
       if (r && !r.ok) {
         setErrors(r.errors);
@@ -176,6 +176,7 @@ export function Wizard({ cities, today }: { cities: CityOption[]; today: string 
                 <select id="city" className="field" value={f.cityId} onChange={(e) => {
                   if (e.target.value === "__else") { setElsewhere(true); return; }
                   set("cityId", e.target.value);
+                  set("venueId", "");
                 }} aria-describedby="city-e" aria-invalid={!!errors.city}>
                   <option value="">Choose a city</option>
                   {cities.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -183,6 +184,15 @@ export function Wizard({ cities, today }: { cities: CityOption[]; today: string 
                 </select>
                 <Err id="city-e" msg={errors.city} />
               </div>
+              {(venues[f.cityId] ?? []).length > 0 && (
+                <div className="slide-in">
+                  <Label htmlFor="venue" hint="Some places have venue-specific rules. Pick yours if it's listed.">Venue</Label>
+                  <select id="venue" className="field" value={f.venueId} onChange={(e) => set("venueId", e.target.value)}>
+                    <option value="">Another location / not decided</option>
+                    {venues[f.cityId].map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
+                  </select>
+                </div>
+              )}
               <p className="text-mute">Rules are local, so we only show requirements for places we&rsquo;ve configured. Nowhere else yet.</p>
             </>
           )}

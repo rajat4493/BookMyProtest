@@ -12,14 +12,14 @@ import { DOC_KINDS } from "@/lib/documents";
 import { parseAnswers, vendorRequestSchema, waitlistSchema } from "@/lib/validation";
 import {
   addJurisdiction, addWaitlist, archiveJurisdiction, audit, createEvent, createVendorRequest, eventsFor, getEvent, getJurisdiction, setJurisdictionSupported,
-  recordDocument, setRequirementDone, track, updateVendorRequest, listVendorCategories, type JurisdictionLevel, JURISDICTION_LEVELS,
+  jurisdictionChain, recordDocument, setRequirementDone, track, updateVendorRequest, listVendorCategories, type JurisdictionLevel, JURISDICTION_LEVELS,
 } from "@/lib/store";
 import {
   archiveRule, checkSource, chainFor, cloneAsNewVersion, dismissChange, generateEvaluation, linkSource, publishRule, recheckEvent, recordSourceContent, saveAuthority,
   saveRestriction, saveRuleDraft, saveSource, saveTemplateVersion, selectTemplateMap, startReplacement, submitForReview, unlinkSource, type RuleInput,
 } from "@/lib/knowledge";
 import {
-  ASSEMBLY_TYPES, CATEGORIES, CONDITION_FIELDS, CONFIDENCES, EVIDENCE_STRENGTHS, INHERITANCE_MODES, LEVELS, OPS, SEVERITIES, SOURCE_TYPES, type Clause, type Condition, type DeadlineDef,
+  ASSEMBLY_TYPES, CATEGORIES, CONDITION_FIELDS, CONFIDENCES, EVIDENCE_STRENGTHS, INHERITANCE_MODES, LEGAL_CERTAINTIES, LEVELS, OPS, SEVERITIES, SOURCE_TYPES, type Clause, type Condition, type DeadlineDef,
 } from "@/lib/engine/types";
 
 export type ActionResult = { ok: false; errors: Record<string, string> } | { ok: true };
@@ -28,14 +28,20 @@ const safeNext = (n: unknown) => (typeof n === "string" && /^\/(?!\/)[\w\-/?=&.%
 
 /* ---------- Planning ---------- */
 
-export async function createPlanAction(cityId: string, raw: unknown): Promise<ActionResult> {
+export async function createPlanAction(cityId: string, raw: unknown, venueId: string | null = null): Promise<ActionResult> {
   const city = await getJurisdiction(cityId);
-  if (!city || city.level !== "city" || !city.supported) return { ok: false, errors: { city: "We're not live here yet. Join the waitlist." } };
+  if (!city || city.level === "venue" || !city.supported) return { ok: false, errors: { city: "We're not live here yet. Join the waitlist." } };
+  let venue: string | null = null;
+  if (venueId) {
+    const v = await getJurisdiction(venueId);
+    if (!v || v.level !== "venue" || !(await jurisdictionChain(v.id)).includes(city.id)) return { ok: false, errors: { city: "Choose a venue in this place" } };
+    venue = v.id;
+  }
   const parsed = parseAnswers(raw);
   if (!parsed.ok) return parsed;
   const anon = await ensureAnonId();
   const user = await getUser();
-  const id = await createEvent(anon, user?.id ?? null, city.id, parsed.answers);
+  const id = await createEvent(anon, user?.id ?? null, city.id, parsed.answers, venue);
   await generateEvaluation((await getEvent(id))!, "GENERATED"); // immutable record of the rule versions this plan was built on
   await track("complete_questionnaire", anon, { eventId: id, city: city.name, attendance: parsed.answers.attendance, kind: parsed.answers.kind });
   redirect(`/plan/${id}`);
@@ -206,6 +212,7 @@ export async function saveRuleDraftAction(fd: FormData) {
       level: oneOf(str(fd, "level"), LEVELS, "UNKNOWN"),
       elseLevel: str(fd, "elseLevel") ? oneOf(str(fd, "elseLevel"), LEVELS, "NOT_REQUIRED") : null,
       severity: oneOf(str(fd, "severity"), SEVERITIES, "REQUIRED"),
+      legalCertainty: oneOf(str(fd, "legalCertainty"), LEGAL_CERTAINTIES, "UNVERIFIED"),
       condition: parseCondition(fd, "cond"),
       completeWhen: (() => { const c = parseCondition(fd, "done"); return c.all.length + c.any.length > 0 ? c : null; })(),
       deadline: parseDeadline(fd),
@@ -248,7 +255,7 @@ export async function linkSourceAction(fd: FormData) {
   await guarded(`/admin/rules/${ruleId}`, async (actor) => {
     const sourceId = uuidOrNull(str(fd, "sourceId"));
     if (!sourceId) throw new Error("Choose a source");
-    await linkSource(ruleId, sourceId, { strength: oneOf(str(fd, "strength"), EVIDENCE_STRENGTHS, "PRIMARY"), excerpt: str(fd, "excerpt"), sectionRef: str(fd, "sectionRef"), note: str(fd, "note"), relevance: str(fd, "relevance") }, actor);
+    await linkSource(ruleId, sourceId, { strength: oneOf(str(fd, "strength"), EVIDENCE_STRENGTHS, "PRIMARY"), excerpt: str(fd, "excerpt"), sectionRef: str(fd, "sectionRef"), note: str(fd, "note"), relevance: str(fd, "relevance"), flagOnChange: fd.get("flagOnChange") === "on" }, actor);
     return `/admin/rules/${ruleId}?saved=1`;
   });
 }

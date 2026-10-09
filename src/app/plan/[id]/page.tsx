@@ -18,7 +18,7 @@ const CAT_LABEL = { permissions: "Permissions", documents: "Documents", logistic
 export default async function Dashboard({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ rechecked?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
-  const { event, city, cityLabel, items, readiness: r, evaluation, rulesChanged, overlays, verifiedOn } = await loadPlan(id);
+  const { event, city, cityLabel, venueName, items, readiness: r, evaluation, rulesChanged, overlays, verifiedOn } = await loadPlan(id);
   const user = await getUser();
   const a = event.answers;
   const h = headline(r);
@@ -51,7 +51,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
             <dl className="mt-5 grid gap-x-8 gap-y-3 border-t border-paper/20 pt-4 sm:grid-cols-[auto_auto_1fr] sm:justify-start">
               <div><dt className="label text-paper/55">Date</dt><dd>{formatDate(event.date)}</dd></div>
               <div><dt className="label text-paper/55">Time</dt><dd>{a.startTime}–{a.endTime}</dd></div>
-              <div><dt className="label text-paper/55">Location</dt><dd>{a.startLocation}, {cityLabel}</dd></div>
+              <div><dt className="label text-paper/55">Location</dt><dd>{venueName ? `${venueName} · ` : ""}{a.startLocation}, {cityLabel}</dd></div>
             </dl>
             <div className="mt-8 grid items-end gap-6 md:grid-cols-[auto_1fr] md:gap-12">
               <Score value={r.pct} className="numeral rise text-[clamp(7.5rem,29vw,15rem)] text-accent" />

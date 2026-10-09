@@ -8,7 +8,7 @@ export const baseAnswers: Answers = {
 
 export function rule(over: Partial<Rule> & { id: string }): Rule {
   return {
-    ruleFamilyId: over.id, version: 1, status: "ACTIVE", effectiveFrom: null, effectiveUntil: null, supersedesRuleId: null, inheritanceMode: "ADD", overridesFamilyId: null,
+    ruleFamilyId: over.id, version: 1, status: "ACTIVE", legalCertainty: "UNVERIFIED", effectiveFrom: null, effectiveUntil: null, supersedesRuleId: null, inheritanceMode: "ADD", overridesFamilyId: null,
     legalStatement: "", userAction: "", submissionMethod: "", deadline: { kind: "UNKNOWN" }, reviewedAt: null,
     jurisdictionId: "j1", authorityName: null, assemblyType: "any", title: over.id, description: "", category: "permissions",
     requirementType: "general", level: "REQUIRED", elseLevel: null, severity: "REQUIRED", condition: { all: [], any: [] },

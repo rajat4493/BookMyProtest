@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { linkSourceAction, ruleLifecycleAction, saveRuleDraftAction, unlinkSourceAction } from "@/app/actions";
 import { Field, Flash, StatusChip } from "@/components/admin-ui";
 import { evidenceStatus } from "@/lib/engine/evaluate";
-import { ASSEMBLY_TYPES, CATEGORIES, CONDITION_FIELDS, CONFIDENCES, EVIDENCE_STRENGTHS, INHERITANCE_MODES, LEVELS, OPS, SEVERITIES, type Clause, type Condition } from "@/lib/engine/types";
+import { ASSEMBLY_TYPES, CATEGORIES, CONDITION_FIELDS, CONFIDENCES, EVIDENCE_STRENGTHS, INHERITANCE_MODES, LEGAL_CERTAINTIES, LEVELS, OPS, SEVERITIES, type Clause, type Condition } from "@/lib/engine/types";
 import { listAuthorities, listSources } from "@/lib/knowledge";
 import { getRule, listJurisdictions, listVendorCategories, ruleVersions } from "@/lib/store";
 import { query } from "@/lib/db";
@@ -49,7 +49,7 @@ export default async function EditRule({ params, searchParams }: { params: Promi
   return (
     <>
       <div className="flex flex-wrap items-center gap-3"><h1 className="heading text-3xl">{rule ? rule.title : "New rule"}</h1>{rule && <StatusChip status={rule.status} />}</div>
-      {rule && <p className="mt-1 font-mono text-sm text-mute">{rule.ruleFamilyId} · v{rule.version} · {evidenceStatus(rule) === "verified" ? "Evidence verified" : "Needs verification"}</p>}
+      {rule && <p className="mt-1 font-mono text-sm text-mute">{rule.ruleFamilyId} · v{rule.version} · {rule.legalCertainty} · {evidenceStatus(rule) === "verified" ? "Evidence verified" : "Needs verification"}</p>}
       <Flash sp={sp} />
 
       {rule && (
@@ -84,6 +84,7 @@ export default async function EditRule({ params, searchParams }: { params: Promi
             <label>Requirement status when conditions match{sel("level", LEVELS, rule?.level)}</label>
             <label>Status when they do not match{sel("elseLevel", LEVELS, rule?.elseLevel, true)}</label>
             <label>Severity{sel("severity", SEVERITIES, rule?.severity)}</label>
+            <label>Legal certainty{sel("legalCertainty", LEGAL_CERTAINTIES, rule?.legalCertainty ?? "UNVERIFIED")}</label>
             <label>Inheritance{sel("inheritanceMode", INHERITANCE_MODES, rule?.inheritanceMode)}</label>
             <label>Overrides rule family (for OVERRIDE / EXCLUDE)<input name="overridesFamilyId" defaultValue={rule?.overridesFamilyId ?? ""} className="field !min-h-11" /></label>
             <label>Effective from<input type="date" name="effectiveFrom" defaultValue={rule?.effectiveFrom ?? ""} className="field !min-h-11" /></label>
@@ -126,11 +127,11 @@ export default async function EditRule({ params, searchParams }: { params: Promi
         <section className="mt-10 max-w-3xl" aria-labelledby="ev-h">
           <h2 id="ev-h" className="heading text-xl">Evidence</h2>
           <p className="text-sm text-mute">Publishing needs at least one official (non-secondary) source with a URL. Secondary reporting is a lead only.</p>
-          <table className="mt-3 w-full border border-hair text-left text-sm"><thead className="bg-paper-2"><tr>{["Source", "Type", "Strength", "Section", ""].map((h) => <th key={h} className="p-2">{h}</th>)}</tr></thead>
+          <table className="mt-3 w-full border border-hair text-left text-sm"><thead className="bg-paper-2"><tr>{["Source", "Type", "Strength", "Section", "Flags rule", ""].map((h) => <th key={h} className="p-2">{h}</th>)}</tr></thead>
             <tbody>
-              {rule.sources.length === 0 && <tr><td className="p-3 text-mute" colSpan={5}>No evidence attached. This rule will show as “Needs verification”.</td></tr>}
+              {rule.sources.length === 0 && <tr><td className="p-3 text-mute" colSpan={6}>No evidence attached. This rule will show as “Needs verification”.</td></tr>}
               {rule.sources.map((s) => (
-                <tr key={s.sourceId} className="border-t border-hair"><td className="p-2"><Link className="underline" href={`/admin/sources/${s.sourceId}`}>{s.title}</Link></td><td className="p-2">{s.sourceType}</td><td className="p-2">{s.strength}</td><td className="p-2">{s.sectionRef}</td>
+                <tr key={s.sourceId} className="border-t border-hair"><td className="p-2"><Link className="underline" href={`/admin/sources/${s.sourceId}`}>{s.title}</Link></td><td className="p-2">{s.sourceType}</td><td className="p-2">{s.strength}</td><td className="p-2">{s.sectionRef}</td><td className="p-2">{s.flagOnChange === false ? "no" : "yes"}</td>
                   <td className="p-2">{editable && <form action={unlinkSourceAction}><input type="hidden" name="ruleId" value={rule.id} /><input type="hidden" name="sourceId" value={s.sourceId} /><button className="underline">Remove</button></form>}</td></tr>))}
             </tbody></table>
           {editable && (
@@ -140,6 +141,7 @@ export default async function EditRule({ params, searchParams }: { params: Promi
               <label>Evidence strength{sel("strength", EVIDENCE_STRENGTHS, "PRIMARY")}</label>
               <label>Section / page<input name="sectionRef" className="field !min-h-11" /></label>
               <label>Excerpt<input name="excerpt" className="field !min-h-11" /></label>
+              <label className="flex items-center gap-2 sm:col-span-2"><input type="checkbox" name="flagOnChange" defaultChecked /> Flag this rule when the source changes (untick for a feed that is only watched for new orders)</label>
               <label className="sm:col-span-2">Interpretation note<input name="note" className="field !min-h-11" /></label>
               <button className="btn btn-sm w-fit">Attach evidence</button>
             </form>
