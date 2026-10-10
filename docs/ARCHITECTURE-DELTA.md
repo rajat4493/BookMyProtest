@@ -126,3 +126,6 @@ Load **one real jurisdiction's** rules with sources through the new admin (start
 
 ## TheDuck
 The TheDuck learning-capture requirement from the original spec is kept and extended for the platform: see [THEDUCK-LEARNING-CAPTURE.md](THEDUCK-LEARNING-CAPTURE.md).
+
+## v0.7.0 delta
+Migration `006_live_restrictions.sql`: `sources.parser/feed_role`, richer `temporary_restrictions`, `restriction_candidates`, `restriction_checks` (unique T-72h/T-24h per event), `events.application_submitted_at`, `event_changes`. New pure engine modules: `order-parser`, `schedule`, `material-change`, `restriction-check`. New services: `restriction-checks.ts`, `event-changes.ts`; knowledge additions `parseOrderText/acceptCandidate/rejectCandidate`. Place data (`jurisdictions.metadata`: timezone, largeEventAbove) drives scheduling and the large-event step; no jurisdiction logic in components. Warnings are rules with `requirementType: "warning"`. Tests: 175 passing; e2e `scripts/e2e-v07.mjs`, a11y `scripts/a11y-v07.mjs` (0 violations); screenshots in `docs/previews/v0.7.0/images`.

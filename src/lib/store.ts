@@ -303,3 +303,21 @@ export async function adminEvents() {
 export async function adminWaitlist() {
   return query("SELECT city, state, country, count(*)::int AS signups FROM waitlist GROUP BY 1,2,3 ORDER BY signups DESC");
 }
+
+/* ---------------- Jurisdiction metadata (timezone, large-event threshold: data, not code) ---------------- */
+
+export interface PlaceMeta { timezone?: string; largeEventAbove?: number }
+export async function setJurisdictionMetadata(id: string, patch: PlaceMeta) {
+  await query("UPDATE jurisdictions SET metadata = metadata || $2::jsonb WHERE id=$1", [id, JSON.stringify(patch)]);
+}
+/** Merged along the chain, most specific place winning. */
+export async function metaForChain(chain: string[]): Promise<PlaceMeta> {
+  if (!chain.length) return {};
+  const rows = await query<{ id: string; metadata: PlaceMeta }>("SELECT id, metadata FROM jurisdictions WHERE id = ANY($1)", [chain]);
+  const by = new Map(rows.map((r) => [r.id, r.metadata ?? {}]));
+  return chain.reduce<PlaceMeta>((acc, id) => ({ ...acc, ...(by.get(id) ?? {}) }), {}); // chain is general -> specific
+}
+
+export async function eventsInWindow(fromDate: string, toDate: string): Promise<EventRow[]> {
+  return (await query(`${EVENT_SELECT} WHERE event_date BETWEEN $1 AND $2 ORDER BY event_date`, [fromDate, toDate])).map(mapEvent);
+}

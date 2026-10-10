@@ -29,6 +29,7 @@ export interface DocContext {
 export interface DocBlock { heading?: string; rows?: [string, string][]; paragraphs?: string[]; bullets?: string[] }
 export interface BuiltDoc { slug: DocKind; title: string; blocks: DocBlock[]; disclaimer: string; templateId: string | null; templateVersion: number }
 
+const PROMO_LABEL: Record<string, string> = { NONE: "None yet", DRAFTING: "Being drafted", PRINTED: "Printed", CIRCULATED: "Already circulated" };
 const yn = (b: boolean) => (b ? "Yes" : "No");
 const ORG_LABEL: Record<Answers["organizerType"], string> = { individual: "Individual", group: "Group / collective", student: "Student body", ngo: "Non-profit / NGO", union: "Union / association", other: "Other" };
 
@@ -45,6 +46,8 @@ export function templateVars(ctx: DocContext, authorityName = ""): Vars {
     stage_yn: yn(a.stage), sound_yn: yn(a.sound), vehicles_yn: yn(a.vehicles), food_yn: yn(a.food),
     stage_yn_lower: yn(a.stage).toLowerCase(), sound_yn_lower: yn(a.sound).toLowerCase(), vehicles_yn_lower: yn(a.vehicles).toLowerCase(), food_yn_lower: yn(a.food).toLowerCase(),
     readiness_pct: String(ctx.readiness.pct),
+    speakers: (a.speakers ?? "").trim(), traffic_footprint: (a.trafficFootprint ?? "").trim(),
+    promo_label: PROMO_LABEL[a.promoStatus ?? "NONE"], promo_set: (a.promoStatus ?? "NONE") !== "NONE" ? "true" : "",
   };
 }
 

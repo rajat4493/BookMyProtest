@@ -1,0 +1,47 @@
+// axe-core scan of the v0.7.0 screens: large-event step, Ramlila dashboard (heads-up, check panel, change banner), details form, admin restrictions.
+// Usage (app on the Delhi test DB): BASE=http://localhost:3101 node scripts/a11y-v07.mjs
+import { chromium } from "playwright-core";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
+for (const f of [".env.local"]) if (existsSync(f)) for (const line of readFileSync(f, "utf8").split("\n")) { const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2]; }
+const BASE = process.env.BASE ?? "http://localhost:3101";
+const exe = "/opt/pw-browsers/" + readdirSync("/opt/pw-browsers").filter((d) => d.startsWith("chromium-"))[0] + "/chrome-linux/chrome";
+const axe = readFileSync("node_modules/axe-core/axe.min.js", "utf8");
+const b = await chromium.launch({ executablePath: exe });
+const eventDate = new Date(Date.now() + 25 * 864e5).toISOString().slice(0, 10);
+let n = 0;
+const scan = async (p, name) => {
+  await p.waitForLoadState("networkidle"); await p.waitForTimeout(1200);
+  await p.evaluate(axe);
+  const r = await p.evaluate(() => axe.run({ exclude: ["nextjs-portal"] }));
+  console.log(`${name}: ${r.violations.length} violations`);
+  for (const v of r.violations) console.log("  -", v.id, v.impact, v.nodes.length, v.nodes[0].target.join(" "), "|", v.nodes[0].failureSummary?.split("\n")[1]);
+  n += r.violations.length;
+};
+const p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+const next = () => p.getByRole("button", { name: "Next", exact: true }).click();
+await p.goto(BASE + "/plan"); await p.waitForLoadState("networkidle");
+await p.selectOption("#city", { label: "New Delhi District, NCT Delhi" }); await next();
+await p.fill("#name", "A11y check"); await p.fill("#date", eventDate); await next();
+await p.fill("#startLoc", "Ramlila Maidan"); await next();
+await p.fill("#att", "5000"); await next();
+await next();
+await scan(p, "large-event step");
+await next(); await scan(p, "large-event step with error");
+await p.fill("#purpose", "A public meeting about schools"); await next();
+await p.fill("#oname", "Asha Rao"); await p.fill("#oemail", "asha@example.com");
+await p.getByRole("button", { name: /show my readiness/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
+const url = p.url();
+await scan(p, "Ramlila dashboard");
+await p.getByRole("button", { name: /I.ve submitted my application/ }).click(); await p.waitForTimeout(800);
+await p.goto(url + "/details"); await scan(p, "details form");
+await p.fill("#d-speakers", "Someone new"); await p.getByRole("button", { name: /Save and recheck/ }).click(); await p.waitForURL(/updated=1/);
+await scan(p, "dashboard with change banner");
+const a = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+await a.goto(BASE + "/login"); await a.fill('input[name="email"]', process.env.ADMIN_EMAIL); await a.fill('input[name="password"]', process.env.ADMIN_PASSWORD);
+await a.getByRole("button", { name: /sign in|log in/i }).click(); await a.waitForLoadState("networkidle");
+await a.goto(BASE + "/admin/restrictions"); await a.fill('textarea[name="text"]', "ORDER\nNo. 9/Ord/2026\nUnder Section 163 BNSS the Commissioner of Police, Delhi hereby prohibits assembly of five or more persons within the limits of New Delhi District from 01.01.2027 to 03.01.2027.");
+await a.getByRole("button", { name: "Parse for review" }).click(); await a.waitForLoadState("networkidle");
+await scan(a, "admin restrictions with candidate");
+console.log("TOTAL violations:", n);
+await b.close();
+process.exit(n ? 1 : 0);

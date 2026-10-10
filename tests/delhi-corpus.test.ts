@@ -57,12 +57,12 @@ describe("corpus shape", () => {
 
   it("defines the 29 requested families, the conservative generic-march baseline (PROC-001…004) and two held gap records", () => {
     const wanted = [...Array.from({ length: 26 }, (_, i) => `DEL-JM-${String(i + 1).padStart(3, "0")}`), "DEL-TRAFFIC-001", "DEL-LIVE-001", "DEL-RAM-001"];
-    const extra = ["DEL-PROC-001", "DEL-PROC-002", "DEL-PROC-003", "DEL-PROC-004"];
+    const extra = ["DEL-PROC-001", "DEL-PROC-002", "DEL-PROC-003", "DEL-PROC-004", "DEL-RAM-101", "DEL-RAM-102", "DEL-RAM-103"];
     expect(RULES.map((r) => r.family).filter((f) => !["DEL-RAM-002", "DEL-PROC-100"].includes(f)).sort()).toEqual([...wanted, ...extra].sort());
     expect(RULES.filter((r) => r.holdForReview).map((r) => r.family).sort()).toEqual(["DEL-PROC-100", "DEL-RAM-002"]);
   });
   it("publishes all 29 with a named human reviewer, and keeps the Ramlila booking workflow UNDER_REVIEW", async () => {
-    expect(report).toMatchObject({ published: 33, drafted: 0, heldForReview: 2, districtLive: true });
+    expect(report).toMatchObject({ published: 36, drafted: 0, heldForReview: 2, districtLive: true });
     const rows = await query("SELECT rule_family_id, rule_status, legal_certainty, reviewed_by FROM rules ORDER BY rule_family_id");
     const status = new Map(rows.map((r) => [r.rule_family_id, r]));
     expect(status.get("DEL-RAM-002")).toMatchObject({ rule_status: "UNDER_REVIEW", legal_certainty: "UNVERIFIED", reviewed_by: null });
@@ -73,7 +73,7 @@ describe("corpus shape", () => {
   });
   it("marks Standing Order and Traffic Police rules PRIMARY_VERIFIED; the notifications check is OFFICIAL_GUIDANCE", async () => {
     const cert = Object.fromEntries((await query("SELECT rule_family_id, legal_certainty FROM rules")).map((r) => [r.rule_family_id, r.legal_certainty]));
-    const guidance = ["DEL-LIVE-001", "DEL-PROC-002", "DEL-PROC-004"]; // official current practice / hedged: never labelled primary-verified
+    const guidance = ["DEL-LIVE-001", "DEL-PROC-002", "DEL-PROC-004", "DEL-RAM-101", "DEL-RAM-102", "DEL-RAM-103"]; // official current practice / hedged: never labelled primary-verified
     for (const r of RULES.filter((x) => !x.holdForReview && !guidance.includes(x.family))) expect(cert[r.family], r.family).toBe("PRIMARY_VERIFIED");
     for (const f of guidance) expect(cert[f], f).toBe("OFFICIAL_GUIDANCE");
   });
@@ -132,14 +132,14 @@ describe("scenario 2: 2,000-person rally is routed away from Jantar Mantar", () 
   beforeAll(async () => { await reset(true); });
   it("with Jantar Mantar selected: shows the cap breach and Ramlila guidance, and none of the Jantar Mantar permission rules", async () => {
     const p = await plan({ attendance: 2000 });
-    expect(p.families).toEqual(["DEL-JM-005", "DEL-LIVE-001", "DEL-RAM-001", "DEL-TRAFFIC-001"]);
+    expect(p.families).toEqual(["DEL-JM-005", "DEL-LIVE-001", "DEL-RAM-001", "DEL-RAM-101", "DEL-RAM-102", "DEL-RAM-103", "DEL-TRAFFIC-001"]);
     expect(p.by.get("DEL-RAM-001")).toMatchObject({ level: "RECOMMENDED", freshness: "CURRENT" });
     expect(p.by.get("DEL-RAM-001")!.rule.severity).toBe("CRITICAL");
     expect(p.readiness.blockers.map((b) => b.rule.ruleFamilyId)).toContain("DEL-RAM-001");
   });
   it("with no venue chosen: Ramlila guidance and the Delhi-wide rules, nothing Jantar Mantar-specific", async () => {
     const p = await plan({ attendance: 2000 }, null);
-    expect(p.families).toEqual(["DEL-LIVE-001", "DEL-RAM-001", "DEL-TRAFFIC-001"]);
+    expect(p.families).toEqual(["DEL-LIVE-001", "DEL-RAM-001", "DEL-RAM-101", "DEL-RAM-102", "DEL-RAM-103", "DEL-TRAFFIC-001"]);
   });
   it("the threshold is exact: 1,000 stays at Jantar Mantar, 1,001 is routed away", async () => {
     expect((await plan({ attendance: 1000 })).by.has("DEL-RAM-001")).toBe(false);
@@ -444,13 +444,13 @@ describe("loading, verifying and going live are three separate decisions", () =>
     expect(so).toMatchObject({ canonical_url: STANDING_ORDER_URL, source_type: "OFFICIAL_ADMINISTRATIVE_RULE", monitoring_enabled: true, lifecycle: "CURRENT", pd: "2022-04-28" });
     expect(r.published).toBe(0);
     expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='ACTIVE'"))[0].n).toBe(0);
-    expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='DRAFT'"))[0].n).toBe(33);
+    expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='DRAFT'"))[0].n).toBe(36);
     expect(r.warnings.join(" ")).toMatch(/not confirmed/);
     expect(await listSupportedCities()).toEqual([]);
   });
   it("publishing needs the admin's explicit confirmation; it still does not make Delhi selectable", async () => {
     const r = await loadDelhiCorpus({ actor, verifiedOn: "2026-10-01", confirmVerified: true });
-    expect(r).toMatchObject({ published: 33, districtLive: false, heldForReview: 2 });
+    expect(r).toMatchObject({ published: 36, districtLive: false, heldForReview: 2 });
     expect(r.warnings.join(" ")).toMatch(/NOT enabled in the planner/);
     expect(await listSupportedCities()).toEqual([]);
     expect((await query("SELECT count(DISTINCT reviewed_by)::int AS n FROM rules WHERE rule_status='ACTIVE' AND reviewed_by IS NOT NULL"))[0].n).toBe(1);

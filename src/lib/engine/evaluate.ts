@@ -100,5 +100,8 @@ export function evaluate(rules: Rule[], answers: Answers, doneRuleIds: ReadonlyS
   return out.sort((a, b) => a.rule.sort - b.rule.sort || a.rule.title.localeCompare(b.rule.title));
 }
 
-/** Items that need doing (everything except NOT_REQUIRED / UNKNOWN). */
-export const isActionable = (i: EvaluatedItem) => i.level === "REQUIRED" || i.level === "LIKELY_REQUIRED" || i.level === "RECOMMENDED";
+/** Informational heads-ups (requirementType "warning"): shown to the user, never a task and never scored. */
+export const isWarning = (i: EvaluatedItem) => i.rule.requirementType === "warning";
+
+/** Items that need doing (everything except NOT_REQUIRED / UNKNOWN / warnings). */
+export const isActionable = (i: EvaluatedItem) => !isWarning(i) && (i.level === "REQUIRED" || i.level === "LIKELY_REQUIRED" || i.level === "RECOMMENDED");

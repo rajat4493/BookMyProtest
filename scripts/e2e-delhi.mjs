@@ -27,6 +27,7 @@ async function run(tag, { attendance, march = false, sound = false, venue = true
   await p.fill("#att", String(attendance)); await next();
   if (sound) await p.locator("#sound").click();
   await next();
+  if (/tell us more/i.test(await p.locator("h1").innerText())) { await p.fill("#purpose", "A large public meeting for the scenario"); await next(); } // large-event step (v0.7.0)
   await p.fill("#oname", "Asha Rao"); await p.fill("#oemail", "asha@example.com");
   await p.getByRole("button", { name: /show my readiness/i }).click();
   await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1500);
@@ -59,7 +60,7 @@ ok(await has(p, "Undertaking preparation sheet (Jantar Mantar)"), "documents use
 await p.getByText("Undertaking preparation sheet (Jantar Mantar)").first().scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/6-jantar-mantar-undertaking-sheet.png` });
 // Scenario 4: a march elsewhere in Delhi (no venue): conservative generic baseline, nothing borrowed from Jantar Mantar
 p = await run("s4", { attendance: 500, march: true, sound: true, venue: false });
-for (const t of ["Police permission process for processions", "Route and timing are set by Delhi Police", "Sound permission for processions that use sound", "A current Delhi Police order governs rallies and processions", "Traffic NOC for rallies"]) ok(await has(p, t), `S4: shows "${t}"`);
+for (const t of ["Police permission process for processions", "Route and timing are set by Delhi Police", "Sound permission for processions and large gatherings that use sound", "A current Delhi Police order governs rallies and processions", "Traffic NOC for rallies"]) ok(await has(p, t), `S4: shows "${t}"`);
 for (const t of ["No march to or from Jantar Mantar", "Apply at least 10 days ahead", "Loudspeaker only with specific permission"]) ok(!(await has(p, t)), `S4: does not show the Jantar Mantar rule "${t}"`);
 ok(await has(p, "Needs verification"), "S4: the sound item is honestly labelled 'Needs verification'");
 const routeRow = p.locator("li", { hasText: "Route and timing are set by Delhi Police" }).first();

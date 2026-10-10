@@ -8,7 +8,8 @@ import { evaluate } from "./engine/evaluate";
 import { computeReadiness } from "./engine/readiness";
 import { overlaysFor, selectRules } from "./engine/select";
 import { selectTemplate, type DocTemplate } from "./engine/templates";
-import { hashText, heuristicAssistant, normalizeText, type ChangeAssistant, type ChangeSuggestion } from "./engine/watch";
+import { diffLines, hashText, heuristicAssistant, normalizeText, type ChangeAssistant, type ChangeSuggestion } from "./engine/watch";
+import { parseOrder, splitOrders, type ParsedOrder } from "./engine/order-parser";
 import type {
   Answers, AssemblyType, Category, LegalCertainty, Condition, Confidence, DeadlineDef, EvidenceStrength, InheritanceMode, Level, Rule, RestrictionOverlay,
   RuleStatus, Severity, SourceType, TemporaryRestriction,
@@ -77,6 +78,7 @@ export interface Source {
   active: boolean; monitoringEnabled: boolean; monitoringFrequency: "DAILY" | "WEEKLY" | "MONTHLY" | "MANUAL"; notes: string;
   lifecycle: "CURRENT" | "HISTORICAL" | "PLACEHOLDER"; supersededBySourceId: string | null;
   sourceCode: string | null; orderNumber: string; documentUrl: string | null; indexUrl: string | null;
+  parser: "ORDER_NOTICES" | null; feedRole: "LIVE_RESTRICTIONS" | null;
 }
 const mapSource = (r: any): Source => ({
   id: r.id, title: r.title, sourceType: r.source_type, issuingAuthority: r.issuing_authority, jurisdictionId: r.jurisdiction_id, canonicalUrl: r.canonical_url,
@@ -84,6 +86,7 @@ const mapSource = (r: any): Source => ({
   active: r.active, monitoringEnabled: r.monitoring_enabled, monitoringFrequency: r.monitoring_frequency, notes: r.notes,
   lifecycle: r.lifecycle, supersededBySourceId: r.superseded_by_source_id,
   sourceCode: r.source_code, orderNumber: r.order_number, documentUrl: r.document_url, indexUrl: r.index_url,
+  parser: r.parser ?? null, feedRole: r.feed_role ?? null,
 });
 const SRC_SELECT = `SELECT *, to_char(publication_date,'YYYY-MM-DD') AS pd, to_char(effective_date,'YYYY-MM-DD') AS ed, to_char(retrieved_at,'YYYY-MM-DD') AS ra FROM sources`;
 
@@ -95,8 +98,9 @@ export async function getSource(id: string): Promise<Source | null> {
   const r = await one(`${SRC_SELECT} WHERE id=$1`, [id]);
   return r ? mapSource(r) : null;
 }
-export type SourceInput = Omit<Source, "id" | "lastCheckedAt" | "contentHash" | "lifecycle" | "supersededBySourceId" | "sourceCode" | "orderNumber" | "documentUrl" | "indexUrl"> & {
+export type SourceInput = Omit<Source, "id" | "lastCheckedAt" | "contentHash" | "lifecycle" | "supersededBySourceId" | "sourceCode" | "orderNumber" | "documentUrl" | "indexUrl" | "parser" | "feedRole"> & {
   lifecycle?: Source["lifecycle"]; supersededBySourceId?: string | null; sourceCode?: string | null; orderNumber?: string; documentUrl?: string | null; indexUrl?: string | null;
+  parser?: Source["parser"]; feedRole?: Source["feedRole"];
 };
 export async function saveSource(id: string | null, i: SourceInput, actor: Actor): Promise<string> {
   assertHuman(actor);
@@ -104,16 +108,20 @@ export async function saveSource(id: string | null, i: SourceInput, actor: Actor
   const lifecycle = i.lifecycle ?? "CURRENT";
   // History and placeholders are never monitored: nothing downstream may depend on them.
   const p = [i.title, i.sourceType, i.issuingAuthority, i.jurisdictionId, url, i.publicationDate, i.effectiveDate, i.retrievedAt, i.active, i.monitoringEnabled && !!url && lifecycle === "CURRENT", i.monitoringFrequency, i.notes, lifecycle, i.supersededBySourceId ?? null,
-    i.sourceCode ? i.sourceCode.trim() : null, i.orderNumber ?? "", i.documentUrl && /^https?:\/\//i.test(i.documentUrl) ? i.documentUrl : null, i.indexUrl && /^https?:\/\//i.test(i.indexUrl) ? i.indexUrl : null];
+    i.sourceCode ? i.sourceCode.trim() : null, i.orderNumber ?? "", i.documentUrl && /^https?:\/\//i.test(i.documentUrl) ? i.documentUrl : null, i.indexUrl && /^https?:\/\//i.test(i.indexUrl) ? i.indexUrl : null,
+    i.parser ?? null, i.feedRole ?? null];
   return tx(async (q) => {
     const before = id ? (await q(`${SRC_SELECT} WHERE id=$1`, [id]))[0] : null;
+    // A form that does not mention the feed settings must not wipe them.
+    if (before && i.parser === undefined) p[18] = before.parser ?? null;
+    if (before && i.feedRole === undefined) p[19] = before.feed_role ?? null;
     let sid = id;
     if (id) {
       await q(`UPDATE sources SET title=$2, source_type=$3, issuing_authority=$4, jurisdiction_id=$5, canonical_url=$6, publication_date=$7, effective_date=$8, retrieved_at=$9,
-        active=$10, monitoring_enabled=$11, monitoring_frequency=$12, notes=$13, lifecycle=$14, superseded_by_source_id=$15, source_code=$16, order_number=$17, document_url=$18, index_url=$19 WHERE id=$1`, [id, ...p]);
+        active=$10, monitoring_enabled=$11, monitoring_frequency=$12, notes=$13, lifecycle=$14, superseded_by_source_id=$15, source_code=$16, order_number=$17, document_url=$18, index_url=$19, parser=$20, feed_role=$21 WHERE id=$1`, [id, ...p]);
     } else {
-      sid = (await q(`INSERT INTO sources (title, source_type, issuing_authority, jurisdiction_id, canonical_url, publication_date, effective_date, retrieved_at, active, monitoring_enabled, monitoring_frequency, notes, lifecycle, superseded_by_source_id, source_code, order_number, document_url, index_url)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`, p))[0].id;
+      sid = (await q(`INSERT INTO sources (title, source_type, issuing_authority, jurisdiction_id, canonical_url, publication_date, effective_date, retrieved_at, active, monitoring_enabled, monitoring_frequency, notes, lifecycle, superseded_by_source_id, source_code, order_number, document_url, index_url, parser, feed_role)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`, p))[0].id;
     }
     await auditQ(q, actor.userId, id ? "source.update" : "source.create", "source", sid!, { before, after: i });
     return sid!;
@@ -344,7 +352,66 @@ export async function recordSourceContent(sourceId: string, text: string, assist
       }
     }
     await auditQ(q, null, "source.change_detected", "source", sourceId, { changeEventId: ev, materiality: suggestion.materiality, origin: suggestion.origin });
+    if (src.parser === "ORDER_NOTICES") await proposeCandidates(q, sourceId, ev, diffLines(prev.raw_text ?? "", text).added.join("\n"));
     return { kind: "CHANGED" as const, changeEventId: ev, affectedRuleIds: affected, suggestion };
+  });
+}
+
+/** Parser output is only ever a PENDING candidate for a human to review. */
+async function proposeCandidates(q: Q, sourceId: string, changeEventId: string | null, text: string) {
+  for (const block of splitOrders(text)) {
+    const parsed = parseOrder(block);
+    await q("INSERT INTO restriction_candidates (source_id, change_event_id, raw_text, parsed) VALUES ($1,$2,$3,$4)", [sourceId, changeEventId, block.slice(0, 20_000), JSON.stringify(parsed)]);
+  }
+}
+
+/** Admin pastes an order's text; the parser proposes fields. Nothing is created beyond a pending candidate. */
+export async function parseOrderText(sourceId: string, text: string, actor: Actor): Promise<number> {
+  assertHuman(actor);
+  const blocks = splitOrders(text);
+  const use = blocks.length ? blocks : text.trim() ? [text.trim()] : [];
+  await tx(async (q) => {
+    for (const block of use) await q("INSERT INTO restriction_candidates (source_id, raw_text, parsed) VALUES ($1,$2,$3)", [sourceId, block.slice(0, 20_000), JSON.stringify(parseOrder(block))]);
+    await auditQ(q, actor.userId, "restriction_candidate.parse", "source", sourceId, { after: { candidates: use.length } });
+  });
+  return use.length;
+}
+
+export interface CandidateRow { id: string; sourceId: string; sourceTitle: string; rawText: string; parsed: ParsedOrder; status: string; restrictionId: string | null; createdAt: string; reviewNotes: string }
+export async function listCandidates(status?: string): Promise<CandidateRow[]> {
+  const rows = await query(`SELECT c.*, s.title AS source_title FROM restriction_candidates c JOIN sources s ON s.id=c.source_id WHERE ($1::text IS NULL OR c.status=$1) ORDER BY (c.status='PENDING') DESC, c.created_at DESC LIMIT 100`, [status ?? null]);
+  return rows.map((r: any) => ({ id: r.id, sourceId: r.source_id, sourceTitle: r.source_title, rawText: r.raw_text, parsed: r.parsed, status: r.status, restrictionId: r.restriction_id, createdAt: new Date(r.created_at).toISOString(), reviewNotes: r.review_notes }));
+}
+export async function pendingCandidateCount(sourceIds: string[]): Promise<number> {
+  if (!sourceIds.length) return 0;
+  const [r] = await query<{ n: number }>("SELECT count(*)::int AS n FROM restriction_candidates WHERE status='PENDING' AND source_id = ANY($1)", [sourceIds]);
+  return r.n;
+}
+
+export interface CandidateDecision {
+  jurisdictionId: string; title: string; geographicScope: string; startsAt: string; endsAt: string; legalBasis: string; affectedActivities: string[];
+  effect: TemporaryRestriction["effect"]; plainExplanation: string; issuingAuthority: string; orderDate: string | null; orderReference: string;
+}
+/** Human decision. Accepting creates a DRAFT restriction (never ACTIVE): activation is a separate step that needs a source. */
+export async function acceptCandidate(candidateId: string, d: CandidateDecision, actor: Actor): Promise<string> {
+  assertHuman(actor);
+  return tx(async (q) => {
+    const [c] = await q("SELECT * FROM restriction_candidates WHERE id=$1 FOR UPDATE", [candidateId]);
+    if (!c || c.status !== "PENDING") throw new Error("Only a pending candidate can be accepted.");
+    const rid = (await q(`INSERT INTO temporary_restrictions (jurisdiction_id, title, geographic_scope, starts_at, ends_at, legal_basis, affected_activities, effect, plain_explanation, source_id, status, issuing_authority, order_date, order_reference, source_excerpt)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'DRAFT',$11,$12,$13,$14) RETURNING id`,
+      [d.jurisdictionId, d.title, d.geographicScope, d.startsAt, d.endsAt, d.legalBasis, d.affectedActivities, d.effect, d.plainExplanation, c.source_id, d.issuingAuthority, d.orderDate, d.orderReference, String(c.raw_text).slice(0, 4000)]))[0].id as string;
+    await q("UPDATE restriction_candidates SET status='ACCEPTED', restriction_id=$2, reviewed_by=$3, reviewed_at=now() WHERE id=$1", [candidateId, rid, actor.userId]);
+    await auditQ(q, actor.userId, "restriction_candidate.accept", "restriction_candidate", candidateId, { after: { restrictionId: rid, status: "DRAFT" } });
+    return rid;
+  });
+}
+export async function rejectCandidate(candidateId: string, notes: string, actor: Actor) {
+  assertHuman(actor);
+  await tx(async (q) => {
+    const done = await q("UPDATE restriction_candidates SET status='REJECTED', review_notes=$2, reviewed_by=$3, reviewed_at=now() WHERE id=$1 AND status='PENDING' RETURNING id", [candidateId, notes, actor.userId]);
+    if (!done.length) throw new Error("Only a pending candidate can be rejected.");
+    await auditQ(q, actor.userId, "restriction_candidate.reject", "restriction_candidate", candidateId, { reason: notes });
   });
 }
 
@@ -452,21 +519,22 @@ export async function startReplacement(changeEventId: string, ruleId: string, ac
 const mapRestriction = (r: any): TemporaryRestriction => ({
   id: r.id, jurisdictionId: r.jurisdiction_id, title: r.title, geographicScope: r.geographic_scope, startsAt: new Date(r.starts_at).toISOString(), endsAt: new Date(r.ends_at).toISOString(),
   legalBasis: r.legal_basis, affectedActivities: r.affected_activities, effect: r.effect, plainExplanation: r.plain_explanation, sourceId: r.source_id, status: r.status,
+  issuingAuthority: r.issuing_authority ?? "", orderDate: r.od ?? null, orderReference: r.order_reference ?? "", sourceExcerpt: r.source_excerpt ?? "",
 });
 export async function listRestrictions(chain?: string[]): Promise<TemporaryRestriction[]> {
-  return (await query("SELECT * FROM temporary_restrictions WHERE ($1::uuid[] IS NULL OR jurisdiction_id = ANY($1)) ORDER BY starts_at DESC", [chain ?? null])).map(mapRestriction);
+  return (await query("SELECT *, to_char(order_date,'YYYY-MM-DD') AS od FROM temporary_restrictions WHERE ($1::uuid[] IS NULL OR jurisdiction_id = ANY($1)) ORDER BY starts_at DESC", [chain ?? null])).map(mapRestriction);
 }
 export type RestrictionInput = Omit<TemporaryRestriction, "id">;
 export async function saveRestriction(id: string | null, i: RestrictionInput, actor: Actor): Promise<string> {
   assertHuman(actor);
   if (i.status === "ACTIVE" && !i.sourceId) throw new Error("An active restriction needs a source.");
-  const p = [i.jurisdictionId, i.title, i.geographicScope, i.startsAt, i.endsAt, i.legalBasis, i.affectedActivities, i.effect, i.plainExplanation, i.sourceId, i.status];
+  const p = [i.jurisdictionId, i.title, i.geographicScope, i.startsAt, i.endsAt, i.legalBasis, i.affectedActivities, i.effect, i.plainExplanation, i.sourceId, i.status, i.issuingAuthority ?? "", i.orderDate ?? null, i.orderReference ?? "", i.sourceExcerpt ?? ""];
   return tx(async (q) => {
     let rid = id;
     if (id) await q(`UPDATE temporary_restrictions SET jurisdiction_id=$2, title=$3, geographic_scope=$4, starts_at=$5, ends_at=$6, legal_basis=$7, affected_activities=$8, effect=$9,
-      plain_explanation=$10, source_id=$11, status=$12 WHERE id=$1`, [id, ...p]);
-    else rid = (await q(`INSERT INTO temporary_restrictions (jurisdiction_id, title, geographic_scope, starts_at, ends_at, legal_basis, affected_activities, effect, plain_explanation, source_id, status)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`, p))[0].id;
+      plain_explanation=$10, source_id=$11, status=$12, issuing_authority=$13, order_date=$14, order_reference=$15, source_excerpt=$16 WHERE id=$1`, [id, ...p]);
+    else rid = (await q(`INSERT INTO temporary_restrictions (jurisdiction_id, title, geographic_scope, starts_at, ends_at, legal_basis, affected_activities, effect, plain_explanation, source_id, status, issuing_authority, order_date, order_reference, source_excerpt)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`, p))[0].id;
     await auditQ(q, actor.userId, id ? "restriction.update" : "restriction.create", "temporary_restriction", rid!, { after: i });
     return rid!;
   });

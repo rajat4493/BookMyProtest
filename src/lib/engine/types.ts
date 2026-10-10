@@ -47,6 +47,9 @@ export type AssemblyType = (typeof ASSEMBLY_TYPES)[number];
 export const CONFIDENCES = ["low", "medium", "high"] as const;
 export type Confidence = (typeof CONFIDENCES)[number];
 
+export const PROMO_STATUSES = ["NONE", "DRAFTING", "PRINTED", "CIRCULATED"] as const;
+export type PromoStatus = (typeof PROMO_STATUSES)[number];
+
 /** Everything the questionnaire collects. Rule conditions read from this, never from UI code. */
 export interface Answers {
   name: string;
@@ -66,6 +69,10 @@ export interface Answers {
   organizerName: string;
   organizerEmail: string;
   organizerPhone: string;
+  /** Large-event details (optional; asked when attendance is above the place's large-event threshold). */
+  speakers?: string;
+  promoStatus?: PromoStatus;
+  trafficFootprint?: string;
 }
 
 export const OPS = ["eq", "neq", "gt", "gte", "lt", "lte", "in", "present"] as const;
@@ -189,6 +196,10 @@ export interface TemporaryRestriction {
   plainExplanation: string;
   sourceId: string | null;
   status: "DRAFT" | "ACTIVE" | "EXPIRED" | "ARCHIVED";
+  issuingAuthority?: string;
+  orderDate?: string | null; // YYYY-MM-DD
+  orderReference?: string;
+  sourceExcerpt?: string;
 }
 export interface RestrictionOverlay {
   restriction: TemporaryRestriction;

@@ -17,6 +17,15 @@ const T: Record<string, [string, string]> = {
 | Loudspeaker / sound | {{sound_yn}}
 | Vehicles involved | {{vehicles_yn}}
 | Food or water distribution | {{food_yn}}
+{{#if speakers}}
+| Speakers / VIPs | {{speakers}}
+{{/if}}
+{{#if promo_set}}
+| Promotional material | {{promo_label}}
+{{/if}}
+{{#if traffic_footprint}}
+| Route and traffic footprint | {{traffic_footprint}}
+{{/if}}
 
 # Purpose
 {{purpose|Not provided yet. Add a short description of the purpose and format.}}`],

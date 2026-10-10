@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { recheckPlanAction } from "@/app/actions";
+import { acknowledgeChangesAction, markApplicationAction, recheckPlanAction } from "@/app/actions";
 import { Footer, TrustNote, Wordmark } from "@/components/chrome";
 import { Score, SubmitButton, Tracker } from "@/components/client";
 import { EmptyState } from "@/components/empty";
@@ -7,7 +7,10 @@ import { Arrow, Glyph } from "@/components/icons";
 import { RequirementRow } from "@/components/requirement";
 import { getUser } from "@/lib/auth";
 import { headline } from "@/lib/engine/readiness";
-import { addDays, isActionable } from "@/lib/engine/evaluate";
+import { addDays, isActionable, isWarning } from "@/lib/engine/evaluate";
+import { RECONFIRM_ADVICE, applicationSubmittedAt, openChangeNotices } from "@/lib/event-changes";
+import { TRIGGER_LABEL } from "@/lib/engine/restriction-check";
+import { listChecks } from "@/lib/restriction-checks";
 import { PLANNING_BUFFER_DAYS, daysUntil, formatDate, loadPlan, LEVEL_LABEL } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +18,7 @@ export const metadata = { title: "Your readiness" };
 
 const CAT_LABEL = { permissions: "Permissions", documents: "Documents", logistics: "Logistics", safety: "Safety" } as const;
 
-export default async function Dashboard({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ rechecked?: string }> }) {
+export default async function Dashboard({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ rechecked?: string; updated?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const { event, city, cityLabel, venueName, items, readiness: r, evaluation, rulesChanged, overlays, verifiedOn } = await loadPlan(id);
@@ -24,7 +27,10 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
   const h = headline(r);
   const open = items.filter((i) => isActionable(i) && !i.done);
   const done = items.filter((i) => isActionable(i) && i.done);
-  const notes = items.filter((i) => !isActionable(i));
+  const notes = items.filter((i) => !isActionable(i) && !isWarning(i));
+  const warnings = items.filter(isWarning);
+  const [checks, submittedAt, changeNotices] = await Promise.all([listChecks(event.id), applicationSubmittedAt(event.id), openChangeNotices(event.id)]);
+  const latestCheck = checks[0];
   const next = r.blockers[0] ?? r.required[0] ?? r.recommended[0];
   const target = addDays(event.date, -PLANNING_BUFFER_DAYS);
   const toEvent = daysUntil(event.date);
@@ -78,6 +84,35 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
               <form action={recheckPlanAction}><input type="hidden" name="eventId" value={event.id} /><SubmitButton className="btn btn-sm shrink-0" pending="Rechecking…">Recheck my plan</SubmitButton></form>
             </aside>
           )}
+          {sp.updated && <p className="panel p-4 text-sm" role="status"><span className="chip chip-required mr-2">Updated</span>Your plan details were saved and the plan was rechecked.</p>}
+          {changeNotices.length > 0 && (
+            <div className="card p-5" role="alert" data-testid="change-banner">
+              <p className="label">You changed your plan after applying</p>
+              <p className="heading mt-1 text-lg">Changed: {[...new Set(changeNotices.flatMap((n) => n.materialLabels))].join(", ")}.</p>
+              <p className="mt-1">{RECONFIRM_ADVICE}</p>
+              <form action={acknowledgeChangesAction} className="mt-3"><input type="hidden" name="eventId" value={event.id} /><SubmitButton className="btn btn-sm" pending="Saving…">I have re-confirmed with the authority</SubmitButton></form>
+            </div>
+          )}
+          {latestCheck && (
+            <section className="panel p-5" aria-labelledby="live-h" data-testid="restriction-check">
+              <p className="label text-mute">Live restriction check</p>
+              <h2 id="live-h" className="heading mt-1 text-lg">{latestCheck.status === "RESTRICTIONS_APPLY" ? "A temporary restriction may affect your event" : latestCheck.status === "FEED_STALE" ? "We could not confirm the latest orders" : latestCheck.status === "REVIEW_PENDING" ? "New notifications are awaiting review" : "No restriction recorded for your date and place"}</h2>
+              <p className="mt-1 text-mute">{latestCheck.message}</p>
+              <p className="mt-1 text-sm text-mute">{TRIGGER_LABEL[latestCheck.trigger]} · {latestCheck.checkedAt.slice(0, 16).replace("T", " ")} UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.</p>
+              {checks.length > 1 && (
+                <details className="mt-2"><summary className="cursor-pointer text-sm underline">Check history ({checks.length})</summary>
+                  <ul className="mt-2 text-sm">{checks.map((c) => <li key={c.id} className="border-t border-hair py-1">{c.checkedAt.slice(0, 16).replace("T", " ")} · {TRIGGER_LABEL[c.trigger]} · {c.status.replace(/_/g, " ").toLowerCase()}</li>)}</ul>
+                </details>
+              )}
+            </section>
+          )}
+          {warnings.map((w) => (
+            <aside key={w.rule.id} className="panel bg-paper-2 p-5" role="note" data-testid="heads-up">
+              <p className="label">Heads-up</p>
+              <p className="heading mt-1 text-lg">{w.rule.description}</p>
+              <p className="mt-1 text-sm">{w.evidence === "verified" ? "" : "Needs verification. "}Please verify with the relevant authority.</p>
+            </aside>
+          ))}
           {overlays.map((o) => (
             <aside key={o.restriction.id} className="card p-5" role="note">
               <p className="label">Temporary restriction may apply</p>
@@ -92,6 +127,15 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
               <Link href={`/signup?next=/plan/${event.id}`} className="btn btn-sm shrink-0">Save with an account</Link>
             </aside>
           )}
+
+          <section className="panel p-5" aria-labelledby="app-h">
+            <h2 id="app-h" className="heading text-lg">Your application</h2>
+            <p className="mt-1 text-sm text-mute">{submittedAt ? `Marked as submitted on ${formatDate(submittedAt.slice(0, 10))}.` : "Mark it once you have applied, so we can warn you if a later change matters."} If the crowd, speakers, purpose, route or nature of the event materially changes, re-confirm with the issuing authority.</p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <form action={markApplicationAction}><input type="hidden" name="eventId" value={event.id} /><input type="hidden" name="submitted" value={submittedAt ? "false" : "true"} /><SubmitButton className="btn btn-sm" pending="Saving…">{submittedAt ? "Undo: I haven’t applied" : "I’ve submitted my application"}</SubmitButton></form>
+              <Link href={`/plan/${event.id}/details`} className="btn btn-sm btn-ghost">Edit plan details</Link>
+            </div>
+          </section>
 
           {next && (
             <section aria-labelledby="next-h">

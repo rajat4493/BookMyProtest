@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Answers } from "./engine/types";
+import { PROMO_STATUSES, type Answers } from "./engine/types";
 
 const text = (max: number) => z.string().trim().max(max);
 const bool = z.preprocess((v) => v === true || v === "true" || v === "on" || v === "1", z.boolean());
@@ -24,6 +24,9 @@ export const answersSchema = z
     organizerName: text(120).min(2, "Organizer name is required"),
     organizerEmail: z.string().trim().email("Enter a valid email").max(200),
     organizerPhone: text(40).default(""),
+    speakers: text(500).default(""),
+    promoStatus: z.enum(PROMO_STATUSES).default("NONE"),
+    trafficFootprint: text(500).default(""),
   })
   .superRefine((a, ctx) => {
     if (a.kind === "march" && a.destination.length < 3) ctx.addIssue({ code: "custom", path: ["destination"], message: "Where does the march end?" });

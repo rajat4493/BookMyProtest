@@ -40,3 +40,10 @@ Where the data lives is noted so the capture is a query, not a research project.
 - Method note: summarised corpus handed over without the source document. The platform's "no URL → nothing published" guard turned a missing input into a safe partial load instead of a guess. Keep that pattern.
 - Evidence-chain note: separating the governing instrument from current-practice confirmation (and press leads) let a rule stay verifiable by its instrument while the *current* deadline is corroborated elsewhere. Record how often current practice and the written order disagree; each disagreement is a candidate for a reviewed rule update.
 - Track how long placeholder sources (e.g. the 25 May 2022 procession order) wait before extraction, and how many march plans hit the "no verified march rules" gap in the meantime.
+
+## Live restrictions and large events (v0.7.0)
+- Parser calibration: share of candidates accepted vs rejected, fields humans had to correct (`restriction_candidates` vs resulting `temporary_restrictions`), and lag from feed change to accepted draft.
+- How often checks returned FEED_STALE or REVIEW_PENDING (`restriction_checks.status`) vs RESTRICTIONS_APPLY; whether T-72h/T-24h results changed organiser behaviour.
+- How many large events skipped optional fields (speakers, footprint); how many marked applications and then made material changes (`event_changes.after_application`), and whether they acknowledged the advice.
+- Whether users asked for the Ramlila booking steps we deliberately do not give (DEL-RAM-002) and which of the three approvals caused most drop-off.
+- Method note: invariants ("a candidate is never ACTIVE", "no MCD link", "L&O/10/2022 stays metadata-only") were written as tests first; two real bugs (an operator-precedence slip and an off-by-one parameter index) were caught by them.

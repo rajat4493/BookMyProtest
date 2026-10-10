@@ -11,9 +11,9 @@ import type { Category, Clause, Condition, DeadlineDef, Level, LegalCertainty, S
 
 export type PlaceKey = "IN" | "NCT" | "DIST" | "JM";
 
-export const PLACES: { key: PlaceKey; name: string; level: "country" | "region" | "district" | "venue"; parent: PlaceKey | null; code: string; supported: boolean }[] = [
+export const PLACES: { key: PlaceKey; name: string; level: "country" | "region" | "district" | "venue"; parent: PlaceKey | null; code: string; supported: boolean; meta?: { timezone?: string; largeEventAbove?: number } }[] = [
   { key: "IN", name: "India", level: "country", parent: null, code: "IN", supported: false },
-  { key: "NCT", name: "NCT Delhi", level: "region", parent: "IN", code: "DL", supported: false },
+  { key: "NCT", name: "NCT Delhi", level: "region", parent: "IN", code: "DL", supported: false, meta: { timezone: "Asia/Kolkata", largeEventAbove: 1000 } },
   { key: "DIST", name: "New Delhi District", level: "district", parent: "NCT", code: "DL-ND", supported: false /* set true by the loader only after rules are published */ },
   { key: "JM", name: "Jantar Mantar", level: "venue", parent: "DIST", code: "DL-ND-JM", supported: false },
 ];
@@ -24,11 +24,13 @@ export const STANDING_ORDER_URL = "https://delhipolice.gov.in/StandingOrderFiles
 /** Official Delhi Police Standing Orders index (lists title, number and date; the PDFs are served separately). */
 export const OFFICIAL_INDEX_URL = "https://kpkb.delhipolice.gov.in/standingorderNew";
 
-export type SourceKey = "SO" | "SO_2018" | "SO_10_2022" | "SO_309" | "SC_RAMLILA" | "ACT_1978" | "CURRENT_PRACTICE" | "NEWS_ANI" | "NEWS_INDIATV" | "TRAFFIC" | "NOTIF";
+export type SourceKey = "SO" | "SO_2018" | "SO_10_2022" | "SO_309" | "SC_RAMLILA" | "ACT_1978" | "CURRENT_PRACTICE" | "NEWS_ANI" | "NEWS_INDIATV" | "TRAFFIC" | "NOTIF" | "LEAD_PTI" | "LEAD_LAWTREND" | "LEAD_LIVELAW";
 export interface SourceSpec {
   key: SourceKey; title: string; type: SourceType; issuer: string; place: PlaceKey; url: string | null; monitoring: "DAILY" | "WEEKLY" | null; notes: string;
   lifecycle?: "CURRENT" | "HISTORICAL" | "PLACEHOLDER"; publicationDate?: string; supersededBy?: SourceKey;
   code?: string; orderNumber?: string; documentUrl?: string | null; indexUrl?: string | null; legacyTitles?: string[];
+  /** Live-restriction feed settings (generic platform fields, not Delhi logic). */
+  parser?: "ORDER_NOTICES"; feedRole?: "LIVE_RESTRICTIONS";
 }
 
 export const SOURCES: SourceSpec[] = [
@@ -83,12 +85,27 @@ export const SOURCES: SourceSpec[] = [
   {
     key: "TRAFFIC", title: "Delhi Traffic Police — NOC for processions, rallies, meetings and morchas", type: "OFFICIAL_CURRENT_PRACTICE", issuer: "Delhi Traffic Police", place: "NCT",
     url: "https://traffic.delhipolice.gov.in/node/80", monitoring: "WEEKLY",
-    notes: "URL taken from a web search result for the official Traffic Police NOC page; not fetchable from the build sandbox. REVIEWER: open it and confirm it is the NOC page. The application procedure, fee and processing time were NOT found and are not asserted.",
+    notes: "Official Delhi Traffic Police page on the NOC for public rallies, processions, meetings, morchas and protest gatherings. The project owner confirmed this is the official page and that it makes a Traffic NOC mandatory for such gatherings, so the Traffic NOC requirement is PRIMARY_VERIFIED from it. The page could not be fetched from the build sandbox, so no verbatim excerpt is recorded. The application procedure, fee and processing time were NOT found and are not asserted.",
   },
   {
     key: "NOTIF", title: "Delhi Police — Notifications (Section 163 BNSS orders)", type: "OFFICIAL_CURRENT_PRACTICE", issuer: "Delhi Police", place: "NCT",
-    url: "https://delhipolice.gov.in/notification", monitoring: "DAILY",
-    notes: "Monitored for new temporary orders (Commissioner-level and district/ACP Section 163 BNSS orders). A change opens a review item; it does NOT flag DEL-LIVE-001. A human reads each new order and records it under Admin → Restrictions.",
+    url: "https://delhipolice.gov.in/notification", monitoring: "DAILY", parser: "ORDER_NOTICES", feedRole: "LIVE_RESTRICTIONS",
+    notes: "CANONICAL LIVE-RESTRICTION FEED for Delhi (Commissioner-level and district/ACP Section 163 BNSS orders). Checked daily. When new text appears, the Regulatory Watch order parser PROPOSES candidates (issuing authority, order date, legal basis, geographic scope, effective start/end where stated, prohibited or restricted activities); each field shows the text it came from and gaps stay blank. A human accepts a candidate as a DRAFT restriction and separately activates it with a source. Every Delhi event gets a restriction check at plan generation, recheck, document generation, T-72h and T-24h. The parser was written from order wording seen in reporting, not from this page's real markup (unreachable from the build sandbox): treat the first live runs as calibration. A change to the feed does NOT flag DEL-LIVE-001.",
+  },
+  {
+    key: "LEAD_PTI", title: "PTI via PSU Watch: Delhi HC asks authorities to respond to plea on permission for Ramlila Maidan meeting (2023)", type: "SECONDARY_LEAD", issuer: "PTI / PSU Watch", place: "NCT",
+    url: "https://psuwatch.com/amp/story/newsupdates/pti/dl-hc-ramlila-maidan-meeting", monitoring: null,
+    notes: "News report of a 2023 Delhi High Court matter. Per a search summary (page not read in full by the build assistant): the MCD Horticulture Department referred the applicant to Delhi Police for a no-objection certificate. A LEAD: it can never verify a rule. It is the only basis, with the other two leads, for the Ramlila 'separate approvals' warning, which therefore stays low confidence / Needs verification.",
+  },
+  {
+    key: "LEAD_LAWTREND", title: "LawTrend: Delhi HC asks authorities to respond to plea on permission for Ramlila Maidan meeting", type: "SECONDARY_LEAD", issuer: "LawTrend", place: "NCT",
+    url: "https://lawtrend.in/?p=178678", monitoring: null,
+    notes: "Legal news report of the same 2023 matter. Seen only as a search result. A LEAD: never verifies a rule.",
+  },
+  {
+    key: "LEAD_LIVELAW", title: "LiveLaw-hosted court filing (PDF) on Ramlila Maidan permission", type: "SECONDARY_LEAD", issuer: "LiveLaw (hosting)", place: "NCT",
+    url: "https://livelaw.in/pdf_upload/1700976216521-506199.pdf", monitoring: null,
+    notes: "A PDF hosted by LiveLaw that surfaced alongside the reports above, said in a search summary to record an MCD order allotting the ground subject to a police NOC. The build assistant did NOT read it. Treated as a LEAD only; a reviewer should open it and, if it is the court order, cite it properly. It can never verify a rule.",
   },
 ];
 
@@ -106,6 +123,8 @@ export interface RuleSpec {
   family: string; title: string; place: PlaceKey; authority: AuthKey | null; category: Category; level: Level; severity: Severity; certainty: LegalCertainty;
   legal: string; plain: string; action: string; condition: Condition; deadline?: DeadlineDef; docs?: string[]; vendor?: string;
   sources: { key: SourceKey; strength: "PRIMARY" | "SUPPORTING" | "LEAD"; flagOnChange?: boolean; note?: string; section?: string; relevance?: string }[]; confidence: "low" | "medium" | "high";
+  /** Rule type; "warning" is informational (a heads-up), not an action: it is never scored. Defaults to "permission". */
+  type?: "permission" | "warning";
   /** Leave in UNDER_REVIEW: never shown to users. */
   holdForReview?: boolean; note?: string;
 }
@@ -188,7 +207,7 @@ export const RULES: RuleSpec[] = [
     legal: "Delhi Traffic Police state that a Traffic NOC is mandatory for public rallies and meetings, morchas and protest gatherings, and direct applicants to DCP (Headquarters), Delhi Traffic Police Headquarters, Todapur.",
     plain: "You need a Traffic NOC from Delhi Traffic Police. We have not verified the application steps, fee or processing time.", action: "Contact DCP (Headquarters), Delhi Traffic Police HQ, Todapur, to apply.",
     condition: cond(), docs: ["Traffic NOC application"], sources: [{ key: "TRAFFIC", strength: "PRIMARY" }], confidence: "high",
-    note: "Sourced from the Delhi Traffic Police NOC page per the project owner's review. Procedure, fee and timeline not found; not asserted." },
+    note: "PRIMARY_VERIFIED from the official Delhi Traffic Police NOC page (confirmed by the project owner). Applies to every Delhi plan, including Ramlila Maidan gatherings. Procedure, fee and timeline not found; not asserted." },
   { family: "DEL-LIVE-001", title: "Check for current Section 163 or other temporary orders", place: "NCT", authority: null, category: "permissions", level: "RECOMMENDED", severity: "REQUIRED", certainty: "OFFICIAL_GUIDANCE",
     legal: "Delhi Police publish Section 163 BNSS orders, including Commissioner-level and district or ACP orders, on their Notifications page. An order in force for your date and place can change what is allowed.",
     plain: "Temporary orders can override the usual rules for a few days. Check the Delhi Police notifications for your date and place, and again just before the event.", action: "Check the Delhi Police notifications page now and again the day before.",
@@ -199,9 +218,38 @@ export const RULES: RuleSpec[] = [
     plain: "Above 1,000 people, Jantar Mantar is not an option. The Standing Order points to Ramlila Ground, which can hold up to 50,000. This is venue guidance only: we have not verified how Ramlila Ground is booked or who grants land-owner permission, so confirm that with the relevant authority. For more than 50,000 we have no verified guidance.",
     action: "Plan your gathering for Ramlila Ground or another suitable venue, and confirm the booking and land-owner process with the relevant authority.",
     condition: cond(c("attendance", "gt", 1000)), sources: SO, confidence: "high", note: `${SO_NOTE} Venue-routing guidance ONLY; not a booking workflow (see DEL-RAM-002).` },
-  { family: "DEL-RAM-002", title: "Ramlila Ground booking and land-owner authority workflow", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "UNVERIFIED",
+  { family: "DEL-RAM-101", title: "Police NOC for a gathering at Ramlila Maidan", place: "NCT", authority: null, category: "permissions", level: "LIKELY_REQUIRED", severity: "CRITICAL", certainty: "OFFICIAL_GUIDANCE",
+    legal: "Reporting on a 2023 Delhi High Court matter indicates that Delhi Police issue a no-objection certificate (NOC) for events at Ramlila Maidan, separately from the allotment of the ground. The governing Delhi Police order for this has not been read.",
+    plain: "Expect to need a police NOC for a large gathering at Ramlila Maidan, in addition to the ground allotment. We have not verified the application steps, the office or the timeline.",
+    action: "Ask Delhi Police how to apply for a police NOC for your gathering at Ramlila Maidan, and apply early.",
+    condition: cond(c("attendance", "gt", 1000)), docs: ["Police NOC application"], deadline: { kind: "UNKNOWN", specialNotes: "No published deadline verified for Ramlila Maidan." },
+    sources: [
+      { key: "SO", strength: "SUPPORTING", flagOnChange: false, relevance: "Identifies Ramlila Ground as the venue for larger gatherings; says nothing about its NOC process." },
+      { key: "LEAD_PTI", strength: "LEAD" }, { key: "LEAD_LAWTREND", strength: "LEAD" }, { key: "LEAD_LIVELAW", strength: "LEAD" },
+    ], confidence: "low",
+    note: "Hedged on purpose: LIKELY_REQUIRED, OFFICIAL_GUIDANCE, LOW confidence, so users see 'Needs verification'. The only support for a separate police NOC is press and court-filing leads (secondary, never verifying). Raise confidence only after a reviewer attaches the actual order or police page." },
+  { family: "DEL-RAM-102", title: "Ground allotment and land-owner permission for Ramlila Maidan", place: "NCT", authority: null, category: "permissions", level: "LIKELY_REQUIRED", severity: "CRITICAL", certainty: "OFFICIAL_GUIDANCE",
+    legal: "Reporting indicates that the ground is allotted by its land-owning body, understood to be the Municipal Corporation of Delhi (MCD), and that a police NOC is a separate step. The allotting authority and its process have not been verified from an official page.",
+    plain: "Using Ramlila Maidan needs the ground to be allotted to you by whoever controls it (understood to be the MCD). This is separate from police permission. We have not verified how to apply, so we give no booking steps or link.",
+    action: "Confirm with the land-owning authority how to request an allotment of Ramlila Maidan for your date.",
+    condition: cond(c("attendance", "gt", 1000)), docs: ["Ground allotment request"], deadline: { kind: "UNKNOWN", specialNotes: "No published deadline verified for Ramlila Maidan allotment." },
+    sources: [
+      { key: "SO", strength: "SUPPORTING", flagOnChange: false, relevance: "Identifies Ramlila Ground as the venue for larger gatherings; says nothing about who allots it." },
+      { key: "LEAD_PTI", strength: "LEAD" }, { key: "LEAD_LAWTREND", strength: "LEAD" }, { key: "LEAD_LIVELAW", strength: "LEAD" },
+    ], confidence: "low",
+    note: "LAND_OWNER_PERMISSION step. The exact booking endpoint is UNDER_REVIEW (DEL-RAM-002): NO MCD booking link and no steps are exposed. The owner being the MCD is reporting only." },
+  { family: "DEL-RAM-103", title: "Ramlila Maidan is not a one-step police-permission venue", type: "warning", place: "NCT", authority: null, category: "permissions", level: "RECOMMENDED", severity: "RECOMMENDED", certainty: "OFFICIAL_GUIDANCE",
+    legal: "Ramlila Maidan is not a one-step police-permission venue. Ground allotment and police NOC are separate requirements.",
+    plain: "Ramlila Maidan is not a one-step police-permission venue. Ground allotment and police NOC are separate requirements. Plan for three separate approvals: ground allotment, police NOC and the Traffic NOC.",
+    action: "", condition: cond(c("attendance", "gt", 1000)),
+    sources: [
+      { key: "SO", strength: "SUPPORTING", flagOnChange: false, relevance: "Identifies Ramlila Ground as the venue for larger gatherings." },
+      { key: "LEAD_PTI", strength: "LEAD" }, { key: "LEAD_LAWTREND", strength: "LEAD" }, { key: "LEAD_LIVELAW", strength: "LEAD" },
+    ], confidence: "low",
+    note: "Informational heads-up, not a task: never scored and never a to-do. LOW confidence so it is shown as 'Needs verification'. Based on the same leads as DEL-RAM-101/102." },
+  { family: "DEL-RAM-002", title: "Exact Ramlila Ground booking endpoint (under review)", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "UNVERIFIED",
     legal: "", plain: "Not yet verified. No steps are given.", action: "", condition: cond(c("attendance", "gt", 1000)), sources: [], confidence: "low", holdForReview: true,
-    note: "GAP RECORD. No clean current official page found for the end-to-end Ramlila Ground booking or land-owner form. Kept UNDER_REVIEW so it never reaches users. Do not guess steps." },
+    note: "GAP RECORD: the exact booking endpoint is UNDER_REVIEW. No clean current official page was found for the Ramlila Ground booking or land-owner form, so NO direct MCD booking link is exposed anywhere (a test enforces this). Kept UNDER_REVIEW so it never reaches users. Do not guess steps or URLs." },
   // ---- Generic Delhi procession/march baseline (conservative). Applies to any plan with a march, anywhere in NCT Delhi.
   // Everything here is deliberately limited to what the sources support; clause-level L&O/10/2022 content is held (DEL-PROC-100).
   { family: "DEL-PROC-001", title: "A current Delhi Police order governs rallies and processions", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "PRIMARY_VERIFIED",
@@ -231,11 +279,11 @@ export const RULES: RuleSpec[] = [
       { key: "SO_10_2022", strength: "SUPPORTING", flagOnChange: false, relevance: "Existence of the current framework only." },
     ], confidence: "medium",
     note: "REVIEWER MUST READ ss. 28-29 of the Act before verifying: the build assistant could not read the text (India Code unreachable) and took the sections from search results. Confidence is MEDIUM so users see 'please verify with the authority'." },
-  { family: "DEL-PROC-004", title: "Sound permission for processions that use sound", place: "NCT", authority: null, category: "permissions", level: "LIKELY_REQUIRED", severity: "REQUIRED", certainty: "OFFICIAL_GUIDANCE",
+  { family: "DEL-PROC-004", title: "Sound permission for processions and large gatherings that use sound", place: "NCT", authority: null, category: "permissions", level: "LIKELY_REQUIRED", severity: "REQUIRED", certainty: "OFFICIAL_GUIDANCE",
     legal: "Use of music or loudspeakers in public places is subject to police regulation under the Delhi Police Act, 1978. (Basis not yet confirmed; see notes.)",
     plain: "If your procession uses a sound system or loudspeaker, expect to need permission for it. We haven't confirmed the exact basis or procedure, so please verify with Delhi Police.",
     action: "Ask Delhi Police whether your sound set-up needs permission, and apply with your route and timing.",
-    condition: cond(c("march", "eq", true), c("sound", "eq", true)),
+    condition: { all: [c("sound", "eq", true)], any: [c("march", "eq", true), c("attendance", "gt", 1000)] },
     sources: [{ key: "ACT_1978", strength: "SUPPORTING", flagOnChange: true, relevance: "Section 28 touches control of noisy activities and music in public places (per search results, unread).", section: "s. 28 (to be confirmed)" }], confidence: "low",
     note: "The project owner reports sound permission as an independently verified generic requirement but did not supply the basis, and none could be found. Surfaced with LOW confidence so users see 'Needs verification' rather than a fact. Attach the actual provision/order and raise confidence to promote it. At Jantar Mantar the verified DEL-JM-010 applies instead/in addition." },
   { family: "DEL-PROC-100", title: "L&O/10/2022 clause-level requirements for organisers", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "UNVERIFIED",

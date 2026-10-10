@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { endSession, ensureAnonId, getUser, requireAdmin, startSession } from "@/lib/auth";
 import { loadOwnedEvent } from "@/lib/access";
+import { acknowledgeChanges, markApplicationSubmitted, updateEventDetails } from "@/lib/event-changes";
+import { runRestrictionCheck } from "@/lib/restriction-checks";
 import { one } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { allow } from "@/lib/ratelimit";
@@ -12,11 +14,11 @@ import { DOC_KINDS } from "@/lib/documents";
 import { parseAnswers, vendorRequestSchema, waitlistSchema } from "@/lib/validation";
 import {
   addJurisdiction, addWaitlist, archiveJurisdiction, audit, createEvent, createVendorRequest, eventsFor, getEvent, getJurisdiction, setJurisdictionSupported,
-  jurisdictionChain, recordDocument, setRequirementDone, track, updateVendorRequest, listVendorCategories, type JurisdictionLevel, JURISDICTION_LEVELS,
+  jurisdictionChain, metaForChain, recordDocument, setRequirementDone, track, updateVendorRequest, listVendorCategories, type JurisdictionLevel, JURISDICTION_LEVELS,
 } from "@/lib/store";
 import {
   archiveRule, checkSource, chainFor, cloneAsNewVersion, dismissChange, generateEvaluation, linkSource, publishRule, recheckEvent, recordSourceContent, saveAuthority,
-  saveRestriction, saveRuleDraft, saveSource, saveTemplateVersion, selectTemplateMap, startReplacement, submitForReview, unlinkSource, type RuleInput,
+  acceptCandidate, listRestrictions, parseOrderText, rejectCandidate, saveRestriction, saveRuleDraft, saveSource, saveTemplateVersion, selectTemplateMap, startReplacement, submitForReview, unlinkSource, type RuleInput,
 } from "@/lib/knowledge";
 import {
   ASSEMBLY_TYPES, CATEGORIES, CONDITION_FIELDS, CONFIDENCES, EVIDENCE_STRENGTHS, INHERITANCE_MODES, LEGAL_CERTAINTIES, LEVELS, OPS, SEVERITIES, SOURCE_TYPES, type Clause, type Condition, type DeadlineDef,
@@ -27,6 +29,13 @@ export type ActionResult = { ok: false; errors: Record<string, string> } | { ok:
 const safeNext = (n: unknown) => (typeof n === "string" && /^\/(?!\/)[\w\-/?=&.%]*$/.test(n) ? n : "/account");
 
 /* ---------- Planning ---------- */
+
+/** Larger events (above the place's own threshold, held as data) must state their purpose. */
+async function largeEventErrors(cityId: string, a: { attendance: number; description: string }): Promise<Record<string, string> | null> {
+  const meta = await metaForChain(await jurisdictionChain(cityId));
+  if (typeof meta.largeEventAbove === "number" && a.attendance > meta.largeEventAbove && a.description.trim().length < 10) return { description: "Say in a sentence or two what the event is for" };
+  return null;
+}
 
 export async function createPlanAction(cityId: string, raw: unknown, venueId: string | null = null): Promise<ActionResult> {
   const city = await getJurisdiction(cityId);
@@ -39,10 +48,14 @@ export async function createPlanAction(cityId: string, raw: unknown, venueId: st
   }
   const parsed = parseAnswers(raw);
   if (!parsed.ok) return parsed;
+  const large = await largeEventErrors(city.id, parsed.answers);
+  if (large) return { ok: false, errors: large };
   const anon = await ensureAnonId();
   const user = await getUser();
   const id = await createEvent(anon, user?.id ?? null, city.id, parsed.answers, venue);
-  await generateEvaluation((await getEvent(id))!, "GENERATED"); // immutable record of the rule versions this plan was built on
+  const created = (await getEvent(id))!;
+  await generateEvaluation(created, "GENERATED"); // immutable record of the rule versions this plan was built on
+  await runRestrictionCheck(created, "PLAN_GENERATED");
   await track("complete_questionnaire", anon, { eventId: id, city: city.name, attendance: parsed.answers.attendance, kind: parsed.answers.kind });
   redirect(`/plan/${id}`);
 }
@@ -60,6 +73,7 @@ export async function toggleRequirementAction(formData: FormData) {
 export async function recheckPlanAction(formData: FormData) {
   const event = await loadOwnedEvent(String(formData.get("eventId")));
   await recheckEvent(event);
+  await runRestrictionCheck(event, "RECHECK");
   revalidatePath(`/plan/${event.id}`);
   redirect(`/plan/${event.id}?rechecked=1`);
 }
@@ -69,8 +83,32 @@ export async function generatePackAction(formData: FormData) {
   const event = await loadOwnedEvent(eventId);
   const templates = await selectTemplateMap(await chainFor(event), event.date);
   for (const d of DOC_KINDS) await recordDocument(eventId, d.slug, templates[d.slug]?.id.startsWith("builtin:") ? null : templates[d.slug]?.id ?? null, templates[d.slug]?.version ?? null);
+  await runRestrictionCheck(event, "DOCUMENT_GENERATION");
   await track("generate_document", await ensureAnonId(), { eventId, kinds: DOC_KINDS.length });
   redirect(`/plan/${eventId}/pack?ready=1`);
+}
+
+export async function markApplicationAction(formData: FormData) {
+  const event = await loadOwnedEvent(String(formData.get("eventId")));
+  await markApplicationSubmitted(event.id, formData.get("submitted") !== "false");
+  revalidatePath(`/plan/${event.id}`);
+}
+
+export async function acknowledgeChangesAction(formData: FormData) {
+  const event = await loadOwnedEvent(String(formData.get("eventId")));
+  await acknowledgeChanges(event.id);
+  revalidatePath(`/plan/${event.id}`);
+}
+
+export async function updatePlanDetailsAction(eventId: string, raw: unknown): Promise<ActionResult> {
+  const event = await loadOwnedEvent(eventId);
+  const parsed = parseAnswers(raw);
+  if (!parsed.ok) return parsed;
+  const large = await largeEventErrors(event.jurisdictionId, parsed.answers);
+  if (large) return { ok: false, errors: large };
+  await updateEventDetails(event, parsed.answers);
+  revalidatePath(`/plan/${event.id}`);
+  redirect(`/plan/${event.id}?updated=1`);
 }
 
 /* ---------- Vendors ---------- */
@@ -340,8 +378,43 @@ export async function saveRestrictionAction(fd: FormData) {
       endsAt: new Date(str(fd, "endsAt")).toISOString(), legalBasis: str(fd, "legalBasis"), affectedActivities: str(fd, "affectedActivities").split(",").map((x) => x.trim().toUpperCase()).filter(Boolean),
       effect: oneOf(str(fd, "effect"), ["PROHIBITED", "RESTRICTED", "CONDITIONAL"] as const, "RESTRICTED"), plainExplanation: str(fd, "plainExplanation"), sourceId: uuidOrNull(str(fd, "sourceId")),
       status: oneOf(str(fd, "status"), ["DRAFT", "ACTIVE", "EXPIRED", "ARCHIVED"] as const, "DRAFT"),
+      issuingAuthority: str(fd, "issuingAuthority"), orderDate: dateOrNull(str(fd, "orderDate")), orderReference: str(fd, "orderReference"), sourceExcerpt: str(fd, "sourceExcerpt"),
     }, actor);
     revalidatePath("/admin/restrictions");
+  });
+}
+
+/** Human step: a DRAFT restriction becomes ACTIVE only with a source (saveRestriction enforces it). */
+export async function activateRestrictionAction(fd: FormData) {
+  const id = str(fd, "id");
+  await guarded("/admin/restrictions", async (actor) => {
+    const r = (await listRestrictions()).find((x) => x.id === id);
+    if (!r) throw new Error("Restriction not found");
+    await saveRestriction(id, { ...r, sourceId: uuidOrNull(str(fd, "sourceId")) ?? r.sourceId, status: "ACTIVE" }, actor);
+    revalidatePath("/admin/restrictions");
+  });
+}
+
+export async function parseOrderAction(fd: FormData) {
+  await guarded("/admin/restrictions", async (actor) => {
+    const n = await parseOrderText(str(fd, "sourceId"), String(fd.get("text") ?? ""), actor);
+    return `/admin/restrictions?saved=1&parsed=${n}`;
+  });
+}
+
+export async function reviewCandidateAction(fd: FormData) {
+  const id = str(fd, "id");
+  await guarded("/admin/restrictions", async (actor) => {
+    if (str(fd, "op") === "reject") { await rejectCandidate(id, str(fd, "notes") || "Not a restriction that applies.", actor); return; }
+    const from = new Date(str(fd, "startsAt")), to = new Date(str(fd, "endsAt"));
+    if (isNaN(+from) || isNaN(+to)) throw new Error("Enter the start and end of the order: the parser does not guess missing dates.");
+    await acceptCandidate(id, {
+      jurisdictionId: str(fd, "jurisdictionId"), title: str(fd, "title"), geographicScope: str(fd, "geographicScope"), startsAt: from.toISOString(), endsAt: to.toISOString(),
+      legalBasis: str(fd, "legalBasis"), affectedActivities: str(fd, "affectedActivities").split(",").map((x) => x.trim().toUpperCase()).filter(Boolean),
+      effect: oneOf(str(fd, "effect"), ["PROHIBITED", "RESTRICTED", "CONDITIONAL"] as const, "RESTRICTED"), plainExplanation: str(fd, "plainExplanation"),
+      issuingAuthority: str(fd, "issuingAuthority"), orderDate: dateOrNull(str(fd, "orderDate")), orderReference: str(fd, "orderReference"),
+    }, actor);
+    return "/admin/restrictions?saved=1";
   });
 }
 

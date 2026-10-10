@@ -6,23 +6,28 @@ import { track } from "./client";
 
 export interface CityOption { id: string; label: string; isDevSeed: boolean }
 
-const STEPS = ["Where?", "When?", "What kind of gathering?", "How many people?", "What will you use?", "Who's organising?"] as const;
+type StepKey = "where" | "when" | "kind" | "howmany" | "use" | "large" | "who";
+const TITLE: Record<StepKey, string> = { where: "Where?", when: "When?", kind: "What kind of gathering?", howmany: "How many people?", use: "What will you use?", large: "Tell us more.", who: "Who's organising?" };
+const PROMO: [string, string][] = [["NONE", "None yet"], ["DRAFTING", "Being drafted"], ["PRINTED", "Printed"], ["CIRCULATED", "Already circulated"]];
 
 interface Form {
   cityId: string; venueId: string; name: string; date: string; startTime: string; endTime: string; kind: "static" | "march"; startLocation: string; destination: string;
   description: string; attendance: string; stage: boolean; sound: boolean; vehicles: boolean; food: boolean;
   organizerType: string; organizerName: string; organizerEmail: string; organizerPhone: string;
+  speakers: string; promoStatus: string; trafficFootprint: string;
 }
 
 const EMPTY: Form = {
   cityId: "", venueId: "", name: "", date: "", startTime: "10:00", endTime: "13:00", kind: "static", startLocation: "", destination: "", description: "", attendance: "",
   stage: false, sound: false, vehicles: false, food: false, organizerType: "individual", organizerName: "", organizerEmail: "", organizerPhone: "",
+  speakers: "", promoStatus: "NONE", trafficFootprint: "",
 };
 
 /** Which step does each server-side error key belong to? */
-const FIELD_STEP: Record<string, number> = {
-  city: 0, name: 1, date: 1, startTime: 1, endTime: 1, kind: 2, startLocation: 2, destination: 2, description: 2, attendance: 3,
-  organizerType: 5, organizerName: 5, organizerEmail: 5, organizerPhone: 5,
+const FIELD_STEP: Record<string, StepKey> = {
+  city: "where", name: "when", date: "when", startTime: "when", endTime: "when", kind: "kind", startLocation: "kind", destination: "kind", attendance: "howmany",
+  description: "large", speakers: "large", promoStatus: "large", trafficFootprint: "large",
+  organizerType: "who", organizerName: "who", organizerEmail: "who", organizerPhone: "who",
 };
 
 const STORAGE = "bmp:draft";
@@ -83,7 +88,7 @@ function Waitlist({ onBack }: { onBack: () => void }) {
   );
 }
 
-export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; venues?: Record<string, { id: string; label: string }[]>; today: string }) {
+export function Wizard({ cities, venues = {}, today, largeAbove = {} }: { cities: CityOption[]; venues?: Record<string, { id: string; label: string }[]>; today: string; largeAbove?: Record<string, number> }) {
   const [step, setStep] = useState(0);
   const [f, setF] = useState<Form>({ ...EMPTY, cityId: cities.length === 1 ? cities[0].id : "" });
   const [elsewhere, setElsewhere] = useState(false);
@@ -91,12 +96,17 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
   const [pending, start] = useTransition();
   const started = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  // The large-event step appears only when the place defines a threshold (place data) and the crowd is above it.
+  const threshold = largeAbove[f.cityId];
+  const isLarge = threshold != null && Number(f.attendance) > threshold;
+  const STEPS: StepKey[] = isLarge ? ["where", "when", "kind", "howmany", "use", "large", "who"] : ["where", "when", "kind", "howmany", "use", "who"];
+  const key = STEPS[Math.min(step, STEPS.length - 1)];
 
   // Restore an unfinished draft (browser-only convenience).
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE);
-      if (raw) { const d = JSON.parse(raw); setF((cur) => ({ ...cur, ...d.f })); setStep(Math.min(d.step ?? 0, STEPS.length - 1)); }
+      if (raw) { const d = JSON.parse(raw); setF((cur) => ({ ...cur, ...d.f })); setStep(Math.max(0, d.step ?? 0)); }
     } catch { /* ignore */ }
   }, []);
   useEffect(() => { try { localStorage.setItem(STORAGE, JSON.stringify({ f, step })); } catch { /* ignore */ } }, [f, step]);
@@ -108,20 +118,23 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
     setErrors((e) => { const { [k as string]: _, ...rest } = e; return rest; });
   };
 
-  function validate(s: number): Record<string, string> {
+  function validate(s: StepKey): Record<string, string> {
     const e: Record<string, string> = {};
-    if (s === 0 && !f.cityId) e.city = "Choose where it's happening";
-    if (s === 1) {
+    if (s === "where" && !f.cityId) e.city = "Choose where it's happening";
+    if (s === "when") {
       if (f.name.trim().length < 2) e.name = "Give your event a name";
       if (!f.date) e.date = "Choose a date"; else if (f.date < today) e.date = "Pick a date in the future";
       if (f.endTime <= f.startTime) e.endTime = "End time must be after start time";
     }
-    if (s === 2) {
+    if (s === "kind") {
       if (f.startLocation.trim().length < 3) e.startLocation = "Where does it start?";
       if (f.kind === "march" && f.destination.trim().length < 3) e.destination = "Where does the march end?";
     }
-    if (s === 3 && !(Number(f.attendance) >= 1)) e.attendance = "Roughly how many? Enter a number";
-    if (s === 5) {
+    if (s === "howmany" && !(Number(f.attendance) >= 1)) e.attendance = "Roughly how many? Enter a number";
+    if (s === "large") {
+      if (f.description.trim().length < 10) e.description = "Say in a sentence or two what the event is for";
+    }
+    if (s === "who") {
       if (f.organizerName.trim().length < 2) e.organizerName = "Organizer name is required";
       if (!/^\S+@\S+\.\S+$/.test(f.organizerEmail)) e.organizerEmail = "Enter a valid email";
     }
@@ -129,10 +142,10 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
   }
 
   function next() {
-    const e = validate(step);
+    const e = validate(key);
     setErrors(e);
     if (Object.keys(e).length) return;
-    if (step < STEPS.length - 1) { setStep(step + 1); return; }
+    if (key !== "who") { setStep(step + 1); return; }
     start(async () => {
       const { cityId, venueId, ...rest } = f;
       try { localStorage.removeItem(STORAGE); } catch { /* ignore */ }
@@ -141,8 +154,8 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
       if (r && !r.ok) {
         setErrors(r.errors);
         try { localStorage.setItem(STORAGE, JSON.stringify({ f, step })); } catch { /* ignore */ }
-        const first = Math.min(...Object.keys(r.errors).map((k) => FIELD_STEP[k] ?? 0));
-        setStep(Number.isFinite(first) ? first : 0);
+        const idx = Object.keys(r.errors).map((k) => STEPS.indexOf(FIELD_STEP[k] ?? "where")).filter((i) => i >= 0);
+        setStep(idx.length ? Math.min(...idx) : 0);
       }
     });
   }
@@ -158,18 +171,18 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
 
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <div className="mb-8" role="group" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
-        <div className="flex items-center justify-between label"><span>Step {step + 1} of {STEPS.length}</span><span className="text-mute">Plan a protest</span></div>
+      <div className="mb-8" role="group" aria-label={`Step ${Math.min(step, STEPS.length - 1) + 1} of ${STEPS.length}`}>
+        <div className="flex items-center justify-between label"><span>Step {Math.min(step, STEPS.length - 1) + 1} of {STEPS.length}</span><span className="text-mute">Plan a protest</span></div>
         <div className="mt-3 flex gap-1.5" aria-hidden="true">
-          {STEPS.map((_, i) => <span key={i} className={`h-2 flex-1 border-2 border-ink transition-colors duration-500 ${i <= step ? "bg-ink" : "bg-transparent"}`} />)}
+          {STEPS.map((_, i) => <span key={i} className={`h-2 flex-1 border-2 border-ink transition-colors duration-500 ${i <= Math.min(step, STEPS.length - 1) ? "bg-ink" : "bg-transparent"}`} />)}
         </div>
       </div>
 
-      <form key={step} className="slide-in" noValidate onSubmit={(e) => { e.preventDefault(); next(); }}>
-        <h1 ref={heading} tabIndex={-1} className="display text-[clamp(3rem,13vw,6.5rem)] outline-none">{STEPS[step]}</h1>
+      <form key={key} className="slide-in" noValidate onSubmit={(e) => { e.preventDefault(); next(); }}>
+        <h1 ref={heading} tabIndex={-1} className="display text-[clamp(3rem,13vw,6.5rem)] outline-none">{TITLE[key]}</h1>
 
         <div className="mt-8 space-y-6">
-          {step === 0 && (
+          {key === "where" && (
             <>
               <div>
                 <Label htmlFor="city" hint="Pick from cities we cover today.">City</Label>
@@ -197,7 +210,7 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
             </>
           )}
 
-          {step === 1 && (
+          {key === "when" && (
             <>
               <div><Label htmlFor="name" hint="A working title is fine.">Event name</Label><input id="name" className="field" value={f.name} maxLength={120} onChange={(e) => set("name", e.target.value)} aria-describedby="name-e" aria-invalid={!!errors.name} /><Err id="name-e" msg={errors.name} /></div>
               <div><Label htmlFor="date">Date</Label><input id="date" type="date" min={today} className="field" value={f.date} onChange={(e) => set("date", e.target.value)} aria-describedby="date-e" aria-invalid={!!errors.date} /><Err id="date-e" msg={errors.date} /></div>
@@ -208,7 +221,7 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
             </>
           )}
 
-          {step === 2 && (
+          {key === "kind" && (
             <>
               <fieldset>
                 <legend className="label mb-2">Format</legend>
@@ -226,14 +239,14 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
             </>
           )}
 
-          {step === 3 && (
+          {key === "howmany" && (
             <>
               <div><Label htmlFor="att" hint="A rough number is fine. Thresholds in local rules depend on it.">Expected attendance</Label><input id="att" inputMode="numeric" pattern="[0-9]*" className="field text-3xl font-black" value={f.attendance} onChange={(e) => set("attendance", e.target.value.replace(/\D/g, "").slice(0, 7))} aria-describedby="att-e" aria-invalid={!!errors.attendance} /><Err id="att-e" msg={errors.attendance} /></div>
               <div className="grid grid-cols-3 gap-3">{[25, 100, 250, 500, 1000].map(preset)}</div>
             </>
           )}
 
-          {step === 4 && (
+          {key === "use" && (
             <div className="space-y-3">
               <Toggle id="stage" checked={f.stage} onChange={(v) => set("stage", v)} title="Stage" hint="A raised platform or structure" />
               <Toggle id="sound" checked={f.sound} onChange={(v) => set("sound", v)} title="Loudspeaker / sound" hint="Amplified speech or music" />
@@ -242,7 +255,21 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
             </div>
           )}
 
-          {step === 5 && (
+          {key === "large" && (
+            <>
+              <p className="panel p-4 text-sm" role="note">Events of this size usually need more detail for the authorities. These answers go into your documents; you can edit them later.</p>
+              <div><Label htmlFor="purpose" hint="Required for larger events. What is the gathering for?">Event purpose</Label><textarea id="purpose" className="field" value={f.description} maxLength={1000} onChange={(e) => set("description", e.target.value)} aria-describedby="purpose-e" aria-invalid={!!errors.description} /><Err id="purpose-e" msg={errors.description} /></div>
+              <div><Label htmlFor="speakers" hint="Optional. Names and roles of anyone you expect to address the crowd, including any VIPs or public figures.">Speakers / VIPs</Label><textarea id="speakers" className="field" value={f.speakers} maxLength={500} onChange={(e) => set("speakers", e.target.value)} /></div>
+              <fieldset>
+                <legend className="label mb-2">Promotional material</legend>
+                <div className="grid grid-cols-2 gap-3">{PROMO.map(([k, t]) => <button key={k} type="button" aria-pressed={f.promoStatus === k} onClick={() => set("promoStatus", k)} className={`tile min-h-14 px-3 text-left font-extrabold ${f.promoStatus === k ? "bg-accent" : "bg-paper"}`}>{t}</button>)}</div>
+              </fieldset>
+              <div><Label htmlFor="footprint" hint="Optional. Roads you expect to be used or closed, where people will arrive, queue or park, and any vehicle movements.">Route and traffic footprint</Label><textarea id="footprint" className="field" value={f.trafficFootprint} maxLength={500} onChange={(e) => set("trafficFootprint", e.target.value)} /></div>
+              <p className="text-sm text-mute">You give your own organizer details on the next step.</p>
+            </>
+          )}
+
+          {key === "who" && (
             <>
               <div>
                 <Label htmlFor="otype">Organizing as</Label>
@@ -262,7 +289,7 @@ export function Wizard({ cities, venues = {}, today }: { cities: CityOption[]; v
         <div className="mt-10 flex gap-3">
           {step > 0 && <button type="button" className="btn btn-ghost" onClick={() => setStep(step - 1)}><Back /> Back</button>}
           <button type="submit" className="btn btn-accent flex-1" disabled={pending}>
-            {pending ? "Building your plan…" : step === STEPS.length - 1 ? "Show my readiness" : "Next"} {!pending && <Arrow />}
+            {pending ? "Building your plan…" : key === "who" ? "Show my readiness" : "Next"} {!pending && <Arrow />}
           </button>
         </div>
       </form>
