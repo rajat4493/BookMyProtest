@@ -69,7 +69,7 @@ Payments, donations, crowdfunding, vendor checkout, escrow, political ads/target
 - Moderation viewpoint-neutral? Reason codes are conduct-based only. Unneeded data? None collected.
 
 ## Engineering handover
-- Base commit: df0861d (v1.0 work committed on top on `claude/loving-volta-xrhoqz`; see git log for the v1.0 SHA). No PR; no production deploy.
+- Base commit: df0861d (v1.0 work committed on top on `claude/loving-volta-xrhoqz`; v1.0 commit 9d69d72). No PR; no production deploy.
 - Migration: `db/migrations/010_public_protests.sql` (additive). Rollback: drop the five new tables and the two `users` columns, revert the commit; existing plans/events are untouched. No private plan was published.
 - Routes: `/protests`, `/protests/[slug]`, `/plan/[id]/publish`, `/plan/[id]/publish/toolkit`, `/terms`, `/privacy`, `/platform-guidelines`, `/admin/protests`.
 - Key files: `src/lib/protests.ts`, `src/lib/moderation.ts`, `src/lib/engine/{provenance,public-protest,toolkit}.ts`, `src/app/actions.ts`, `src/lib/store.ts`, components `provenance|transparency|protest-bits|protest-card|legal-draft`, tests `tests/public-protests.test.ts`, `tests/public-db.test.ts`.
