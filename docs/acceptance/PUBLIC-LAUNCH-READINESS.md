@@ -15,7 +15,7 @@ Current state (checked 2026-10-10 with `npm run rc:check` against the dev databa
 | `e59f122` | v1.0 docs only (records `9d69d72`; version bump to 1.0.0 is in `9d69d72`'s tree via package.json). |
 | `7bb0f27` | **v1.0.1 implementation** (37 files): user reports, verified-email gating, durable rate limits, identity signals, rule-verification gate, e2e/a11y updates, migration `011`. |
 | `8f9213a` | v1.0.1 version bump only (`package.json`). |
-| *this commit* | Readiness checklist + `scripts/rc-check.ts` + `npm run rc:check` (no product code). |
+| `e9b4bcd` | Readiness checklist + `scripts/rc-check.ts` + `npm run rc:check` (no product code). |
 
 To see the whole hardening change: `git diff 9d69d72..7bb0f27`. The release candidate is whatever commit `rc:check` prints with a clean working tree; do not tag a commit it reports as dirty.
 
