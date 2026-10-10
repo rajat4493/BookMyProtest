@@ -53,3 +53,37 @@ Where the data lives is noted so the capture is a query, not a research project.
 - Which venues got official-check records and how stale they were; how many public-report signals were later confirmed or contradicted.
 - How often organisers saw "Known to BookMyProtest" overlaps and changed date; whether two BMP users applied for the same Ramlila date.
 - Whether the Ramlila booking-side and police-side pictures actually diverged once real checks exist (the 2023 lesson).
+
+## Real-organizer acceptance test (v0.9, Delhi / Jantar Mantar / 500 people)
+Full report: [acceptance/DELHI-JANTAR-500.md](acceptance/DELHI-JANTAR-500.md). Verdict: NOT READY FOR PRIVATE PILOT.
+
+**What real organizer testing exposed that architecture and tests did not**
+- Every engine invariant held (evidence labels, deadline maths, change snapshots, "no conflict found" wording) and the organizer was still left with the hardest question unanswered: *where do I send this, and who do I call?* Tests prove correctness of what we say; they cannot show what we never say.
+- "Next action" was a rule title ("Prior police permission"), technically correct and operationally useless.
+- A 100% score produced "You're prepared." next to an unconfirmed permission and a live restriction. Tick-boxes had quietly become a stand-in for permission status.
+- The same facts were scattered across five places (dashboard row, pack checklist, undertaking sheet, request letter, timeline) with two different deadline dates.
+
+**Assumptions that were wrong**
+- "Honest uncertainty is enough": flagging gaps ("we have not verified how it is submitted") is trustworthy but not helpful unless it also says whom to ask and by when.
+- "Verified" status is a property of a rule; to an organizer it reads as "BookMyProtest checked the document". Today it means the owner's summary plus the load date.
+- "Conflict intelligence helps": with no official checks recorded, it mostly says "not checked".
+- Questions we ask (stage, food, organizer type, end time) were assumed useful; none changed the Delhi output. The one input that matters for buses (how many) was never asked.
+
+**Missing data that matters most (in order)**
+1. Submission method, office, contact for DCP New Delhi District.
+2. A link to the official undertaking form, and who issues the land-owner NOC.
+3. Traffic NOC procedure and designated bus parking.
+4. A real fetch of the Notifications feed.
+5. Official availability signals for Jantar Mantar's police side.
+
+**Features that turned out unnecessary or premature**
+- The percentage ring as the headline for a permission-gated activity.
+- Elaborate venue-conflict machinery before any official check data exists.
+- Stage and food/water toggles for Delhi; the hero "Get quotes" button before compliance is understood.
+
+**Block future work unless it removes organizer effort**
+- No new rule family, venue, or signal type until the Jantar Mantar scenario can be completed with at most two phone calls.
+- No new scoring/visual treatment of readiness; only a status derived from evidence (permission, restrictions, unknowns).
+- No vendor feature that appears before the compliance need is established.
+- Every milestone ends with a real-organizer run like this one, with an external-dependency ledger; the KPI is *external effort eliminated*, not rules covered.
+- Method note: running the journey also surfaced two cheap wording bugs (a misleading "You're prepared." and press reports listed as sources) that no unit test had a reason to look for.

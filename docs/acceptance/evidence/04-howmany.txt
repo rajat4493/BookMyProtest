@@ -1,0 +1,14 @@
+URL: http://localhost:3101/plan
+
+STEP 4 OF 6
+PLAN A PROTEST
+HOW MANY PEOPLE?
+EXPECTED ATTENDANCE
+A rough number is fine. Thresholds in local rules depend on it.
+25
+100
+250
+500
+1,000+
+BACK
+NEXT

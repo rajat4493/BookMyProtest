@@ -50,7 +50,7 @@ export function headline(r: Readiness): { title: string; sub: string } {
   const b = r.blockers.length;
   const plural = (n: number) => (n === 1 ? "blocker" : "blockers");
   if (r.totalItems === 0) return { title: "Nothing configured yet.", sub: "We have no requirements for this plan. Check with the relevant authority." };
-  if (r.pct >= 100) return { title: "You're prepared.", sub: "Everything on your list is done. Verify details with the authority before the day." };
+  if (r.pct >= 100) return { title: "Checklist complete.", sub: "Ticking items is not permission. Confirm your permission and the latest orders with the authority before the day." };
   if (b === 0) return { title: r.pct >= 75 ? "Nearly there." : "No blockers. Keep going.", sub: `${r.required.length + r.recommended.length} items left, none critical.` };
   if (r.pct >= 70) return { title: "You're close.", sub: `${b} critical ${plural(b)} still ${b === 1 ? "needs" : "need"} attention.` };
   if (r.pct >= 40) return { title: "Your plan is taking shape.", sub: `${b} ${plural(b)} remain.` };

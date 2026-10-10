@@ -120,7 +120,8 @@ describe("readiness", () => {
     expect(headline(r).sub).toContain("1 ");
     const all = computeReadiness(items.map((i) => ({ ...i, done: true })));
     expect(all.pct).toBe(100);
-    expect(headline(all).title).toBe("You're prepared.");
+    expect(headline(all).title).toBe("Checklist complete.");
+    expect(headline(all).sub).toMatch(/not permission/i);
     expect(headline(computeReadiness([])).title).toBe("Nothing configured yet.");
   });
 });

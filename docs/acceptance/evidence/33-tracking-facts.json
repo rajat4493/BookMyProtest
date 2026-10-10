@@ -1,0 +1,23 @@
+{
+ "snapshotsBefore": 1,
+ "snapshotsAfter": 3,
+ "nonMaterialBanner": 0,
+ "materialBanner": 1,
+ "firstEvalUntouched": true,
+ "changes": [
+  {
+   "changed_fields": [
+    "organizerPhone"
+   ],
+   "material": false,
+   "after_application": false
+  },
+  {
+   "changed_fields": [
+    "attendance"
+   ],
+   "material": true,
+   "after_application": true
+  }
+ ]
+}

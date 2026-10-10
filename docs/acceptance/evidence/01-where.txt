@@ -1,0 +1,19 @@
+URL: http://localhost:3101/plan
+
+STEP 1 OF 6
+PLAN A PROTEST
+WHERE?
+CITY
+Pick from cities we cover today.
+Choose a city
+New Delhi District, NCT Delhi
+My city isn’t listed
+VENUE
+Some places have venue-specific rules. Pick yours if it's listed.
+Another location / not decided
+Jantar Mantar
+Ramlila Maidan
+
+Rules are local, so we only show requirements for places we’ve configured. Nowhere else yet.
+
+NEXT

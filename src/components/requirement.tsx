@@ -96,7 +96,7 @@ export function RequirementRow({ item, eventId }: { item: EvaluatedItem; eventId
             {item.deadline && <p><span className="label">Target date: </span>{formatDate(item.deadline)}{r.deadlineNote ? ` — ${r.deadlineNote}` : ""}</p>}
             {!item.deadline && r.deadlineNote && <p><span className="label">Deadline: </span>{r.deadlineNote}</p>}
             {r.officialLink && <p><a className="underline underline-offset-2" href={r.officialLink} target="_blank" rel="noopener noreferrer">Official link</a></p>}
-            {r.sources.length > 0 && <p className="text-mute"><span className="label">Sources: </span>{r.sources.map((s) => s.title || s.url).filter(Boolean).join("; ")}</p>}
+            {r.sources.length > 0 && <p className="text-mute"><span className="label">Sources: </span>{r.sources.map((s) => (s.title || s.url) && `${s.title || s.url}${s.sourceType === "SECONDARY_LEAD" || s.strength === "LEAD" ? " (press report, lead only: not evidence)" : ""}`).filter(Boolean).join("; ")}</p>}
           </div>
         </details>
         {r.vendorCategory && !item.done && (
