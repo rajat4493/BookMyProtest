@@ -17,7 +17,8 @@ export type ReasonKind = "BLOCKING" | "UNKNOWN" | "WARNING";
 export interface Reason { code: string; kind: ReasonKind; text: string; next?: string }
 export interface EventReadiness { state: ReadinessState; headline: string; reasons: Reason[] }
 
-export const READINESS_LABEL: Record<ReadinessState, string> = { READY: "Ready", READY_WITH_WARNINGS: "Ready with warnings", NOT_READY: "Not ready", STATUS_UNKNOWN: "Status unknown" };
+/** Product-facing names. These describe the state of the organizer's PREPARATION, never an approval by anyone. (Internal codes keep their names.) */
+export const READINESS_LABEL: Record<ReadinessState, string> = { READY: "Preparation complete", READY_WITH_WARNINGS: "Preparation complete with warnings", NOT_READY: "Action required", STATUS_UNKNOWN: "Status unknown" };
 /** The rule type that marks the police permission an event cannot proceed without. */
 export const GATE_TYPE = "permission_gate";
 
@@ -47,7 +48,7 @@ export function computeEventReadiness(i: ReadinessInput): EventReadiness {
       NOT_STARTED: "You have not applied yet.", PREPARED: "Your application is prepared but not submitted.", SUBMITTED: "Your application is submitted; no approval has been recorded.",
       ACKNOWLEDGED: "Your application is acknowledged; no approval has been recorded.", REJECTED: "Your application was rejected.", WITHDRAWN: "Your application was withdrawn.", EXPIRED: "Your permission or application has expired.",
     };
-    reasons.push({ code: "PERMISSION_NOT_APPROVED", kind: "BLOCKING", text: `Police permission is not approved (status: ${PERMISSION_LABEL[i.permission]}). ${why[i.permission] ?? ""}`.trim(), next: i.permission === "NOT_STARTED" || i.permission === "PREPARED" ? gates[0].rule.userAction || "Submit your application." : "Record the approval once you have the permission in hand." });
+    reasons.push({ code: "PERMISSION_NOT_APPROVED", kind: "BLOCKING", text: `Police permission is not recorded as approved (status: ${PERMISSION_LABEL[i.permission]}). ${why[i.permission] ?? ""}`.trim(), next: i.permission === "NOT_STARTED" || i.permission === "PREPARED" ? gates[0].rule.userAction || "Submit your application." : "Record the approval once you have the permission in hand." });
   }
   for (const o of i.overlays) reasons.push({ code: "RESTRICTION", kind: "BLOCKING", text: `A temporary restriction may conflict with your event: ${o.restriction.title}.`, next: "Read the order, then confirm with the issuing authority." });
   if (i.venue?.state === "CONFLICT_CONFIRMED") reasons.push({ code: "VENUE_CONFLICT", kind: "BLOCKING", text: "An official source shows another confirmed booking or approval for this venue on your date.", next: "Consider another date or ask the authority." });
@@ -73,8 +74,8 @@ export function computeEventReadiness(i: ReadinessInput): EventReadiness {
   if ((i.unacknowledgedMaterialChanges ?? 0) > 0) reasons.push({ code: "CHANGE_UNCONFIRMED", kind: "WARNING", text: "You changed your plan after applying and have not re-confirmed it with the issuing authority.", next: "Re-confirm with the issuing authority." });
 
   const blocking = reasons.filter((r) => r.kind === "BLOCKING"), unknown = reasons.filter((r) => r.kind === "UNKNOWN"), warn = reasons.filter((r) => r.kind === "WARNING");
-  if (blocking.length) return { state: "NOT_READY", headline: `Not ready: ${blocking[0].text.replace(/\.$/, "")}.`, reasons };
+  if (blocking.length) return { state: "NOT_READY", headline: `Action required: ${blocking[0].text.replace(/\.$/, "")}.`, reasons };
   if (unknown.length) return { state: "STATUS_UNKNOWN", headline: `Status unknown: ${unknown[0].text.replace(/\.$/, "")}.`, reasons };
-  if (warn.length) return { state: "READY_WITH_WARNINGS", headline: `Ready with ${warn.length} warning${warn.length > 1 ? "s" : ""}. Review them before the day.`, reasons };
-  return { state: "READY", headline: "Ready: permission is approved and nothing blocking is open. Confirm any last-minute orders on the day.", reasons };
+  if (warn.length) return { state: "READY_WITH_WARNINGS", headline: `Preparation complete, with ${warn.length} warning${warn.length > 1 ? "s" : ""}. Review them before the day. This is a preparation state, not an authority's approval.`, reasons };
+  return { state: "READY", headline: "Preparation complete: your recorded permission status is Approved and nothing blocking is open. This is a preparation state, not an authority's approval. Confirm any last-minute orders on the day.", reasons };
 }

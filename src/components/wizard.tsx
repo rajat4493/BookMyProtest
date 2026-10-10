@@ -126,7 +126,7 @@ export function Wizard({ cities, venues = {}, today, largeAbove = {} }: { cities
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [step, elsewhere]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
-    if (!started.current) { started.current = true; track("start_plan"); }
+    if (!started.current) { started.current = true; track("start_plan"); track("PROTEST_PLAN_STARTED"); }
     setF((cur) => ({ ...cur, [k]: v }));
     setErrors((e) => { const { [k as string]: _, ...rest } = e; return rest; });
   };
@@ -307,7 +307,7 @@ export function Wizard({ cities, venues = {}, today, largeAbove = {} }: { cities
         <div className="mt-10 flex gap-3">
           {step > 0 && <button type="button" className="btn btn-ghost" onClick={() => setStep(step - 1)}><Back /> Back</button>}
           <button type="submit" className="btn btn-accent flex-1" disabled={pending}>
-            {pending ? "Building your plan…" : key === "who" ? "Show my readiness" : "Next"} {!pending && <Arrow />}
+            {pending ? "Building your plan…" : key === "who" ? "Show my checklist" : "Next"} {!pending && <Arrow />}
           </button>
         </div>
       </form>

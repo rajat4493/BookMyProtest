@@ -7,6 +7,9 @@ import { endSession, ensureAnonId, getUser, requireAdmin, startSession } from "@
 import { loadOwnedEvent } from "@/lib/access";
 import { acknowledgeChanges, markApplicationSubmitted, markApprovalRecorded, updateEventDetails } from "@/lib/event-changes";
 import { recordPermission } from "@/lib/permissions";
+import { getOwnerProtest, getPublicProtest, postUpdate, saveProtest, setVisibility, toggleOffer, toggleSupport, type ProtestInput } from "@/lib/protests";
+import { moderateProtest, setOrganizerSuspended } from "@/lib/moderation";
+import { SUPPORT_KINDS, SUPPORT_TYPES, VISIBILITIES, CATEGORIES as PROTEST_CATEGORIES, type SupportKind, type Visibility } from "@/lib/engine/public-protest";
 import { runChecks } from "@/lib/readiness-service";
 import { recordOfficialCheck, saveVenueSignal, setSchedulingMode, venueAvailability } from "@/lib/venue-signals";
 import { SCHEDULING_MODES, SIGNAL_TYPES, EVENT_STATUSES, type Availability } from "@/lib/engine/availability";
@@ -16,7 +19,7 @@ import { allow } from "@/lib/ratelimit";
 import { DOC_KINDS } from "@/lib/documents";
 import { parseAnswers, vendorRequestSchema, waitlistSchema } from "@/lib/validation";
 import {
-  addJurisdiction, addWaitlist, archiveJurisdiction, audit, createEvent, createVendorRequest, eventsFor, getEvent, getJurisdiction, setJurisdictionSupported,
+  addJurisdiction, addWaitlist, archiveJurisdiction, audit, claimAnonEvents, createEvent, createVendorRequest, eventsFor, getEvent, getJurisdiction, setJurisdictionSupported,
   jurisdictionChain, metaForChain, recordDocument, setRequirementDone, track, updateVendorRequest, listVendorCategories, type JurisdictionLevel, JURISDICTION_LEVELS,
 } from "@/lib/store";
 import {
@@ -74,6 +77,7 @@ export async function createPlanAction(cityId: string, raw: unknown, venueId: st
   await generateEvaluation(created, "GENERATED"); // immutable record of the rule versions this plan was built on
   await runChecks(created, "PLAN_GENERATED");
   await track("complete_questionnaire", anon, { eventId: id, city: city.name, attendance: parsed.answers.attendance, kind: parsed.answers.kind });
+  await track("PROTEST_PLAN_COMPLETED", anon, { city: city.name, date: parsed.answers.date });
   redirect(`/plan/${id}`);
 }
 
@@ -518,5 +522,115 @@ export async function recordOfficialCheckAction(fd: FormData) {
     }, actor);
     revalidatePath("/admin/venues");
     return "/admin/venues?saved=1";
+  });
+}
+
+/* ---------- Public protest pages: organizer ---------- */
+
+const publishErr = (eventId: string, msg: string) => `/plan/${eventId}/publish?error=${encodeURIComponent(msg.slice(0, 300))}`;
+const dims = (p: { city: string; state: string; category: string; date: string; organizerType: string | null; visibility: string; permission: { status: string } }, extra: Record<string, unknown> = {}) =>
+  ({ city: p.city, state: p.state, category: p.category, date: p.date, organizerType: p.organizerType ?? "", visibility: p.visibility, permissionStatus: p.permission.status, ...extra });
+
+export async function savePublicProtestAction(fd: FormData) {
+  const eventId = str(fd, "eventId");
+  const event = await loadOwnedEvent(eventId);
+  const user = await getUser();
+  if (!user) redirect(`/signup?next=${encodeURIComponent(`/plan/${eventId}/publish`)}`);
+  let dest = `/plan/${eventId}/publish?saved=1`;
+  try {
+    await claimAnonEvents(await ensureAnonId(), user.id);
+    const mine = (await getEvent(eventId))!;
+    const supportOptions = Object.keys(SUPPORT_TYPES).filter((t) => fd.get(`opt_${t}`) === "on").map((t) => ({ type: t, note: str(fd, `note_${t}`), link: str(fd, `link_${t}`) }));
+    const input: ProtestInput = {
+      title: str(fd, "title"), summary: str(fd, "summary"), description: String(fd.get("description") ?? "").trim(), organizerDisplayName: str(fd, "organizerDisplayName"),
+      organizerType: str(fd, "organizerType") || null, category: oneOf(str(fd, "category"), Object.keys(PROTEST_CATEGORIES) as [string, ...string[]], "OTHER"), logistics: String(fd.get("logistics") ?? "").trim(),
+      visibility: oneOf(str(fd, "visibility"), VISIBILITIES, "DRAFT") as Visibility, permissionMode: str(fd, "permissionMode") === "NOT_PROVIDED" ? "NOT_PROVIDED" : "SYNC",
+      publicFields: { organizerType: fd.get("pf_organizerType") === "on", logistics: fd.get("pf_logistics") === "on", officialInfo: fd.get("pf_officialInfo") === "on" }, supportOptions,
+    };
+    const r = await saveProtest(mine, user, input);
+    const o = (await getOwnerProtest(eventId))!;
+    const d = dims(o.protest);
+    if (r.created) await track("PUBLIC_PAGE_CREATED", await ensureAnonId(), d);
+    if (r.becamePublic) await track("PUBLIC_PAGE_PUBLISHED", await ensureAnonId(), d);
+  } catch (e) { dest = publishErr(eventId, e instanceof Error ? e.message : "Could not save."); }
+  revalidatePath(`/plan/${eventId}/publish`);
+  redirect(dest);
+}
+
+export async function setProtestVisibilityAction(fd: FormData) {
+  const eventId = str(fd, "eventId");
+  await loadOwnedEvent(eventId);
+  const user = await getUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/plan/${eventId}/publish`)}`);
+  let dest = `/plan/${eventId}/publish?saved=1`;
+  try {
+    const v = oneOf(str(fd, "visibility"), VISIBILITIES, "PRIVATE") as Visibility;
+    await setVisibility(eventId, user, v);
+    if (v === "PUBLIC" || v === "UNLISTED") await track("PUBLIC_PAGE_PUBLISHED", await ensureAnonId(), dims((await getOwnerProtest(eventId))!.protest));
+  } catch (e) { dest = publishErr(eventId, e instanceof Error ? e.message : "Could not change visibility."); }
+  redirect(dest);
+}
+
+export async function postProtestUpdateAction(fd: FormData) {
+  const eventId = str(fd, "eventId");
+  await loadOwnedEvent(eventId);
+  const user = await getUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/plan/${eventId}/publish`)}`);
+  let dest = `/plan/${eventId}/publish?saved=1`;
+  try { await postUpdate(eventId, user, String(fd.get("body") ?? "")); } catch (e) { dest = publishErr(eventId, e instanceof Error ? e.message : "Could not post."); }
+  redirect(dest);
+}
+
+export async function generateToolkitAction(fd: FormData) {
+  const eventId = str(fd, "eventId");
+  await loadOwnedEvent(eventId);
+  const o = await getOwnerProtest(eventId);
+  if (o) await track("TOOLKIT_GENERATED", await ensureAnonId(), dims(o.protest));
+  redirect(`/plan/${eventId}/publish?toolkit=1#toolkit`);
+}
+
+/* ---------- Public protest pages: supporters (login required, aggregate-only) ---------- */
+
+export async function toggleSupportAction(fd: FormData) {
+  const slug = str(fd, "slug");
+  const kind = str(fd, "kind") as SupportKind;
+  const user = await getUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/protests/${slug}`)}`);
+  if (!(SUPPORT_KINDS as readonly string[]).includes(kind)) redirect(`/protests/${slug}`);
+  let dest = `/protests/${slug}`;
+  try {
+    const on = await toggleSupport(slug, user.id, kind);
+    if (on) {
+      const pub = await getPublicProtest(slug, { userId: user.id });
+      if (pub) await track(kind === "FOLLOWING" ? "PROTEST_FOLLOWED" : kind === "INTERESTED" ? "PROTEST_INTERESTED" : "PROTEST_ATTEND_INTENT", await ensureAnonId(), dims(pub.protest));
+    }
+  } catch (e) { dest = `${dest}?error=${encodeURIComponent(e instanceof Error ? e.message : "Could not do that.")}`; }
+  revalidatePath(`/protests/${slug}`);
+  redirect(dest);
+}
+
+export async function toggleOfferAction(fd: FormData) {
+  const slug = str(fd, "slug");
+  const user = await getUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/protests/${slug}`)}`);
+  let dest = `/protests/${slug}`;
+  try { await toggleOffer(slug, user.id, str(fd, "type")); } catch (e) { dest = `${dest}?error=${encodeURIComponent(e instanceof Error ? e.message : "Could not do that.")}`; }
+  revalidatePath(`/protests/${slug}`);
+  redirect(dest);
+}
+
+/* ---------- Moderation (admin) ---------- */
+
+export async function moderateProtestAction(fd: FormData) {
+  await guarded("/admin/protests", async (actor) => {
+    const op = oneOf(str(fd, "op"), ["HIDE", "RESTORE", "REMOVE"] as const, "HIDE");
+    await moderateProtest(actor, str(fd, "slug"), op, str(fd, "reason"), str(fd, "note"));
+    revalidatePath("/admin/protests"); revalidatePath("/protests");
+  });
+}
+export async function suspendOrganizerAction(fd: FormData) {
+  await guarded("/admin/protests", async (actor) => {
+    await setOrganizerSuspended(actor, str(fd, "userId"), str(fd, "suspend") === "true", str(fd, "reason"), str(fd, "note"));
+    revalidatePath("/admin/protests"); revalidatePath("/protests");
   });
 }

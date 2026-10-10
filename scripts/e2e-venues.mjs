@@ -100,7 +100,7 @@ async function plan(venue) {
   await u.fill("#name", "Own plan"); await u.fill("#date", date); await next();
   await u.fill("#startLoc", venue); await next(); await u.fill("#att", "200"); await next(); await next();
   await u.fill("#oname", "Asha Rao"); await u.fill("#oemail", "asha@example.com");
-  await u.getByRole("button", { name: /show my readiness/i }).click(); await u.waitForURL(/\/plan\/[0-9a-f-]{36}$/); await settle(u);
+  await u.getByRole("button", { name: /show my checklist/i }).click(); await u.waitForURL(/\/plan\/[0-9a-f-]{36}$/); await settle(u);
 }
 await plan("Jantar Mantar");
 await submitApplication(u);

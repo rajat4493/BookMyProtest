@@ -57,7 +57,7 @@ await shot("07-step5");
 await page.getByRole("button", { name: "Next", exact: true }).click();
 await page.fill("#oname", "Asha Rao"); await page.fill("#oemail", "asha@example.com");
 await shot("08-step6");
-await page.getByRole("button", { name: /show my readiness/i }).click();
+await page.getByRole("button", { name: /show my checklist/i }).click();
 await page.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
 const planUrl = page.url();
 await page.waitForTimeout(1400);

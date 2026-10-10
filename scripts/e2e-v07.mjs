@@ -44,7 +44,7 @@ async function wizard({ attendance, large }) {
     ok(/organising/i.test(heading), "small event: no extra step, goes straight to organiser details");
   }
   await p.fill("#oname", "Asha Rao"); await p.fill("#oemail", "asha@example.com");
-  await p.getByRole("button", { name: /show my readiness/i }).click();
+  await p.getByRole("button", { name: /show my checklist/i }).click();
   await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/); await settle(p);
 }
 

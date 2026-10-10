@@ -35,7 +35,7 @@ async function makePlan(label, attendance) {
   await user.fill("#startLoc", "Test Square"); await next(user);
   await user.fill("#att", String(attendance)); await next(user); await next(user);
   await user.fill("#oname", "Tester"); await user.fill("#oemail", "t@example.com");
-  await user.getByRole("button", { name: /show my readiness/i }).click();
+  await user.getByRole("button", { name: /show my checklist/i }).click();
   await user.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
   await settle(user);
   return user.url();

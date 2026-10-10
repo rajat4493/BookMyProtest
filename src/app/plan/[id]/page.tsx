@@ -5,6 +5,7 @@ import { PermissionPanel } from "@/components/permission-panel";
 import { currentPermission, permissionHistory } from "@/lib/permissions";
 import { nextStatuses } from "@/lib/engine/permission";
 import { READINESS_LABEL } from "@/lib/engine/event-readiness";
+import { getOwnerProtest } from "@/lib/protests";
 import { assessReadiness, listReadinessSnapshots } from "@/lib/readiness-service";
 import { Footer, TrustNote, Wordmark } from "@/components/chrome";
 import { Score, SubmitButton, Tracker } from "@/components/client";
@@ -22,7 +23,7 @@ import { listChecks } from "@/lib/restriction-checks";
 import { PLANNING_BUFFER_DAYS, daysUntil, fillText, formatDate, loadPlan, LEVEL_LABEL } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Your readiness" };
+export const metadata = { title: "Your preparation" };
 
 const CAT_LABEL = { permissions: "Permissions", documents: "Documents", logistics: "Logistics", safety: "Safety" } as const;
 
@@ -39,6 +40,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
   const warnings = items.filter(isWarning);
   const [checks, changeNotices, perm, permHistory, live, scheduled] = await Promise.all([listChecks(event.id), openChangeNotices(event.id), currentPermission(event.id), permissionHistory(event.id), assessReadiness(event), listReadinessSnapshots(event.id, true)]);
   const readiness = live.readiness;
+  const pubPage = (await getOwnerProtest(event.id))?.protest ?? null;
   const latestCheck = checks[0];
   const feedFlags: string[] = latestCheck?.feedSourceId ? ((await one<{ verification_flags: string[] }>("SELECT verification_flags FROM sources WHERE id=$1", [latestCheck.feedSourceId]))?.verification_flags ?? []) : [];
   const dateCheck = event.venueJurisdictionId ? await venueAvailability(event.venueJurisdictionId, event.date, a.startTime, a.endTime, { attendance: a.attendance, excludeEventId: event.id }) : null;
@@ -143,7 +145,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
           )}
 
           <section className="panel p-5" aria-labelledby="ready-h" data-testid="readiness-panel" data-state={readiness.state}>
-            <p className="label text-mute">Event-day readiness</p>
+            <p className="label text-mute">Preparation status</p>
             <h2 id="ready-h" className="heading mt-1 text-lg">{READINESS_LABEL[readiness.state]}</h2>
             <p className="mt-1 text-mute">{readiness.headline}</p>
             {readiness.reasons.length > 0 && (
@@ -153,11 +155,16 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
                 ))}
               </ul>
             )}
-            <p className="mt-2 text-sm text-mute">Based on your recorded permission status, current restrictions, venue and date, and your critical items: never on the percentage.</p>
+            <p className="mt-2 text-sm text-mute">A preparation state, not an approval by any authority. Based on the permission status you recorded, current restrictions, venue and date, and your critical items: never on the percentage.</p>
           </section>
 
           <PermissionPanel eventId={event.id} current={perm} history={permHistory} next={nextStatuses(perm.status)} advice="If the crowd, speakers, purpose, route or nature of the event materially changes after you apply, re-confirm with the issuing authority." />
-          <div><Link href={`/plan/${event.id}/details`} className="btn btn-sm btn-ghost">Edit plan details</Link></div>
+          <section className="panel p-5" aria-labelledby="publish-h" data-testid="publish-strip">
+            <p className="label text-mute">Next: publish</p>
+            <h2 id="publish-h" className="heading mt-1 text-lg">{pubPage ? `Your public page is ${pubPage.visibility.toLowerCase()}` : "Create a public page, if you want one"}</h2>
+            <p className="mt-1 text-sm text-mute">Preview it, choose what to show, and share it. Publishing is your choice and does not wait for permission: your page shows the status you report, labelled as reported by you. BookMyProtest does not approve or endorse your event.</p>
+            <div className="mt-3 flex flex-wrap gap-3"><Link href={`/plan/${event.id}/publish`} className="btn btn-sm">{pubPage ? "Manage public page" : "Create public page"}</Link>{pubPage && <Link href={`/protests/${pubPage.slug}`} className="btn btn-sm btn-ghost">Preview</Link>}<Link href={`/plan/${event.id}/details`} className="btn btn-sm btn-ghost">Edit plan details</Link></div>
+          </section>
 
           {scheduled.length > 0 && (
             <section className="panel p-5" aria-labelledby="sched-h" data-testid="scheduled-rechecks">

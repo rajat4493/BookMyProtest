@@ -8,11 +8,11 @@ import { listVendorCategories } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 const FLOW = [
-  ["Idea", "You know what you want to say."],
-  ["Requirements", "We list what your plan triggers."],
-  ["Permissions", "See what to ask, and who to ask."],
-  ["Logistics", "Sound, water, stages, stewards."],
-  ["Ready", "A score, a checklist, a pack."],
+  ["Create", "Tell us what you are planning."],
+  ["Prepare", "A checklist, documents, and the process explained."],
+  ["Publish", "A public page you control, if you choose."],
+  ["Discover", "Anyone can browse public listings."],
+  ["Support", "Follow, share, or offer to help."],
 ];
 
 const BEHIND = [
@@ -42,15 +42,16 @@ export default async function Home() {
           </h1>
           <div className="mt-10 grid gap-8 md:grid-cols-[1.1fr_1fr] md:items-end">
             <p className="rise max-w-xl text-xl text-paper/85 sm:text-2xl" style={{ "--i": 3 } as React.CSSProperties}>
-              Plan the paperwork, permissions and logistics behind your public gathering — in one place.
+              Understand the process, prepare the paperwork and logistics behind your public gathering, and publish a page for it — in one place.
             </p>
             <div className="rise flex flex-col gap-3 sm:flex-row" style={{ "--i": 4 } as React.CSSProperties}>
               <Link href="/plan" className="btn btn-accent">Plan a protest <Arrow /></Link>
+              <Link href="/protests" className="btn btn-ghost !border-paper !text-paper hover:!bg-paper hover:!text-ink">Discover protests</Link>
               <Link href="/check" className="btn btn-ghost !border-paper !text-paper hover:!bg-paper hover:!text-ink">Check requirements</Link>
               <a href="#how" className="btn btn-ghost !border-paper !text-paper hover:!bg-paper hover:!text-ink">See how it works</a>
             </div>
           </div>
-          <p className="label mt-14 text-paper/60">Permissions • Logistics • Vendors • Readiness</p>
+          <p className="label mt-14 text-paper/60">Information • Preparation • Public pages • Sharing</p>
         </section>
         <div className="border-t-2 border-paper/20" aria-hidden="true">
           <div className="mx-auto flex max-w-7xl flex-wrap gap-x-8 gap-y-1 px-4 py-3 label text-paper/50 sm:px-8">
@@ -118,7 +119,7 @@ export default async function Home() {
           <div>
             <p className="label text-mute">Trust</p>
             <p className="display-wide mt-4 text-2xl sm:text-4xl">BookMyProtest helps organizers understand and prepare for public-assembly requirements.</p>
-            <p className="display-wide mt-6 text-2xl text-mute sm:text-4xl">Final permissions and approvals are issued solely by the relevant authorities.</p>
+            <p className="display-wide mt-6 text-2xl text-mute sm:text-4xl">Final permissions and approvals are issued solely by the relevant authorities. Organizers remain responsible for their events and what they publish.</p>
           </div>
           <dl className="space-y-6 self-end border-t border-hair pt-6">
             {[

@@ -45,7 +45,7 @@ describe("event readiness: deterministic and explainable", () => {
       const r = computeEventReadiness(input({ permission, doneIds: ALL }));
       expect(r.state, permission).toBe("NOT_READY");
       expect(r.reasons[0].code).toBe("PERMISSION_NOT_APPROVED");
-      expect(r.headline).toMatch(/^Not ready: Police permission is not approved/);
+      expect(r.headline).toMatch(/^Action required: Police permission is not recorded as approved/);
     }
   });
   it("a 100% checklist alone is never READY (no inference of approval)", () => {

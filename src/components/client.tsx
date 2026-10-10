@@ -52,7 +52,7 @@ export function Score({ value, className = "" }: { value: number; className?: st
     return () => cancelAnimationFrame(raf.current);
   }, [value]);
   return (
-    <span className={className} role="img" aria-label={`${value} percent ready`}>
+    <span className={className} role="img" aria-label={`${value} percent of checklist done`}>
       <span aria-hidden="true">{n}<span className="text-[0.45em] align-top">%</span></span>
     </span>
   );

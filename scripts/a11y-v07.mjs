@@ -30,7 +30,7 @@ await scan(p, "large-event step");
 await next(); await scan(p, "large-event step with error");
 await p.fill("#purpose", "A public meeting about schools"); await next();
 await p.fill("#oname", "Asha Rao"); await p.fill("#oemail", "asha@example.com");
-await p.getByRole("button", { name: /show my readiness/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
+await p.getByRole("button", { name: /show my checklist/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
 const url = p.url();
 await scan(p, "Ramlila dashboard");
 await submitApplication(p);

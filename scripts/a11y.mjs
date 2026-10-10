@@ -30,7 +30,7 @@ n += await scan("wizard step 2"); await next();
 await p.fill("#startLoc", "Somewhere"); await next(); await p.fill("#att", "300"); await next(); await p.locator("#sound").click();
 n += await scan("wizard step 5"); await next();
 await p.fill("#oname", "Ola Test"); await p.fill("#oemail", "ola@example.com");
-await p.getByRole("button", { name: /show my readiness/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
+await p.getByRole("button", { name: /show my checklist/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
 await p.screenshot({ path: "shots/d-top.png" });
 n += await scan("dashboard");
 await p.evaluate(() => window.scrollTo(0, 1100)); await p.screenshot({ path: "shots/d-mid.png" });

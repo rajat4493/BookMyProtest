@@ -3,6 +3,7 @@ import { toggleRequirementAction } from "@/app/actions";
 import { LEVEL_LABEL, SEVERITY_LABEL, fillText, formatDate } from "@/lib/plan";
 import type { EvaluatedItem } from "@/lib/engine/types";
 import { Arrow, Bang, Check } from "./icons";
+import { Provenance } from "./provenance";
 
 export function EvidenceLine({ item }: { item: EvaluatedItem }) {
   const r = item.rule;
@@ -97,7 +98,7 @@ export function RequirementRow({ item, eventId, buses = 0, leadDeadline = null }
             {r.userAction && <p><span className="label">What to do: </span>{fill(r.userAction)}</p>}
             {r.submissionMethod && <p><span className="label">How to submit: </span>{r.submissionMethod}</p>}
             {r.requiredDocuments.length > 0 && <p><span className="label">Documents: </span>{r.requiredDocuments.join(", ")}</p>}
-            {item.deadline && <p><span className="label">Target date: </span>{formatDate(item.deadline)}{r.deadlineNote ? ` — ${r.deadlineNote}` : ""}</p>}
+            {item.deadline && <p><span className="label">Target date: </span>{formatDate(item.deadline)}{r.deadlineNote ? ` — ${r.deadlineNote}` : ""}{(() => { const s = r.sources.find((x) => x.strength === "PRIMARY" && x.url); return s ? <Provenance p={{ cls: "SYSTEM_DERIVED", source: { title: s.title, url: s.url, section: s.sectionRef } }} /> : <Provenance p={{ cls: "SYSTEM_DERIVED" }} />; })()}</p>}
             {!item.deadline && r.deadlineNote && <p><span className="label">Deadline: </span>{r.deadlineNote}</p>}
             {r.officialLink && <p><a className="underline underline-offset-2" href={r.officialLink} target="_blank" rel="noopener noreferrer">{r.officialLinkLabel || "Official link"}</a></p>}
             {r.sources.length > 0 && <p className="text-mute"><span className="label">Sources: </span>{r.sources.map((s) => (s.title || s.url) && `${s.title || s.url}${s.sectionRef ? ` (${s.sectionRef})` : ""}${s.sourceType === "SECONDARY_LEAD" || s.strength === "LEAD" ? " (press report, lead only: not evidence)" : ""}`).filter(Boolean).join("; ")}</p>}

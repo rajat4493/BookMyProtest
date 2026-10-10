@@ -132,3 +132,11 @@ Migration `006_live_restrictions.sql`: `sources.parser/feed_role`, richer `tempo
 
 ## v0.8.0 delta
 Migration `007_venue_availability.sql` (`jurisdictions.scheduling_mode`, `venue_date_signals`, `venue_official_checks`, `venue_evidence`, `events.approval_recorded_at`). Pure engine `availability.ts`; service `venue-signals.ts`; component `availability.tsx` (existing panel/card patterns). Tests 219 passing; e2e `scripts/e2e-venues.mjs`; screenshots `docs/previews/v0.8.0/images`.
+
+## v1.0 — Public Launch Foundation (additive)
+
+- Migration `010_public_protests.sql`: `public_protests` (1:1 with `events` via `event_id`; private planning data never copied), `protest_updates`, `protest_supports` (protest_id, user_id, kind), `protest_support_offers`, `moderation_actions`; `users.suspended_at/suspension_reason`.
+- Services: `src/lib/protests.ts` (public reads through an explicit column whitelist; supporter tables touched only here), `src/lib/moderation.ts`, pure engines `provenance.ts`, `public-protest.ts`, `toolkit.ts`.
+- Public permission status is derived live from internal `event_permissions` and always labelled "reported by organizer".
+- Legal/compliance engine unchanged; only user-facing readiness wording renamed to preparation language.
+- See `docs/acceptance/PUBLIC-V1.md`, `docs/PRODUCT-PRINCIPLES.md`.

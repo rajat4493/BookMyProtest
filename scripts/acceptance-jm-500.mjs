@@ -27,7 +27,7 @@ await p.fill("#startLoc", "Jantar Mantar, New Delhi"); await p.fill("#desc", "A 
 await p.fill("#att", "500"); await dump("04-howmany"); await next();
 await p.locator("#vehicles").click(); await p.fill("#buses", "2"); await dump("05-use"); await next();
 await p.fill("#oname", "Meera Nair"); await p.fill("#oemail", "meera@example.com"); await p.fill("#ophone", "9810000000"); await dump("06-who");
-await p.getByRole("button", { name: /show my readiness/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/); await settle();
+await p.getByRole("button", { name: /show my checklist/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/); await settle();
 const planUrl = p.url(); const eventId = planUrl.split("/").pop();
 
 // --- 2. dashboard, with every requirement's details expanded

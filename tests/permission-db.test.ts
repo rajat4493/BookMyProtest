@@ -83,7 +83,7 @@ describe("event-day readiness on the Jantar Mantar / 500 plan", () => {
     await tickAll(e.id);
     const r = await state(e);
     expect(r.state).toBe("NOT_READY");
-    expect(r.headline).toMatch(/Police permission is not approved/);
+    expect(r.headline).toMatch(/Police permission is not recorded as approved/);
     await recordPermission(e, { status: "SUBMITTED", occurredAt: "2026-11-20T09:30:00Z" });
     expect((await state(e)).state).toBe("NOT_READY");
   });

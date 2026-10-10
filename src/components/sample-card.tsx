@@ -27,7 +27,7 @@ export function SampleCard() {
       <div className="px-5 pt-6">
         <div className="flex items-end gap-4">
           <span className="numeral text-[6.2rem] sm:text-[7.4rem]" aria-live="polite">{pct}<span className="text-[0.4em] align-top">%</span></span>
-          <span className="label pb-3">Ready</span>
+          <span className="label pb-3">Checklist</span>
         </div>
         <div className="mt-4 h-3 w-full border-2 border-ink" role="presentation">
           <div className="h-full bg-accent transition-[width] duration-500" style={{ width: `${pct}%` }} />

@@ -78,7 +78,7 @@ Entrances and exits: ______________________
 Nearest transport: ______________________
 {{/unless}}`],
 
-  "document-checklist": ["Document checklist", `Readiness at {{generated_on}}: {{readiness_pct}}%. Based on currently configured local requirements for {{city_label}}.
+  "document-checklist": ["Document checklist", `Checklist progress at {{generated_on}}: {{readiness_pct}}%. Based on currently configured local requirements for {{city_label}}.
 
 [[checklist]]`],
 

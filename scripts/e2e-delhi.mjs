@@ -29,7 +29,7 @@ async function run(tag, { attendance, march = false, sound = false, venue = true
   await next();
   if (/tell us more/i.test(await p.locator("h1").innerText())) { await p.fill("#purpose", "A large public meeting for the scenario"); await next(); } // large-event step (v0.7.0)
   await p.fill("#oname", "Asha Rao"); await p.fill("#oemail", "asha@example.com");
-  await p.getByRole("button", { name: /show my readiness/i }).click();
+  await p.getByRole("button", { name: /show my checklist/i }).click();
   await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1500);
   return p;
 }
