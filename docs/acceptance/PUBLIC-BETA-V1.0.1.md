@@ -55,6 +55,9 @@ The proxy README says a 403 is an organization egress-policy denial that must be
 
 **Regression:** e2e (V0 journey; fixed a stale `percent ready` selector — the label was renamed in v1.0 and this script had not been updated; passes), e2e-v07, e2e-venues, e2e-delhi, e2e-admin (13 steps), a11y, a11y-v07 all pass.
 
+## Commits
+Implementation: `7bb0f27` (37 files; `git diff 9d69d72..7bb0f27`). `8f9213a` is only the version bump. v1.0 implementation: `9d69d72`. See [PUBLIC-LAUNCH-READINESS.md](PUBLIC-LAUNCH-READINESS.md).
+
 ## Schema, files, rollback
 - Migration `011_beta_hardening.sql`: `users.email_verified_at` (admins marked confirmed), `email_verifications`, `email_outbox`, `rate_limits`, `protest_reports`, `public_protests.identity_flags/identity_reviewed_at`. Additive. Rollback: revert the commit and drop those tables/columns; existing data is unaffected. Existing non-admin accounts are unconfirmed and must confirm to publish/be counted.
 - New: `src/lib/{verification,mail,reports,rule-verification}.ts`, `src/lib/engine/identity.ts`, `src/app/verify-email/`, `scripts/{delhi-verification-gate,prep-e2e}.ts`. Changed: `ratelimit.ts` (now async, DB-backed), `protests.ts`, `actions.ts`, protest/publish/account/admin pages, privacy draft. Screenshot: `docs/previews/v1.0.0/images/8-admin-reports.png`.

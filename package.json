@@ -17,6 +17,7 @@
     "watch:events": "tsx scripts/event-checks.ts",
     "probe:feed": "tsx scripts/probe-feed.ts",
     "delhi:verify-gate": "tsx scripts/delhi-verification-gate.ts",
+    "rc:check": "tsx scripts/rc-check.ts",
     "db:load-delhi": "tsx scripts/load-delhi.ts"
   },
   "dependencies": {
