@@ -306,7 +306,7 @@ export async function adminWaitlist() {
 
 /* ---------------- Jurisdiction metadata (timezone, large-event threshold: data, not code) ---------------- */
 
-export interface PlaceMeta { timezone?: string; largeEventAbove?: number }
+export interface PlaceMeta { timezone?: string; largeEventAbove?: number; capacity?: number }
 export async function setJurisdictionMetadata(id: string, patch: PlaceMeta) {
   await query("UPDATE jurisdictions SET metadata = metadata || $2::jsonb WHERE id=$1", [id, JSON.stringify(patch)]);
 }

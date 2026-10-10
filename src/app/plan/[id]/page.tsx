@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { acknowledgeChangesAction, markApplicationAction, recheckPlanAction } from "@/app/actions";
+import { acknowledgeChangesAction, markApplicationAction, markApprovalAction, recheckPlanAction } from "@/app/actions";
 import { Footer, TrustNote, Wordmark } from "@/components/chrome";
 import { Score, SubmitButton, Tracker } from "@/components/client";
 import { EmptyState } from "@/components/empty";
@@ -8,7 +8,9 @@ import { RequirementRow } from "@/components/requirement";
 import { getUser } from "@/lib/auth";
 import { headline } from "@/lib/engine/readiness";
 import { addDays, isActionable, isWarning } from "@/lib/engine/evaluate";
-import { RECONFIRM_ADVICE, applicationSubmittedAt, openChangeNotices } from "@/lib/event-changes";
+import { AvailabilityPanel } from "@/components/availability";
+import { venueAvailability } from "@/lib/venue-signals";
+import { RECONFIRM_ADVICE, applicationSubmittedAt, approvalRecordedAt, openChangeNotices } from "@/lib/event-changes";
 import { TRIGGER_LABEL } from "@/lib/engine/restriction-check";
 import { listChecks } from "@/lib/restriction-checks";
 import { PLANNING_BUFFER_DAYS, daysUntil, formatDate, loadPlan, LEVEL_LABEL } from "@/lib/plan";
@@ -31,6 +33,8 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
   const warnings = items.filter(isWarning);
   const [checks, submittedAt, changeNotices] = await Promise.all([listChecks(event.id), applicationSubmittedAt(event.id), openChangeNotices(event.id)]);
   const latestCheck = checks[0];
+  const approvedAt = await approvalRecordedAt(event.id);
+  const dateCheck = event.venueJurisdictionId ? await venueAvailability(event.venueJurisdictionId, event.date, a.startTime, a.endTime, { attendance: a.attendance, excludeEventId: event.id }) : null;
   const next = r.blockers[0] ?? r.required[0] ?? r.recommended[0];
   const target = addDays(event.date, -PLANNING_BUFFER_DAYS);
   const toEvent = daysUntil(event.date);
@@ -106,6 +110,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
               )}
             </section>
           )}
+          {dateCheck && <AvailabilityPanel a={dateCheck} />}
           {warnings.map((w) => (
             <aside key={w.rule.id} className="panel bg-paper-2 p-5" role="note" data-testid="heads-up">
               <p className="label">Heads-up</p>
@@ -133,6 +138,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
             <p className="mt-1 text-sm text-mute">{submittedAt ? `Marked as submitted on ${formatDate(submittedAt.slice(0, 10))}.` : "Mark it once you have applied, so we can warn you if a later change matters."} If the crowd, speakers, purpose, route or nature of the event materially changes, re-confirm with the issuing authority.</p>
             <div className="mt-3 flex flex-wrap gap-3">
               <form action={markApplicationAction}><input type="hidden" name="eventId" value={event.id} /><input type="hidden" name="submitted" value={submittedAt ? "false" : "true"} /><SubmitButton className="btn btn-sm" pending="Saving…">{submittedAt ? "Undo: I haven’t applied" : "I’ve submitted my application"}</SubmitButton></form>
+              {submittedAt && <form action={markApprovalAction}><input type="hidden" name="eventId" value={event.id} /><input type="hidden" name="approved" value={approvedAt ? "false" : "true"} /><SubmitButton className="btn btn-sm btn-ghost" pending="Saving…">{approvedAt ? "Undo: approval not received" : "I’ve received an approval"}</SubmitButton></form>}
               <Link href={`/plan/${event.id}/details`} className="btn btn-sm btn-ghost">Edit plan details</Link>
             </div>
           </section>

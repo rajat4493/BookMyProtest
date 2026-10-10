@@ -5,7 +5,9 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { endSession, ensureAnonId, getUser, requireAdmin, startSession } from "@/lib/auth";
 import { loadOwnedEvent } from "@/lib/access";
-import { acknowledgeChanges, markApplicationSubmitted, updateEventDetails } from "@/lib/event-changes";
+import { acknowledgeChanges, markApplicationSubmitted, markApprovalRecorded, updateEventDetails } from "@/lib/event-changes";
+import { recordOfficialCheck, saveVenueSignal, setSchedulingMode, venueAvailability } from "@/lib/venue-signals";
+import { SCHEDULING_MODES, SIGNAL_TYPES, EVENT_STATUSES, type Availability } from "@/lib/engine/availability";
 import { runRestrictionCheck } from "@/lib/restriction-checks";
 import { one } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
@@ -29,6 +31,20 @@ export type ActionResult = { ok: false; errors: Record<string, string> } | { ok:
 const safeNext = (n: unknown) => (typeof n === "string" && /^\/(?!\/)[\w\-/?=&.%]*$/.test(n) ? n : "/account");
 
 /* ---------- Planning ---------- */
+
+/** Date-conflict check for a venue and date (public: composes what is known, reveals no names or contacts). */
+export async function checkVenueDateAction(venueId: string, date: string, startTime: string, endTime: string, attendance?: number | null): Promise<{ ok: true; availability: Availability } | { ok: false; error: string }> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime) || !/^[0-9a-f-]{36}$/i.test(venueId)) return { ok: false, error: "Choose a venue and date first." };
+  if (!allow(`dcc:${await clientKey()}`, 60, 10 * 60_000)) return { ok: false, error: "Too many checks. Try again shortly." };
+  const a = await venueAvailability(venueId, date, startTime, endTime > startTime ? endTime : "23:59", { attendance: attendance && attendance > 0 ? attendance : null });
+  return a ? { ok: true, availability: a } : { ok: false, error: "Choose a venue." };
+}
+
+export async function markApprovalAction(formData: FormData) {
+  const event = await loadOwnedEvent(String(formData.get("eventId")));
+  await markApprovalRecorded(event.id, formData.get("approved") !== "false");
+  revalidatePath(`/plan/${event.id}`);
+}
 
 /** Larger events (above the place's own threshold, held as data) must state their purpose. */
 async function largeEventErrors(cityId: string, a: { attendance: number; description: string }): Promise<Record<string, string> | null> {
@@ -459,3 +475,36 @@ export async function updateVendorRequestAction(fd: FormData) {
   revalidatePath("/admin/vendor-requests");
 }
 
+
+/* ---------- Venues: scheduling mode, date signals, official checks ---------- */
+
+export async function setSchedulingModeAction(fd: FormData) {
+  await guarded("/admin/venues", async (actor) => {
+    await setSchedulingMode(str(fd, "venueId"), oneOf(str(fd, "mode"), SCHEDULING_MODES, "UNKNOWN"), actor);
+    revalidatePath("/admin/venues");
+  });
+}
+
+export async function saveVenueSignalAction(fd: FormData) {
+  await guarded("/admin/venues", async (actor) => {
+    const att = parseInt(str(fd, "attendance"), 10);
+    await saveVenueSignal({
+      venueId: str(fd, "venueId"), date: str(fd, "date"), startTime: str(fd, "startTime") || null, endTime: str(fd, "endTime") || null,
+      type: oneOf(str(fd, "type"), SIGNAL_TYPES, "PUBLIC_EVENT_NOTICE"), status: oneOf(str(fd, "status"), EVENT_STATUSES, "REPORTED"), attendance: Number.isFinite(att) ? att : null,
+      sourceId: uuidOrNull(str(fd, "sourceId")), sourceUrl: str(fd, "sourceUrl") || null, confidence: oneOf(str(fd, "confidence"), ["low", "medium", "high"] as const, "low"), label: str(fd, "label"),
+    }, actor);
+    revalidatePath("/admin/venues");
+    return "/admin/venues?saved=1";
+  });
+}
+
+export async function recordOfficialCheckAction(fd: FormData) {
+  await guarded("/admin/venues", async (actor) => {
+    await recordOfficialCheck({
+      venueId: str(fd, "venueId"), authority: oneOf(str(fd, "authority"), ["BOOKING", "POLICE"] as const, "BOOKING"), sourceId: str(fd, "sourceId"), from: str(fd, "from"), to: str(fd, "to"),
+      outcome: oneOf(str(fd, "outcome"), ["OK", "FAILED"] as const, "OK"), notes: str(fd, "notes"),
+    }, actor);
+    revalidatePath("/admin/venues");
+    return "/admin/venues?saved=1";
+  });
+}

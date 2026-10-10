@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { createPlanAction, joinWaitlistAction } from "@/app/actions";
+import { checkVenueDateAction, createPlanAction, joinWaitlistAction } from "@/app/actions";
+import { AvailabilityPanel } from "./availability";
+import type { Availability } from "@/lib/engine/availability";
 import { Arrow, Back, Check } from "./icons";
 import { track } from "./client";
 
@@ -101,6 +103,17 @@ export function Wizard({ cities, venues = {}, today, largeAbove = {} }: { cities
   const isLarge = threshold != null && Number(f.attendance) > threshold;
   const STEPS: StepKey[] = isLarge ? ["where", "when", "kind", "howmany", "use", "large", "who"] : ["where", "when", "kind", "howmany", "use", "who"];
   const key = STEPS[Math.min(step, STEPS.length - 1)];
+
+  // Date conflict check: runs once a venue AND a date are chosen, and again when the date or times change.
+  const [avail, setAvail] = useState<Availability | null>(null);
+  const [availMsg, setAvailMsg] = useState<string | null>(null);
+  useEffect(() => {
+    setAvail(null); setAvailMsg(null);
+    if (!f.venueId || !f.date || f.date < today || f.endTime <= f.startTime) return;
+    let live = true;
+    const t = setTimeout(() => { checkVenueDateAction(f.venueId, f.date, f.startTime, f.endTime).then((r) => { if (!live) return; if (r.ok) setAvail(r.availability); else setAvailMsg(r.error); }).catch(() => live && setAvailMsg("We could not run the date check. Please confirm the date with the authority.")); }, 350);
+    return () => { live = false; clearTimeout(t); };
+  }, [f.venueId, f.date, f.startTime, f.endTime, today]);
 
   // Restore an unfinished draft (browser-only convenience).
   useEffect(() => {
@@ -218,6 +231,8 @@ export function Wizard({ cities, venues = {}, today, largeAbove = {} }: { cities
                 <div><Label htmlFor="start">Starts</Label><input id="start" type="time" className="field" value={f.startTime} onChange={(e) => set("startTime", e.target.value)} /></div>
                 <div><Label htmlFor="end">Ends</Label><input id="end" type="time" className="field" value={f.endTime} onChange={(e) => set("endTime", e.target.value)} aria-describedby="end-e" aria-invalid={!!errors.endTime} /><Err id="end-e" msg={errors.endTime} /></div>
               </div>
+              {f.venueId && f.date && avail && <div className="slide-in"><AvailabilityPanel a={avail} testId="date-conflict-wizard" /></div>}
+              {f.venueId && f.date && availMsg && <p className="panel p-4 text-sm" role="status">{availMsg}</p>}
             </>
           )}
 

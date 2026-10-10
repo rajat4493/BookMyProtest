@@ -42,6 +42,11 @@ await a.getByRole("button", { name: /sign in|log in/i }).click(); await a.waitFo
 await a.goto(BASE + "/admin/restrictions"); await a.fill('textarea[name="text"]', "ORDER\nNo. 9/Ord/2026\nUnder Section 163 BNSS the Commissioner of Police, Delhi hereby prohibits assembly of five or more persons within the limits of New Delhi District from 01.01.2027 to 03.01.2027.");
 await a.getByRole("button", { name: "Parse for review" }).click(); await a.waitForLoadState("networkidle");
 await scan(a, "admin restrictions with candidate");
+await a.goto(BASE + "/admin/venues"); await scan(a, "admin venues");
+await p.goto(BASE + "/plan"); await p.evaluate(() => localStorage.clear()); await p.goto("about:blank"); await p.goto(BASE + "/plan"); await p.waitForLoadState("networkidle");
+await p.selectOption("#city", { label: "New Delhi District, NCT Delhi" }); await p.locator("#venue").selectOption({ label: "Jantar Mantar" }); await next();
+await p.fill("#name", "Venue check"); await p.fill("#date", eventDate); await p.getByTestId("date-conflict-wizard").waitFor();
+await scan(p, "wizard date conflict check");
 console.log("TOTAL violations:", n);
 await b.close();
 process.exit(n ? 1 : 0);

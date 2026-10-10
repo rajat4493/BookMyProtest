@@ -9,8 +9,9 @@
  */
 import { one, query } from "../../src/lib/db";
 import { saveAuthority, saveRuleDraft, saveSource, saveTemplateVersion, linkSource, publishRule, submitForReview, type Actor, type RuleInput } from "../../src/lib/knowledge";
+import { addVenueEvidence, setSchedulingMode } from "../../src/lib/venue-signals";
 import { addJurisdiction, setJurisdictionSupported, setJurisdictionMetadata, audit } from "../../src/lib/store";
-import { AUTHORITIES, PLACES, RULES, SOURCES, STANDING_ORDER_URL, TEMPLATES, type PlaceKey, type RuleSpec, type SourceKey, type AuthKey } from "./corpus";
+import { AUTHORITIES, PLACES, RULES, SOURCES, STANDING_ORDER_URL, TEMPLATES, VENUE_EVIDENCE, type PlaceKey, type RuleSpec, type SourceKey, type AuthKey } from "./corpus";
 
 export interface LoadReport {
   places: Record<string, string>;
@@ -48,7 +49,12 @@ export async function loadDelhiCorpus(opts: LoadOptions): Promise<LoadReport> {
     const parent = p.parent ? place[p.parent]! : null;
     const found = await one<{ id: string }>("SELECT id FROM jurisdictions WHERE name=$1 AND level=$2 AND parent_id IS NOT DISTINCT FROM $3", [p.name, p.level, parent]);
     place[p.key] = found?.id ?? (await addJurisdiction({ parentId: parent, level: p.level, name: p.name, supported: false, code: p.code }));
-    if (p.meta) await setJurisdictionMetadata(place[p.key]!, p.meta); // timezone and large-event threshold are data
+    if (p.meta) await setJurisdictionMetadata(place[p.key]!, p.meta); // timezone, large-event threshold, capacity are data
+    // Set the scheduling mode once; a human's later change is never overwritten.
+    if (p.schedulingMode) {
+      const cur = await one<{ scheduling_mode: string }>("SELECT scheduling_mode FROM jurisdictions WHERE id=$1", [place[p.key]]);
+      if (cur?.scheduling_mode === "UNKNOWN" && p.schedulingMode !== "UNKNOWN") await setSchedulingMode(place[p.key]!, p.schedulingMode, actor);
+    }
   }
 
   // 2. authorities
@@ -87,6 +93,8 @@ export async function loadDelhiCorpus(opts: LoadOptions): Promise<LoadReport> {
     src[s.key] = { id: id!, current: lifecycle === "CURRENT", hasUrl: !!url };
     srcReport[s.key] = `${lifecycle}${url ? "" : ", no URL"}${stale ? (found ? " (updated)" : " (created)") : ""}`;
   }
+
+  for (const e of VENUE_EVIDENCE) await addVenueEvidence(place[e.place]!, src[e.source]!.id, e.kind, e.lesson, actor);
 
   const inputFor = (r: RuleSpec): RuleInput => ({
     ruleFamilyId: r.family, jurisdictionId: place[r.place]!, authorityId: r.authority ? auth[r.authority]! : null, assemblyType: "any", title: r.title, description: r.plain,

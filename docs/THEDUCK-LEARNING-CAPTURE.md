@@ -47,3 +47,9 @@ Where the data lives is noted so the capture is a query, not a research project.
 - How many large events skipped optional fields (speakers, footprint); how many marked applications and then made material changes (`event_changes.after_application`), and whether they acknowledged the advice.
 - Whether users asked for the Ramlila booking steps we deliberately do not give (DEL-RAM-002) and which of the three approvals caused most drop-off.
 - Method note: invariants ("a candidate is never ACTIVE", "no MCD link", "L&O/10/2022 stays metadata-only") were written as tests first; two real bugs (an operator-precedence slip and an off-by-one parameter index) were caught by them.
+
+## Venue date conflicts (v0.8.0)
+- How often the check returned OFFICIAL_STATUS_UNKNOWN vs NO_CONFLICT_FOUND, and whether users treated "no conflict found" as "available" (watch support questions).
+- Which venues got official-check records and how stale they were; how many public-report signals were later confirmed or contradicted.
+- How often organisers saw "Known to BookMyProtest" overlaps and changed date; whether two BMP users applied for the same Ramlila date.
+- Whether the Ramlila booking-side and police-side pictures actually diverged once real checks exist (the 2023 lesson).

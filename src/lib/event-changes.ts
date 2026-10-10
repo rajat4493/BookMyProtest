@@ -13,6 +13,13 @@ export const RECONFIRM_ADVICE =
 export async function markApplicationSubmitted(eventId: string, submitted: boolean) {
   await query("UPDATE events SET application_submitted_at = CASE WHEN $2 THEN COALESCE(application_submitted_at, now()) ELSE NULL END, updated_at=now() WHERE id=$1", [eventId, submitted]);
 }
+export async function markApprovalRecorded(eventId: string, approved: boolean) {
+  await query("UPDATE events SET approval_recorded_at = CASE WHEN $2 THEN COALESCE(approval_recorded_at, now()) ELSE NULL END, updated_at=now() WHERE id=$1 AND application_submitted_at IS NOT NULL", [eventId, approved]);
+}
+export async function approvalRecordedAt(eventId: string): Promise<string | null> {
+  const r = await one<{ t: Date | null }>("SELECT approval_recorded_at AS t FROM events WHERE id=$1", [eventId]);
+  return r?.t ? new Date(r.t).toISOString() : null;
+}
 export async function applicationSubmittedAt(eventId: string): Promise<string | null> {
   const r = await one<{ t: Date | null }>("SELECT application_submitted_at AS t FROM events WHERE id=$1", [eventId]);
   return r?.t ? new Date(r.t).toISOString() : null;
