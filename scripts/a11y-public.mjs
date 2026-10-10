@@ -2,7 +2,10 @@
 // Usage (app on the Delhi test DB): BASE=http://localhost:3101 node scripts/a11y-public.mjs
 import { chromium } from "playwright-core";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
+import pg from "pg";
 for (const f of [".env.local"]) if (existsSync(f)) for (const line of readFileSync(f, "utf8").split("\n")) { const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2]; }
+const db = new pg.Pool({ connectionString: process.env.TEST_DATABASE_URL ?? "postgres://bmp:bmp@localhost:5432/bookmyprotest_test" });
+await db.query("TRUNCATE rate_limits");
 const BASE = process.env.BASE ?? "http://localhost:3101";
 const exe = "/opt/pw-browsers/" + readdirSync("/opt/pw-browsers").filter((d) => d.startsWith("chromium-"))[0] + "/chrome-linux/chrome";
 const axe = readFileSync("node_modules/axe-core/axe.min.js", "utf8");
@@ -26,7 +29,12 @@ await p.fill("#name", "A11y public"); await p.fill("#date", date); await next();
 await p.fill("#oname", "Asha Rao"); await p.fill("#oemail", "asha@example.com"); await p.getByRole("button", { name: /show my checklist/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
 const planUrl = p.url();
 await p.goto(planUrl + "/publish"); await scan(p, "publish editor (signed out)");
-await p.getByRole("link", { name: /create an account/i }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(800); await p.fill("#email", `a11y${Date.now()}@example.com`); await p.fill("#password", "correct-horse-battery"); await p.getByRole("button", { name: /create account/i }).click(); await p.waitForTimeout(3000);
+await p.getByRole("link", { name: /create an account/i }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(800); const email = `a11y${Date.now()}@example.com`; await p.fill("#email", email); await p.fill("#password", "correct-horse-battery"); await p.getByRole("button", { name: /create account/i }).click(); await p.waitForTimeout(3000);
+await p.goto(planUrl + "/publish"); await scan(p, "publish editor (email not yet confirmed)");
+await p.goto(BASE + "/account"); await scan(p, "my plans (email not yet confirmed)");
+const link = (await db.query("SELECT body FROM email_outbox WHERE to_email=$1 ORDER BY created_at DESC LIMIT 1", [email])).rows[0].body.match(/\/verify-email\?token=[0-9a-f]{64}/)[0];
+await p.goto(BASE + link); await scan(p, "confirm email (before)");
+await p.getByRole("button", { name: /confirm email/i }).click(); await p.waitForTimeout(2500); await scan(p, "confirm email (result)");
 await p.goto(planUrl + "/publish"); await p.fill("#title", "A11y public protest"); await p.fill("#summary", "A short summary."); await p.fill("#organizerDisplayName", "Test group"); await p.selectOption("#visibility", "PUBLIC");
 await p.check('input[name="opt_WATER_HELP"]'); await p.getByTestId("save-page").click(); await p.waitForTimeout(3000);
 await scan(p, "publish editor (saved)");
@@ -35,6 +43,8 @@ const slug = (await p.getByTestId("preview-link").getAttribute("href"));
 await p.goto(BASE + slug); await scan(p, "public protest page (owner)");
 const q = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
 await q.goto(BASE + slug); await scan(q, "public protest page (anonymous)");
+await q.getByTestId("report").locator("summary").click(); await scan(q, "public protest page (report form open)");
+await q.locator('select[name="reason"]').selectOption("SPAM"); await q.getByRole("button", { name: "Send report" }).click(); await q.waitForTimeout(2500); await scan(q, "public protest page (report received)");
 await q.goto(BASE + "/protests"); await scan(q, "discovery");
 await q.goto(BASE + "/protests?state=NCT+Delhi&sort=newest"); await scan(q, "discovery filtered");
 for (const path of ["/terms", "/privacy", "/platform-guidelines"]) { await q.goto(BASE + path); await scan(q, path); }
@@ -43,5 +53,6 @@ await a.goto(BASE + "/login"); await a.fill('input[name="email"]', process.env.A
 await a.getByRole("button", { name: /sign in|log in/i }).click(); await a.waitForLoadState("networkidle");
 await a.goto(BASE + "/admin/protests"); await scan(a, "admin public listings");
 await p.goto(BASE + "/account"); await scan(p, "my plans with public page link");
+await db.end();
 console.log("TOTAL violations:", n);
 await b.close(); process.exit(n ? 1 : 0);

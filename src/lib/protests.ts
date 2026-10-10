@@ -15,10 +15,12 @@ import {
   CATEGORIES, PUBLIC_PERMISSION_LABEL, SUPPORT_KINDS, SUPPORT_TYPES, VISIBILITIES, screenPublicText, slugify, toPublicPermission,
   type PublicPermission, type SupportKind, type SupportOption, type Visibility,
 } from "./engine/public-protest";
+import { claimsToBePlatform, identityFlags, type OrganizerSignals } from "./engine/identity";
 import { overlaysFor } from "./engine/select";
 import type { Guidance } from "./engine/toolkit";
 import { chainFor, latestEvaluation, listRestrictions } from "./knowledge";
 import { doneRuleIds, getJurisdiction, getRulesByIds, type EventRow } from "./store";
+import { requireVerified } from "./verification";
 
 export interface PublicFields { organizerType: boolean; logistics: boolean; officialInfo: boolean }
 export interface ProtestInput {
@@ -33,9 +35,11 @@ export interface PublicProtest {
   logistics: string; visibility: Visibility; moderation: "OK" | "HIDDEN" | "REMOVED"; publicFields: PublicFields; supportOptions: SupportOption[]; updatedAt: string; publishedAt: string | null;
   permission: { status: PublicPermission; label: string; reportedAt: string | null; provenance: Provenance };
   counts: { following: number; interested: number; planning: number; offers: Record<string, number> };
+  organizerSignals: OrganizerSignals;
 }
 const PUBLIC_COLUMNS = `p.slug, p.title, p.summary, p.description, p.organizer_display_name, p.organizer_type, p.city, p.state, p.venue_name, to_char(p.event_date,'YYYY-MM-DD') AS d, p.start_time, p.end_time,
-  p.category, p.expected_format, p.logistics, p.visibility, p.moderation_status, p.permission_mode, p.public_fields, p.support_options, p.updated_at, p.published_at, p.id, p.event_id`;
+  p.category, p.expected_format, p.logistics, p.visibility, p.moderation_status, p.permission_mode, p.public_fields, p.support_options, p.updated_at, p.published_at, p.id, p.event_id,
+  (SELECT u.email_verified_at IS NOT NULL FROM users u WHERE u.id=p.owner_user_id) AS owner_email_confirmed, (SELECT to_char(u.created_at,'YYYY-MM') FROM users u WHERE u.id=p.owner_user_id) AS owner_since`;
 
 const E_NOT_YOURS = "Sign in to the account that owns this plan to publish it.";
 
@@ -48,8 +52,8 @@ async function permissionFor(eventId: string, mode: string): Promise<PublicProte
 }
 
 async function counts(protestId: string): Promise<PublicProtest["counts"]> {
-  const k = await query<{ kind: string; n: number }>("SELECT kind, count(*)::int AS n FROM protest_supports WHERE protest_id=$1 GROUP BY kind", [protestId]);
-  const o = await query<{ option_type: string; n: number }>("SELECT option_type, count(*)::int AS n FROM protest_support_offers WHERE protest_id=$1 GROUP BY option_type", [protestId]);
+  const k = await query<{ kind: string; n: number }>("SELECT s.kind, count(*)::int AS n FROM protest_supports s JOIN users u ON u.id=s.user_id AND u.email_verified_at IS NOT NULL AND u.suspended_at IS NULL WHERE s.protest_id=$1 GROUP BY s.kind", [protestId]);
+  const o = await query<{ option_type: string; n: number }>("SELECT s.option_type, count(*)::int AS n FROM protest_support_offers s JOIN users u ON u.id=s.user_id AND u.email_verified_at IS NOT NULL AND u.suspended_at IS NULL WHERE s.protest_id=$1 GROUP BY s.option_type", [protestId]);
   const get = (x: string) => k.find((r) => r.kind === x)?.n ?? 0;
   return { following: get("FOLLOWING"), interested: get("INTERESTED"), planning: get("PLANNING_TO_ATTEND"), offers: Object.fromEntries(o.map((r) => [r.option_type, r.n])) };
 }
@@ -61,6 +65,7 @@ async function shape(r: any): Promise<PublicProtest> {
     logistics: r.public_fields?.logistics ? r.logistics : "", visibility: r.visibility, moderation: r.moderation_status, publicFields: r.public_fields, supportOptions: r.support_options ?? [],
     updatedAt: new Date(r.updated_at).toISOString(), publishedAt: r.published_at ? new Date(r.published_at).toISOString() : null,
     permission: await permissionFor(r.event_id, r.permission_mode), counts: await counts(r.id),
+    organizerSignals: { nameSelfDeclared: true, emailConfirmed: !!r.owner_email_confirmed, memberSince: r.owner_since ?? "1970-01" },
   };
 }
 
@@ -89,6 +94,12 @@ export async function getOwnerProtest(eventId: string) {
   return r ? { protest: await shape(r), eventId: r.event_id as string, ownerUserId: r.owner_user_id as string, id: r.id as string } : null;
 }
 
+/** What the owner (only) may see about the automatic name review. */
+export async function ownerIdentityFlags(eventId: string): Promise<string[]> {
+  const r = await one<{ f: string[]; reviewed: Date | null }>("SELECT identity_flags AS f, identity_reviewed_at AS reviewed FROM public_protests WHERE event_id=$1", [eventId]);
+  return r && !r.reviewed ? r.f : [];
+}
+
 /** Creates or updates the public record for a plan. Never publishes by itself: the caller chooses the visibility, default DRAFT. */
 export async function saveProtest(event: EventRow, user: { id: string }, input: ProtestInput): Promise<{ slug: string; created: boolean; becamePublic: boolean }> {
   if (event.userId !== user.id) throw new Error(E_NOT_YOURS);
@@ -96,27 +107,32 @@ export async function saveProtest(event: EventRow, user: { id: string }, input: 
   if (u?.suspended_at) throw new Error("This account is suspended and cannot publish or edit public pages.");
   const err = validateProtestInput(input);
   if (err) throw new Error(err);
-  const existing = await one<{ id: string; slug: string; visibility: string; moderation_status: string; published_at: Date | null }>("SELECT id, slug, visibility, moderation_status, published_at FROM public_protests WHERE event_id=$1", [event.id]);
+  const existing = await one<{ id: string; slug: string; visibility: string; moderation_status: string; published_at: Date | null; organizer_display_name: string }>("SELECT id, slug, visibility, moderation_status, published_at, organizer_display_name FROM public_protests WHERE event_id=$1", [event.id]);
   if (existing?.moderation_status === "REMOVED") throw new Error("This page was removed under the platform guidelines and cannot be edited.");
   const city = await getJurisdiction(event.jurisdictionId);
   const parent = city?.parentId ? await getJurisdiction(city.parentId) : null;
   const venue = event.venueJurisdictionId ? await getJurisdiction(event.venueJurisdictionId) : null;
   const venueName = venue?.name ?? event.answers.startLocation;
   const goingLive = input.visibility === "PUBLIC" || input.visibility === "UNLISTED";
+  if (goingLive) await requireVerified(user.id);
+  if (claimsToBePlatform(input.organizerDisplayName)) throw new Error("An organizer name cannot present the page as BookMyProtest. Use your own group or name.");
+  const others = (await query<{ n: string }>("SELECT DISTINCT organizer_display_name AS n FROM public_protests WHERE owner_user_id<>$1 AND moderation_status<>'REMOVED'", [user.id])).map((r) => r.n);
+  const flags = identityFlags(input.organizerDisplayName, others);
   const opts = JSON.stringify(input.supportOptions.map((o) => ({ type: o.type, note: o.note.trim(), link: o.link.trim() })));
   if (existing) {
     await query(`UPDATE public_protests SET title=$2, summary=$3, description=$4, organizer_display_name=$5, organizer_type=$6, city=$7, state=$8, venue_name=$9, venue_jurisdiction_id=$10, event_date=$11, start_time=$12, end_time=$13,
-      category=$14, expected_format=$15, logistics=$16, visibility=$17, permission_mode=$18, public_fields=$19, support_options=$20, published_at=CASE WHEN $21 THEN COALESCE(published_at, now()) ELSE published_at END, updated_at=now() WHERE id=$1`,
+      category=$14, expected_format=$15, logistics=$16, visibility=$17, permission_mode=$18, public_fields=$19, support_options=$20, published_at=CASE WHEN $21 THEN COALESCE(published_at, now()) ELSE published_at END, identity_flags=$22,
+      identity_reviewed_at=CASE WHEN organizer_display_name IS DISTINCT FROM $5 THEN NULL ELSE identity_reviewed_at END, updated_at=now() WHERE id=$1`,
       [existing.id, input.title.trim(), input.summary.trim(), input.description.trim(), input.organizerDisplayName.trim(), input.organizerType ?? null, city?.name ?? "", parent?.name ?? "", venueName, event.venueJurisdictionId, event.date, event.answers.startTime, event.answers.endTime,
-        input.category, event.answers.kind, input.logistics.trim(), input.visibility, input.permissionMode, JSON.stringify(input.publicFields), opts, goingLive]);
+        input.category, event.answers.kind, input.logistics.trim(), input.visibility, input.permissionMode, JSON.stringify(input.publicFields), opts, goingLive, flags]);
     return { slug: existing.slug, created: false, becamePublic: goingLive && !existing.published_at };
   }
   const slug = `${slugify(input.title)}-${randomBytes(3).toString("hex")}`;
   await query(`INSERT INTO public_protests (slug, event_id, owner_user_id, title, summary, description, organizer_display_name, organizer_type, city, state, venue_name, venue_jurisdiction_id, event_date, start_time, end_time,
-    category, expected_format, logistics, visibility, permission_mode, public_fields, support_options, published_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22, CASE WHEN $23 THEN now() END)`,
+    category, expected_format, logistics, visibility, permission_mode, public_fields, support_options, published_at, identity_flags)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22, CASE WHEN $23 THEN now() END, $24)`,
     [slug, event.id, user.id, input.title.trim(), input.summary.trim(), input.description.trim(), input.organizerDisplayName.trim(), input.organizerType ?? null, city?.name ?? "", parent?.name ?? "", venueName, event.venueJurisdictionId, event.date, event.answers.startTime, event.answers.endTime,
-      input.category, event.answers.kind, input.logistics.trim(), input.visibility, input.permissionMode, JSON.stringify(input.publicFields), opts, goingLive]);
+      input.category, event.answers.kind, input.logistics.trim(), input.visibility, input.permissionMode, JSON.stringify(input.publicFields), opts, goingLive, flags]);
   return { slug, created: true, becamePublic: goingLive };
 }
 
@@ -126,6 +142,7 @@ export async function setVisibility(eventId: string, user: { id: string }, visib
   if (!p || p.owner_user_id !== user.id) throw new Error(E_NOT_YOURS);
   if (p.moderation_status === "REMOVED") throw new Error("This page was removed under the platform guidelines.");
   if (!(VISIBILITIES as readonly string[]).includes(visibility)) throw new Error("Unknown visibility.");
+  if (visibility === "PUBLIC" || visibility === "UNLISTED") await requireVerified(user.id);
   await query("UPDATE public_protests SET visibility=$2, published_at=CASE WHEN $3 THEN COALESCE(published_at, now()) ELSE published_at END, updated_at=now() WHERE id=$1", [p.id, visibility, visibility === "PUBLIC" || visibility === "UNLISTED"]);
 }
 
@@ -207,6 +224,7 @@ export async function toggleSupport(slug: string, userId: string, kind: SupportK
   if (!(SUPPORT_KINDS as readonly string[]).includes(kind)) throw new Error("Unknown action.");
   const u = await one<{ suspended_at: Date | null }>("SELECT suspended_at FROM users WHERE id=$1", [userId]);
   if (u?.suspended_at) throw new Error("This account is suspended.");
+  await requireVerified(userId);
   const p = await openProtest(slug);
   const del = await query("DELETE FROM protest_supports WHERE protest_id=$1 AND user_id=$2 AND kind=$3 RETURNING 1", [p.id, userId, kind]);
   if (del.length) return false;
@@ -214,6 +232,7 @@ export async function toggleSupport(slug: string, userId: string, kind: SupportK
   return true;
 }
 export async function toggleOffer(slug: string, userId: string, type: string): Promise<boolean> {
+  await requireVerified(userId);
   const p = await openProtest(slug);
   if (!SUPPORT_TYPES[type] || !p.options.some((o) => o.type === type)) throw new Error("The organizer has not enabled that option.");
   const del = await query("DELETE FROM protest_support_offers WHERE protest_id=$1 AND user_id=$2 AND option_type=$3 RETURNING 1", [p.id, userId, type]);

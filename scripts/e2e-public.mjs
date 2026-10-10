@@ -2,8 +2,11 @@
 //   BASE=http://localhost:3101 node scripts/e2e-public.mjs
 import { chromium } from "playwright-core";
 import { mkdirSync, readdirSync, readFileSync, existsSync } from "node:fs";
+import pg from "pg";
 import { recordPermission } from "./ui-helpers.mjs";
 for (const f of [".env.local"]) if (existsSync(f)) for (const line of readFileSync(f, "utf8").split("\n")) { const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2]; }
+const db = new pg.Pool({ connectionString: process.env.TEST_DATABASE_URL ?? "postgres://bmp:bmp@localhost:5432/bookmyprotest_test" });
+await db.query("TRUNCATE rate_limits"); // counters are durable, so a rerun within the hour starts clean
 const BASE = process.env.BASE ?? "http://localhost:3101";
 const OUT = process.env.SHOTS ?? "docs/previews/v1.0.0/images";
 mkdirSync(OUT, { recursive: true });
@@ -33,13 +36,38 @@ async function signup(p, email) {
   await p.fill("#email", email); await p.fill("#password", "correct-horse-battery");
   await p.getByRole("button", { name: /create account/i }).click(); await settle(p);
 }
-async function publishPage(p, planUrl, { title, organizer, visibility = "PUBLIC", water = false }) {
+/** Opens the emailed confirmation link as a person would (the link is read from the outbox; the button press stops scanners using it up). */
+async function confirmEmail(p, email) {
+  const { rows } = await db.query("SELECT body FROM email_outbox WHERE to_email=$1 ORDER BY created_at DESC LIMIT 1", [email]);
+  const link = rows[0]?.body.match(/https?:\/\/\S+\/verify-email\?token=[0-9a-f]{64}/)?.[0];
+  if (!link) throw new Error("FAIL: no confirmation email in the outbox for " + email);
+  await p.goto(BASE + new URL(link).pathname + new URL(link).search); await settle(p);
+  await p.getByRole("button", { name: /confirm email/i }).click(); await settle(p);
+  return p.getByTestId("verify-result").getAttribute("data-result");
+}
+const signedUp = new WeakMap();
+async function publishPage(p, planUrl, { title, organizer, visibility = "PUBLIC", water = false, expectBlocked = false }) {
   await p.goto(planUrl + "/publish"); await settle(p);
   if (await p.getByRole("link", { name: /create an account/i }).count()) {
     await p.getByRole("link", { name: /create an account/i }).click(); await settle(p);
-    await signup(p, `org${stamp}${Math.random().toString(36).slice(2, 6)}@example.com`);
+    const email = `org${stamp}${Math.random().toString(36).slice(2, 6)}@example.com`;
+    await signup(p, email); signedUp.set(p, email);
     await p.goto(planUrl + "/publish"); await settle(p);
   }
+  const fill = async () => { await fillAndSave(p, { title, organizer, visibility, water }); };
+  await fill();
+  if (await p.getByRole("alert").filter({ hasText: /Confirm your email/ }).count()) {
+    if (expectBlocked) {
+      ok(true, "A: an unconfirmed email cannot publish: " + (await p.getByRole("alert").first().innerText()).slice(0, 60));
+      ok(await p.getByTestId("verify-needed").count() === 1, "A: the publish page explains why and offers a new link");
+      ok(!(await db.query("SELECT 1 FROM public_protests WHERE visibility='PUBLIC' AND title=$1", [title])).rowCount, "A: nothing was published");
+    }
+    ok((await confirmEmail(p, signedUp.get(p))) === "VERIFIED", "the emailed link confirms the address");
+    await p.goto(planUrl + "/publish"); await settle(p);
+    await fill();
+  } else if (expectBlocked) throw new Error("FAIL: publishing was not blocked for an unconfirmed email");
+}
+async function fillAndSave(p, { title, organizer, visibility, water }) {
   await p.fill("#title", title); await p.fill("#summary", "Parents asking for safer school buildings."); await p.fill("#organizerDisplayName", organizer);
   await p.selectOption("#category", "EDUCATION"); await p.selectOption("#visibility", visibility);
   if (water) { await p.check('input[name="opt_WATER_HELP"]'); await p.fill('input[name="note_WATER_HELP"]', "We need water for 500 people"); await p.check('input[name="opt_VOLUNTEER"]'); }
@@ -54,7 +82,7 @@ await recordPermission(org, "SUBMITTED", { method: "IN_PERSON", reference: "DIAR
 ok((await org.getByTestId("permission-panel").getAttribute("data-status")) === "SUBMITTED", "A: permission status recorded as SUBMITTED (internal tracker)");
 const readinessText = await org.getByTestId("readiness-panel").innerText();
 ok(/Action required/.test(readinessText) && !/\bReady\b/.test(readinessText), "A: preparation state reads 'Action required', never 'Ready'");
-await publishPage(org, planUrl, { title: `Parents for Safe Schools ${stamp}`, organizer: "Parents for Safe Schools", water: true });
+await publishPage(org, planUrl, { title: `Parents for Safe Schools ${stamp}`, organizer: "Parents for Safe Schools", water: true, expectBlocked: true });
 await org.getByTestId("publish-permission").scrollIntoViewIfNeeded(); await org.screenshot({ path: `${OUT}/1-publish-editor.png`, fullPage: true });
 const slugHref = await org.getByTestId("preview-link").getAttribute("href");
 ok(/^\/protests\//.test(slugHref), "A: the page can be previewed after saving");
@@ -90,6 +118,9 @@ if (!/\/signup/.test(anon.url())) await anon.goto(BASE + `/signup?next=${encodeU
 const supporterEmail = `supporter${stamp}@example.com`;
 await signup(anon, supporterEmail);
 await anon.waitForURL(new RegExp(`/protests/${slug}`)); await settle(anon);
+ok(await anon.getByTestId("verify-needed").count() === 1 && await anon.locator('button[data-kind="PLANNING_TO_ATTEND"]').count() === 0, "B: a signed-up but unconfirmed supporter is asked to confirm their email before acting");
+ok((await confirmEmail(anon, supporterEmail)) === "VERIFIED", "B: the supporter confirms their email from the link");
+await anon.goto(BASE + slugHref); await settle(anon);
 ok(/0 planning to attend/.test(await anon.getByTestId("support-counts").innerText()), "B: counts start at zero");
 await anon.locator('button[data-kind="PLANNING_TO_ATTEND"]').click(); await settle(anon);
 ok(/1 planning to attend/.test(await anon.getByTestId("support-counts").innerText()), "B: planning to attend increments the aggregate");
@@ -151,7 +182,66 @@ ok(/HIDE/.test(await adm.locator("main").innerText()) && /Harassment/.test(await
 await org.goto(BASE + slugHref); await settle(org);
 ok(/hidden under the platform guidelines/.test(await org.getByTestId("owner-notice").innerText()), "E: the organizer is told the page is hidden under platform guidelines");
 
+
+// ================= SCENARIO F: user reporting =================
+const rep = await (await ctx()).newPage();
+const slug2 = (await db.query("SELECT slug FROM public_protests WHERE title=$1", [`Residents for Safe Roads ${stamp}`])).rows[0].slug;
+await rep.goto(BASE + `/protests/${slug2}`); await settle(rep);
+await rep.getByTestId("report").locator("summary").click();
+await rep.locator('select[name="reason"]').selectOption("SPAM");
+await rep.locator('textarea[name="note"]').fill("Looks like a repeated post");
+await rep.getByRole("button", { name: "Send report" }).click(); await settle(rep);
+ok(/Reports do not hide a page automatically/.test(await rep.getByTestId("report-received").innerText()), "F: a visitor can report a page without an account, and is told nothing is hidden automatically");
+ok((await fresh.goto(BASE + `/protests/${slug2}`)).status() === 200, "F: the reported page stays visible until a person decides");
+await adm.goto(BASE + "/admin/protests"); await settle(adm);
+const rrow = adm.locator(`tr[data-report]`).filter({ hasText: `Residents for Safe Roads ${stamp}` }).first();
+ok(/Spam/.test(await rrow.innerText()) && /anonymous/.test(await rrow.innerText()), "F: the admin sees the report with its reason, and the reporter as anonymous");
+await rrow.locator('input[name="note"]').fill("Not a platform-rule issue");
+await rrow.getByRole("button", { name: "Dismiss" }).click(); await settle(adm);
+ok((await fresh.goto(BASE + `/protests/${slug2}`)).status() === 200, "F: a dismissed report leaves the page untouched");
+await rep.goto(BASE + `/protests/${slug2}`); await settle(rep);
+await rep.getByTestId("report").locator("summary").click();
+await rep.locator('select[name="reason"]').selectOption("DOXXING");
+await rep.getByRole("button", { name: "Send report" }).click(); await settle(rep);
+await adm.goto(BASE + "/admin/protests"); await settle(adm);
+const rrow2 = adm.locator(`tr[data-report][data-status="OPEN"]`).filter({ hasText: `Residents for Safe Roads ${stamp}` }).first();
+await rrow2.locator('input[name="note"]').fill("Shows a private address");
+await rrow2.getByRole("button", { name: "Hide page" }).click(); await settle(adm);
+ok((await fresh.goto(BASE + `/protests/${slug2}`)).status() === 404, "F: acting on a report hides the page");
+ok(/Doxxing/.test(await adm.locator("main").innerText()), "F: the action is logged with the report's reason");
+await adm.screenshot({ path: `${OUT}/8-admin-reports.png`, fullPage: true });
+
+// ================= SCENARIO G: organizer identity =================
+const org3 = await (await ctx()).newPage();
+const plan3 = await createPlan(org3, `Citizens clean air ${stamp}`, 200);
+await publishPage(org3, plan3, { title: `Clean air walk ${stamp}`, organizer: "BookMyProtest Team" });
+ok(/cannot present the page as BookMyProtest/.test(await org3.getByRole("alert").first().innerText()), "G: a name that presents the page as BookMyProtest is refused");
+await publishPage(org3, plan3, { title: `Clean air walk ${stamp}`, organizer: "Parents for Safe Schools" });
+ok(await org3.getByTestId("identity-note").count() === 1, "G: a name matching another organizer is accepted but the organizer is told it will be reviewed");
+const org3slug = (await db.query("SELECT slug FROM public_protests WHERE title=$1", [`Clean air walk ${stamp}`])).rows[0].slug;
+await fresh.goto(BASE + `/protests/${org3slug}`); await settle(fresh);
+const G = await fresh.getByTestId("organizer-signals").innerText();
+ok(/self-declared/.test(G) && /Contact email confirmed/.test(G) && /On BookMyProtest since/.test(G), "G: the public page says the name is self-declared, the email is confirmed, and since when");
+ok(!/verified organizer|trusted/i.test(G) && !/LOOKALIKE|AUTHORITY_LIKE|identity_flags/.test(await fresh.content()), "G: no 'verified organizer' claim and no public accusation");
+await adm.goto(BASE + "/admin/protests"); await settle(adm);
+ok(await adm.locator(`tr[data-identity="${org3slug}"]`).count() === 1, "G: the page is in the admin organizer-name review queue");
+await adm.locator(`tr[data-identity="${org3slug}"]`).locator('input[name="note"]').fill("Different group, same area");
+await adm.locator(`tr[data-identity="${org3slug}"]`).getByRole("button", { name: "Mark reviewed" }).click(); await settle(adm);
+ok(await adm.locator(`tr[data-identity="${org3slug}"]`).count() === 0, "G: marking it reviewed is a human decision that clears the queue");
+
+// ================= SCENARIO H: durable rate limit =================
+const lim = await (await ctx()).newPage();
+let blocked = false;
+for (let i = 0; i < 10 && !blocked; i++) {
+  await lim.goto(BASE + "/login"); await lim.fill('input[name="email"]', `nobody${stamp}@example.com`); await lim.fill('input[name="password"]', "wrong-password-" + i);
+  await lim.getByRole("button", { name: /sign in|log in/i }).click(); await settle(lim);
+  blocked = /Too many attempts/.test(await lim.locator("main").innerText());
+}
+ok(blocked, "H: repeated failed sign-ins are slowed down");
+ok((await db.query("SELECT hits FROM rate_limits WHERE key=$1", [`login:nobody${stamp}@example.com`])).rows[0].hits >= 8, "H: the counter lives in the database, shared by every app instance");
+
 // legal drafts + positioning
 for (const path of ["/terms", "/privacy", "/platform-guidelines"]) { await fresh.goto(BASE + path); ok(/Legal review is required before public launch/.test(await fresh.getByTestId("legal-draft-banner").innerText()), `${path} is marked as a draft needing legal review`); }
+await db.end();
 await browser.close();
-console.log("V1.0 PUBLIC-LAUNCH SCENARIOS A–E VERIFIED IN THE UI");
+console.log("V1.0.1 PUBLIC-BETA SCENARIOS A–H VERIFIED IN THE UI");

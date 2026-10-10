@@ -64,15 +64,15 @@ await page.waitForTimeout(1400);
 await shot("09-dashboard", true);
 ok(await page.getByText("Based on currently configured local requirements").first().isVisible(), "dashboard shows configured-requirements language");
 ok((await page.getByText("Needs verification").count()) > 0, "unverified rules labelled Needs verification");
-const before = await page.locator('[aria-label$="percent ready"]').first().getAttribute("aria-label");
+const before = await page.locator('[aria-label$="percent of checklist done"]').first().getAttribute("aria-label");
 await page.getByRole("button", { name: /Mark as done: Police intimation/ }).click();
 await page.waitForTimeout(1500);
-const after = await page.locator('[aria-label$="percent ready"]').first().getAttribute("aria-label");
+const after = await page.locator('[aria-label$="percent of checklist done"]').first().getAttribute("aria-label");
 ok(before !== after, `readiness changes when item completed (${before} -> ${after})`);
 
 // return later: new page load
 await page.goto(planUrl);
-ok((await page.locator('[aria-label$="percent ready"]').first().getAttribute("aria-label")) === after, "readiness state persists on return");
+ok((await page.locator('[aria-label$="percent of checklist done"]').first().getAttribute("aria-label")) === after, "readiness state persists on return");
 
 // vendor
 await page.getByRole("link", { name: /^get quotes/i }).first().click();

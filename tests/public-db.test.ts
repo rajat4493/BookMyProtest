@@ -19,7 +19,7 @@ import { baseAnswers } from "./fixtures";
 let admin: { userId: string }, org1: { id: string }, org2: { id: string }, sup: { id: string }, sup2: { id: string };
 let district: string, jm: string;
 const DAY = "2026-12-15";
-const mkUser = async (email: string, role = "user") => (await one<{ id: string }>("INSERT INTO users (email, password_hash, role) VALUES ($1,'x',$2) RETURNING id", [email, role]))!;
+const mkUser = async (email: string, role = "user") => (await one<{ id: string }>("INSERT INTO users (email, password_hash, role, email_verified_at) VALUES ($1,'x',$2, now()) RETURNING id", [email, role]))!;
 
 async function plan(user: { id: string }, over: Record<string, unknown> = {}) {
   const e = (await getEvent(await createEvent(`anon-${user.id}`, user.id, district, { ...baseAnswers, date: DAY, startTime: "10:30", endTime: "15:30", attendance: 500, organizerName: "Private Person", organizerEmail: "private.person@example.org", organizerPhone: "9810012345", ...over } as any, jm)))!;
@@ -106,7 +106,7 @@ describe("what a public page reveals", () => {
   it("exposes only whitelisted fields: no plan id, owner id, email, phone or internal notes", async () => {
     const { e, slug } = await publish(org1);
     const p = (await getPublicProtest(slug))!.protest;
-    expect(Object.keys(p).sort()).toEqual(["category", "categoryLabel", "city", "counts", "date", "description", "endTime", "expectedFormat", "logistics", "moderation", "organizerDisplayName", "organizerType", "permission", "publicFields", "publishedAt", "slug", "startTime", "state", "summary", "supportOptions", "title", "updatedAt", "venue", "visibility"]);
+    expect(Object.keys(p).sort()).toEqual(["category", "categoryLabel", "city", "counts", "date", "description", "endTime", "expectedFormat", "logistics", "moderation", "organizerDisplayName", "organizerSignals", "organizerType", "permission", "publicFields", "publishedAt", "slug", "startTime", "state", "summary", "supportOptions", "title", "updatedAt", "venue", "visibility"]);
     const json = JSON.stringify(await Promise.all([getPublicProtest(slug), listProtests(), otherListedSameDate(slug), listUpdates(slug), listPlaces()]));
     for (const secret of ["private.person@example.org", "9810012345", "Private Person", e.id, org1.id, "organizer.one@example.org", e.answers.organizerPhone]) expect(json, secret).not.toContain(secret);
   });
@@ -208,7 +208,9 @@ describe("supporters: login-gated, undoable, aggregate-only", () => {
     const src = readFileSync("src/lib/protests.ts", "utf8");
     const selects = [...src.matchAll(/"SELECT[^"]*FROM protest_support(?:s|_offers)[^"]*"|`SELECT[^`]*FROM protest_support(?:s|_offers)[^`]*`/g)].map((m) => m[0]);
     for (const s of selects) if (/user_id/.test(s.split("FROM")[0] ?? "") || /SELECT\s+\*/.test(s)) throw new Error(`selects supporter identity: ${s}`);
-    for (const s of selects.filter((x) => /user_id/.test(x))) expect(s).toMatch(/s\.user_id=\$2/); // identity only ever filtered to the viewer
+    // aggregate counts may join on user_id to count only confirmed-email supporters; every other read is filtered to the viewer
+    for (const s of selects.filter((x) => /user_id/.test(x) && !/count\(\*\)/.test(x))) expect(s).toMatch(/s\.user_id=\$2/);
+    for (const s of selects.filter((x) => /count\(\*\)/.test(x))) expect(s).toMatch(/GROUP BY s\.(kind|option_type)/); // identity only ever filtered to the viewer
   });
   it("only enabled support options can be offered", async () => {
     const { slug } = await publish(org1);

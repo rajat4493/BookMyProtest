@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { generateToolkitAction, postProtestUpdateAction, savePublicProtestAction, setProtestVisibilityAction } from "@/app/actions";
+import { generateToolkitAction, resendVerificationAction, postProtestUpdateAction, savePublicProtestAction, setProtestVisibilityAction } from "@/app/actions";
 import { Footer, Header } from "@/components/chrome";
 import { Back } from "@/components/icons";
 import { Fact, Provenance } from "@/components/provenance";
@@ -14,17 +14,21 @@ import { currentPermission } from "@/lib/permissions";
 import { assessReadiness } from "@/lib/readiness-service";
 import { READINESS_LABEL } from "@/lib/engine/event-readiness";
 import { formatDate } from "@/lib/plan";
-import { getOwnerProtest, listUpdates, toolkitForEvent } from "@/lib/protests";
+import { getOwnerProtest, listUpdates, ownerIdentityFlags, toolkitForEvent } from "@/lib/protests";
+import { IDENTITY_FLAG_LABEL, type IdentityFlag } from "@/lib/engine/identity";
+import { isEmailVerified } from "@/lib/verification";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Publish your protest" };
 
-export default async function Publish({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; saved?: string; toolkit?: string }> }) {
+export default async function Publish({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; saved?: string; toolkit?: string; verify?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const event = await loadOwnedEvent(id);
   const user = await getUser();
   const owner = await getOwnerProtest(id);
+  const verified = await isEmailVerified(user?.id);
+  const flags = (await ownerIdentityFlags(id)) as IdentityFlag[];
   const perm = await currentPermission(id);
   const readiness = (await assessReadiness(event)).readiness;
   const pub = toPublicPermission(perm.status);
@@ -50,6 +54,17 @@ export default async function Publish({ params, searchParams }: { params: Promis
 
         {sp.error && <p role="alert" className="card mt-6 p-4 font-semibold">{sp.error}</p>}
         {sp.saved && !sp.error && <p role="status" className="panel mt-6 p-4"><span className="chip chip-required mr-2">Saved</span>Your page was saved.</p>}
+        {sp.verify && <p role="status" className="panel mt-6 p-4">{sp.verify === "sent" ? "We sent a confirmation link to your email." : sp.verify === "already" ? "Your email is already confirmed." : "We could not send the email just now. Try again later."}</p>}
+        {user && !verified && (
+          <div className="card mt-6 p-4" data-testid="verify-needed" role="note">
+            <p className="font-semibold">Confirm your email to publish.</p>
+            <p className="mt-1 text-sm text-mute">You can save a draft now. Making a page Public or Unlisted needs a confirmed email so there is a way to reach the person behind each page.</p>
+            <form action={resendVerificationAction} className="mt-3"><input type="hidden" name="next" value={`/plan/${event.id}/publish`} /><button className="btn btn-sm">Email me a confirmation link</button></form>
+          </div>
+        )}
+        {flags.length > 0 && (
+          <p className="panel mt-6 p-4 text-sm" role="note" data-testid="identity-note">Your organizer name will be looked at by a person: {flags.map((f) => IDENTITY_FLAG_LABEL[f].toLowerCase()).join("; ")}. This is routine and does not take the page down. Using the name of your own group or your own name avoids confusion.</p>
+        )}
         {!user && (
           <p className="card mt-6 p-4" role="note">You need an account to publish, so you can edit or unpublish later. <Link className="underline" href={`/signup?next=/plan/${event.id}/publish`}>Create an account</Link> or <Link className="underline" href={`/login?next=/plan/${event.id}/publish`}>sign in</Link>; your plan comes with you.</p>
         )}

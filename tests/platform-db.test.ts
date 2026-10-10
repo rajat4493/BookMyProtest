@@ -346,7 +346,7 @@ describe("migration of V0-shaped data", () => {
   it("rules table keeps the V0 columns and the new model coexists", async () => {
     const cols = (await query("SELECT column_name FROM information_schema.columns WHERE table_name='rules'")).map((r) => r.column_name);
     expect(cols).toEqual(expect.arrayContaining(["description", "required_documents", "deadline_days_before", "rule_family_id", "version", "rule_status", "supersedes_rule_id", "deadline_definition", "legal_certainty"]));
-    expect((await query("SELECT name FROM schema_migrations ORDER BY name")).map((r) => r.name)).toEqual(["db/migrations/002_rules_platform.sql", "db/migrations/003_legal_certainty.sql", "db/migrations/004_source_lifecycle.sql", "db/migrations/005_source_identity.sql", "db/migrations/006_live_restrictions.sql", "db/migrations/007_venue_availability.sql", "db/migrations/008_rule_link_label.sql", "db/migrations/009_permission_lifecycle.sql", "db/migrations/010_public_protests.sql", "db/schema.sql"]);
+    expect((await query("SELECT name FROM schema_migrations ORDER BY name")).map((r) => r.name)).toEqual(["db/migrations/002_rules_platform.sql", "db/migrations/003_legal_certainty.sql", "db/migrations/004_source_lifecycle.sql", "db/migrations/005_source_identity.sql", "db/migrations/006_live_restrictions.sql", "db/migrations/007_venue_availability.sql", "db/migrations/008_rule_link_label.sql", "db/migrations/009_permission_lifecycle.sql", "db/migrations/010_public_protests.sql", "db/migrations/011_beta_hardening.sql", "db/schema.sql"]);
     expect(await rulesForChain([city])).toEqual([]);
   });
 });

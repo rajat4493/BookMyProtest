@@ -9,13 +9,15 @@ import { acknowledgeChanges, markApplicationSubmitted, markApprovalRecorded, upd
 import { recordPermission } from "@/lib/permissions";
 import { getOwnerProtest, getPublicProtest, postUpdate, saveProtest, setVisibility, toggleOffer, toggleSupport, type ProtestInput } from "@/lib/protests";
 import { moderateProtest, setOrganizerSuspended } from "@/lib/moderation";
+import { clearIdentityReview, resolveReport, submitReport } from "@/lib/reports";
+import { consumeVerification, sendVerification } from "@/lib/verification";
 import { SUPPORT_KINDS, SUPPORT_TYPES, VISIBILITIES, CATEGORIES as PROTEST_CATEGORIES, type SupportKind, type Visibility } from "@/lib/engine/public-protest";
 import { runChecks } from "@/lib/readiness-service";
 import { recordOfficialCheck, saveVenueSignal, setSchedulingMode, venueAvailability } from "@/lib/venue-signals";
 import { SCHEDULING_MODES, SIGNAL_TYPES, EVENT_STATUSES, type Availability } from "@/lib/engine/availability";
 import { one } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { allow } from "@/lib/ratelimit";
+import { allow, clientIp } from "@/lib/ratelimit";
 import { DOC_KINDS } from "@/lib/documents";
 import { parseAnswers, vendorRequestSchema, waitlistSchema } from "@/lib/validation";
 import {
@@ -39,7 +41,7 @@ const safeNext = (n: unknown) => (typeof n === "string" && /^\/(?!\/)[\w\-/?=&.%
 /** Date-conflict check for a venue and date (public: composes what is known, reveals no names or contacts). */
 export async function checkVenueDateAction(venueId: string, date: string, startTime: string, endTime: string, attendance?: number | null): Promise<{ ok: true; availability: Availability } | { ok: false; error: string }> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime) || !/^[0-9a-f-]{36}$/i.test(venueId)) return { ok: false, error: "Choose a venue and date first." };
-  if (!allow(`dcc:${await clientKey()}`, 60, 10 * 60_000)) return { ok: false, error: "Too many checks. Try again shortly." };
+  if (!(await allow(`dcc:${await clientKey()}`, 60, 10 * 60_000))) return { ok: false, error: "Too many checks. Try again shortly." };
   const a = await venueAvailability(venueId, date, startTime, endTime > startTime ? endTime : "23:59", { attendance: attendance && attendance > 0 ? attendance : null });
   return a ? { ok: true, availability: a } : { ok: false, error: "Choose a venue." };
 }
@@ -150,7 +152,7 @@ export async function requestQuoteAction(eventId: string, raw: unknown): Promise
   if (!p.success) return { ok: false, errors: Object.fromEntries(p.error.issues.map((i) => [String(i.path[0]), i.message])) };
   if (!(await listVendorCategories()).some((c) => c.slug === p.data.category)) return { ok: false, errors: { category: "Choose a category" } };
   const anon = await ensureAnonId();
-  if (!allow(`vendor:${anon}`, 20, 60 * 60_000)) return { ok: false, errors: { form: "Too many requests. Try again later." } };
+  if (!(await allow(`vendor:${anon}`, 20, 60 * 60_000))) return { ok: false, errors: { form: "Too many requests. Try again later." } };
   const id = await createVendorRequest({ eventId: e.id, ...p.data });
   await track("request_vendor_quote", anon, { eventId: e.id, category: p.data.category, requestId: id });
   redirect(`/plan/${e.id}/vendors?sent=${encodeURIComponent(p.data.category)}`);
@@ -162,7 +164,7 @@ export async function joinWaitlistAction(raw: unknown): Promise<ActionResult> {
   const p = waitlistSchema.safeParse(raw);
   if (!p.success) return { ok: false, errors: Object.fromEntries(p.error.issues.map((i) => [String(i.path[0]), i.message])) };
   const anon = await ensureAnonId();
-  if (!allow(`waitlist:${anon}`, 5, 60 * 60_000)) return { ok: false, errors: { form: "Too many attempts. Try again later." } };
+  if (!(await allow(`waitlist:${anon}`, 5, 60 * 60_000))) return { ok: false, errors: { form: "Too many attempts. Try again later." } };
   await addWaitlist(p.data.email.toLowerCase(), p.data.country, p.data.state, p.data.city);
   await track("city_waitlist_signup", anon, { city: p.data.city, state: p.data.state, country: p.data.country });
   return { ok: true };
@@ -173,17 +175,17 @@ export async function joinWaitlistAction(raw: unknown): Promise<ActionResult> {
 const credSchema = z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email").max(200), password: z.string().min(8, "Use at least 8 characters").max(200) });
 
 async function clientKey() {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  return clientIp((await headers()).get("x-forwarded-for"));
 }
 
 export async function signupAction(_: unknown, fd: FormData): Promise<{ error?: string }> {
   const p = credSchema.safeParse({ email: fd.get("email"), password: fd.get("password") });
   if (!p.success) return { error: p.error.issues[0].message };
-  if (!allow(`signup:${await clientKey()}`, 10, 60 * 60_000)) return { error: "Too many attempts. Try again later." };
+  if (!(await allow(`signup:${await clientKey()}`, 10, 60 * 60_000))) return { error: "Too many attempts. Try again later." };
   if (await one("SELECT 1 FROM users WHERE email=$1", [p.data.email])) return { error: "That email already has an account. Sign in instead." };
   const u = await one<{ id: string }>("INSERT INTO users (email,password_hash) VALUES ($1,$2) RETURNING id", [p.data.email, await hashPassword(p.data.password)]);
   await startSession(u!.id);
+  await sendVerification(u!.id).catch(() => {});
   const anon = await ensureAnonId();
   const plans = await eventsFor(anon, u!.id);
   await track("save_plan", anon, { plans: plans.length });
@@ -193,7 +195,8 @@ export async function signupAction(_: unknown, fd: FormData): Promise<{ error?: 
 export async function loginAction(_: unknown, fd: FormData): Promise<{ error?: string }> {
   const p = credSchema.safeParse({ email: fd.get("email"), password: fd.get("password") });
   if (!p.success) return { error: "Check your email and password." };
-  if (!allow(`login:${p.data.email}`, 8, 10 * 60_000) || !allow(`loginip:${await clientKey()}`, 30, 10 * 60_000)) return { error: "Too many attempts. Try again in a few minutes." };
+  const okEmail = await allow(`login:${p.data.email}`, 8, 10 * 60_000), okIp = await allow(`loginip:${await clientKey()}`, 30, 10 * 60_000);
+  if (!okEmail || !okIp) return { error: "Too many attempts. Try again in a few minutes." };
   const u = await one<{ id: string; password_hash: string }>("SELECT id, password_hash FROM users WHERE email=$1", [p.data.email]);
   if (!u || !(await verifyPassword(p.data.password, u.password_hash))) return { error: "Email or password is incorrect." };
   await startSession(u.id);
@@ -538,6 +541,7 @@ export async function savePublicProtestAction(fd: FormData) {
   if (!user) redirect(`/signup?next=${encodeURIComponent(`/plan/${eventId}/publish`)}`);
   let dest = `/plan/${eventId}/publish?saved=1`;
   try {
+    if (!(await allow(`publish:${user.id}`, 40, 60 * 60_000))) throw new Error("Too many saves. Try again later.");
     await claimAnonEvents(await ensureAnonId(), user.id);
     const mine = (await getEvent(eventId))!;
     const supportOptions = Object.keys(SUPPORT_TYPES).filter((t) => fd.get(`opt_${t}`) === "on").map((t) => ({ type: t, note: str(fd, `note_${t}`), link: str(fd, `link_${t}`) }));
@@ -599,6 +603,7 @@ export async function toggleSupportAction(fd: FormData) {
   if (!(SUPPORT_KINDS as readonly string[]).includes(kind)) redirect(`/protests/${slug}`);
   let dest = `/protests/${slug}`;
   try {
+    if (!(await allow(`support:${user.id}`, 60, 60 * 60_000))) throw new Error("Too many actions. Try again later.");
     const on = await toggleSupport(slug, user.id, kind);
     if (on) {
       const pub = await getPublicProtest(slug, { userId: user.id });
@@ -614,7 +619,7 @@ export async function toggleOfferAction(fd: FormData) {
   const user = await getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/protests/${slug}`)}`);
   let dest = `/protests/${slug}`;
-  try { await toggleOffer(slug, user.id, str(fd, "type")); } catch (e) { dest = `${dest}?error=${encodeURIComponent(e instanceof Error ? e.message : "Could not do that.")}`; }
+  try { if (!(await allow(`support:${user.id}`, 60, 60 * 60_000))) throw new Error("Too many actions. Try again later."); await toggleOffer(slug, user.id, str(fd, "type")); } catch (e) { dest = `${dest}?error=${encodeURIComponent(e instanceof Error ? e.message : "Could not do that.")}`; }
   revalidatePath(`/protests/${slug}`);
   redirect(dest);
 }
@@ -633,4 +638,47 @@ export async function suspendOrganizerAction(fd: FormData) {
     await setOrganizerSuspended(actor, str(fd, "userId"), str(fd, "suspend") === "true", str(fd, "reason"), str(fd, "note"));
     revalidatePath("/admin/protests"); revalidatePath("/protests");
   });
+}
+
+/* ---------- Email confirmation ---------- */
+
+export async function resendVerificationAction(fd: FormData) {
+  const user = await getUser();
+  const back = safeNext(fd.get("next") ?? "/account");
+  if (!user) redirect(`/login?next=${encodeURIComponent(back)}`);
+  const sep = back.includes("?") ? "&" : "?";
+  if (!(await allow(`verify:${user.id}`, 3, 60 * 60_000))) redirect(`${back}${sep}error=${encodeURIComponent("Too many requests. Try again in an hour.")}`);
+  const r = await sendVerification(user.id).catch(() => "FAILED" as const);
+  redirect(`${back}${sep}verify=${r === "ALREADY" ? "already" : r === "FAILED" ? "failed" : "sent"}`);
+}
+
+export async function confirmEmailAction(fd: FormData) {
+  if (!(await allow(`verifytry:${await clientKey()}`, 20, 60 * 60_000))) redirect(`/verify-email?result=INVALID`);
+  const r = await consumeVerification(str(fd, "token"));
+  redirect(`/verify-email?result=${r}`);
+}
+
+/* ---------- Reports and identity review ---------- */
+
+export async function reportProtestAction(fd: FormData) {
+  const slug = str(fd, "slug");
+  const user = await getUser();
+  const net = await clientKey();
+  let dest = `/protests/${slug}?reported=1`;
+  try {
+    if (!(await allow(`report:${user?.id ?? net}`, 5, 60 * 60_000)) || !(await allow(`reportip:${net}`, 20, 60 * 60_000))) throw new Error("Too many reports. Try again later.");
+    const r = await submitReport({ slug, reason: str(fd, "reason"), note: String(fd.get("note") ?? ""), reporterUserId: user?.id ?? null, network: net });
+    if (r === "ALREADY_REPORTED") dest = `/protests/${slug}?reported=already`;
+  } catch (e) { dest = `/protests/${slug}?error=${encodeURIComponent(e instanceof Error ? e.message : "Could not send the report.")}#report`; }
+  redirect(dest);
+}
+
+export async function resolveReportAction(fd: FormData) {
+  await guarded("/admin/protests", async (actor) => {
+    await resolveReport(actor, str(fd, "reportId"), oneOf(str(fd, "outcome"), ["HIDE", "REMOVE", "DISMISS"] as const, "DISMISS"), str(fd, "note"), str(fd, "reason") || undefined);
+    revalidatePath("/admin/protests"); revalidatePath("/protests");
+  });
+}
+export async function clearIdentityReviewAction(fd: FormData) {
+  await guarded("/admin/protests", async (actor) => { await clearIdentityReview(actor, str(fd, "slug"), str(fd, "note")); revalidatePath("/admin/protests"); });
 }

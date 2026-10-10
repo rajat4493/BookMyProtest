@@ -2,16 +2,18 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { toggleOfferAction, toggleSupportAction } from "@/app/actions";
+import { reportProtestAction, resendVerificationAction, toggleOfferAction, toggleSupportAction } from "@/app/actions";
 import { Tracker } from "@/components/client";
 import { Footer, Header } from "@/components/chrome";
 import { Fact, Provenance } from "@/components/provenance";
 import { ShareButton, TrackedLink } from "@/components/protest-bits";
 import { TransparencyFooter } from "@/components/transparency";
 import { getUser } from "@/lib/auth";
+import { signalLines } from "@/lib/engine/identity";
 import { provenanceLabel } from "@/lib/engine/provenance";
-import { SUPPORT_KIND_LABEL, SUPPORT_KINDS, SUPPORT_TYPES } from "@/lib/engine/public-protest";
+import { MODERATION_REASONS, SUPPORT_KIND_LABEL, SUPPORT_KINDS, SUPPORT_TYPES } from "@/lib/engine/public-protest";
 import { formatDate } from "@/lib/plan";
+import { isEmailVerified } from "@/lib/verification";
 import { getPublicProtest, listUpdates, officialInfoForSlug, otherListedSameDate, viewerState } from "@/lib/protests";
 
 export const dynamic = "force-dynamic";
@@ -29,13 +31,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function ProtestPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
+export default async function ProtestPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string; reported?: string; verify?: string }> }) {
   const { slug } = await params;
   const sp = await searchParams;
   const user = await getUser();
   const found = await getPublicProtest(slug, { userId: user?.id ?? null });
   if (!found) notFound();
   const { protest: p, isOwner, hiddenNotice } = found;
+  const verified = await isEmailVerified(user?.id);
   const [updates, others, official, mine] = await Promise.all([listUpdates(slug), otherListedSameDate(slug), officialInfoForSlug(slug), viewerState(slug, user?.id ?? null)]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
@@ -50,10 +53,12 @@ export default async function ProtestPage({ params, searchParams }: { params: Pr
       {!isOwner && <Tracker name="PUBLIC_PAGE_VIEWED" props={dims} />}
       <Header />
       <main id="main">
-        {(hiddenNotice || cancelled || sp.error) && (
+        {(hiddenNotice || cancelled || sp.error || sp.reported) && (
           <div className="mx-auto max-w-5xl space-y-3 px-4 pt-2 sm:px-8">
             {hiddenNotice && <p className="card p-4" role="status" data-testid="owner-notice">{hiddenNotice} <Link className="underline" href="/account">Manage in your account</Link>.</p>}
             {cancelled && <p className="card p-4" role="status" data-testid="cancelled">The organizer has cancelled this event.</p>}
+            {sp.reported && <p className="card p-4" role="status" data-testid="report-received">{sp.reported === "already" ? "You have already reported this page. A person will review it." : "Thank you. Your report was received and a person will review it. Reports do not hide a page automatically."}</p>}
+            {sp.verify && <p className="card p-4" role="status">{sp.verify === "sent" ? "We sent a confirmation link to your email." : sp.verify === "already" ? "Your email is already confirmed." : "We could not send the email just now. Try again later."}</p>}
             {sp.error && <p role="alert" className="card p-4 font-semibold">{sp.error}</p>}
           </div>
         )}
@@ -78,6 +83,12 @@ export default async function ProtestPage({ params, searchParams }: { params: Pr
         </div>
 
         <div className="mx-auto max-w-5xl space-y-12 px-4 py-10 sm:px-8">
+          <section aria-labelledby="org-h" data-testid="organizer-signals">
+            <h2 id="org-h" className="heading text-2xl">About the organizer</h2>
+            <p className="mt-3 text-lg font-semibold">{p.organizerDisplayName}</p>
+            <ul className="mt-1 text-sm text-mute">{signalLines(p.organizerSignals).map((l) => <li key={l}>{l}</li>)}</ul>
+          </section>
+
           <section aria-labelledby="why-h">
             <h2 id="why-h" className="heading text-2xl">Why this protest</h2>
             <p className="mt-3 max-w-3xl whitespace-pre-line text-lg">{p.description || p.summary || "The organizer has not added a description yet."}</p>
@@ -138,7 +149,13 @@ export default async function ProtestPage({ params, searchParams }: { params: Pr
           <section aria-labelledby="support-h" data-testid="support">
             <h2 id="support-h" className="heading text-2xl">Support</h2>
             <p className="mt-2 text-sm text-mute" data-testid="support-counts">{N.following} following · {N.interested} interested · {N.planning} planning to attend</p>
-            {canAct ? (
+            {canAct && user && !verified ? (
+              <div className="panel mt-4 p-4" data-testid="verify-needed">
+                <p className="font-semibold">Confirm your email to follow, mark interest or offer help.</p>
+                <p className="mt-1 text-sm text-mute">Counts include only people with a confirmed email, so the totals are harder to inflate.</p>
+                <form action={resendVerificationAction} className="mt-3"><input type="hidden" name="next" value={`/protests/${p.slug}`} /><button className="btn btn-sm">Email me a confirmation link</button></form>
+              </div>
+            ) : canAct ? (
               <>
                 <div className="mt-4 flex flex-wrap gap-3">
                   {SUPPORT_KINDS.map((k) => {
@@ -178,6 +195,25 @@ export default async function ProtestPage({ params, searchParams }: { params: Pr
               </ul>
             )}
           </section>
+
+          {!isOwner && p.moderation === "OK" && (
+            <section id="report" aria-labelledby="report-h" data-testid="report">
+              <details className="panel p-4">
+                <summary id="report-h" className="cursor-pointer font-semibold">Report this page</summary>
+                <p className="mt-2 max-w-xl text-sm text-mute">Use this for threats, harassment, sharing someone&rsquo;s private details, impersonation, fraud, illegal content or spam. It is not a way to object to a cause. A person reviews every report; nothing is hidden automatically.</p>
+                <form action={reportProtestAction} className="mt-3 grid max-w-xl gap-3"><input type="hidden" name="slug" value={p.slug} />
+                  <label className="grid gap-1 text-sm font-semibold">What is wrong?
+                    <select name="reason" required className="field" defaultValue="">
+                      <option value="" disabled>Choose a reason</option>
+                      {Object.entries(MODERATION_REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select></label>
+                  <label className="grid gap-1 text-sm font-semibold">Details (optional)
+                    <textarea name="note" maxLength={500} rows={3} className="field" /></label>
+                  <button className="btn btn-secondary w-fit">Send report</button>
+                </form>
+              </details>
+            </section>
+          )}
 
           <TransparencyFooter />
         </div>
