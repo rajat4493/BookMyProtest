@@ -6,7 +6,9 @@ import { Arrow, Bang, Check } from "./icons";
 
 export function EvidenceLine({ item }: { item: EvaluatedItem }) {
   const r = item.rule;
-  const src = r.sources.find((s) => s.url && s.sourceType !== "SECONDARY_LEAD");
+  // Cite the source that actually carries the claim: primary evidence first, index-only entries last.
+  const rank = (s: (typeof r.sources)[number]) => (s.strength === "PRIMARY" ? 0 : 2) + (s.indexOnly ? 1 : 0);
+  const src = [...r.sources].filter((s) => s.url && s.sourceType !== "SECONDARY_LEAD" && s.strength !== "LEAD").sort((a, b) => rank(a) - rank(b))[0];
   const restricted = item.restrictedBy.length > 0 && (
     <p className="text-sm"><span className="chip chip-critical mr-2">Temporary restriction</span><span className="text-mute">A temporary restriction may change this requirement. Please verify with the relevant authority.</span></p>
   );

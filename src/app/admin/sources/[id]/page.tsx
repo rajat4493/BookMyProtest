@@ -24,6 +24,12 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
       <form action={saveSourceAction} className="mt-6 grid max-w-3xl gap-4">
         <input type="hidden" name="id" defaultValue={src?.id ?? ""} />
         <Field label="Title"><input name="title" required defaultValue={src?.title} className="field !min-h-11" /></Field>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Source code"><input name="sourceCode" defaultValue={src?.sourceCode ?? ""} className="field !min-h-11" placeholder="DEL-SO-LNO-10-2022" /></Field>
+          <Field label="Order number"><input name="orderNumber" defaultValue={src?.orderNumber} className="field !min-h-11" placeholder="L&O/10/2022" /></Field>
+          <Field label="Official index URL"><input name="indexUrl" type="url" defaultValue={src?.indexUrl ?? ""} className="field !min-h-11" /></Field>
+        </div>
+        <Field label="Document URL (leave empty until the actual PDF is recovered; never guess)"><input name="documentUrl" type="url" defaultValue={src?.documentUrl ?? ""} className="field !min-h-11" /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <label>Source type{sel("sourceType", SOURCE_TYPES, src?.sourceType ?? "OFFICIAL_ADMINISTRATIVE_RULE")}</label>
           <Field label="Issuing authority"><input name="issuingAuthority" defaultValue={src?.issuingAuthority} className="field !min-h-11" /></Field>

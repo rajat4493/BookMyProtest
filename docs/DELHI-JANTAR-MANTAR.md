@@ -1,14 +1,14 @@
-# Delhi / Jantar Mantar rule corpus (v0.5.0)
+# Delhi / Jantar Mantar rule corpus (v0.6.0)
 
 Loaded as **data** through the generic rules platform. No code branches on Delhi, Jantar Mantar or Ramlila. See `data/delhi/corpus.ts` (the data), `data/delhi/loader.ts` (idempotent loader) and `tests/delhi-corpus.test.ts` (22 tests).
 
-## Status (v0.5.0): evidence attached, rules staged, awaiting the admin's explicit verification
+## Status (v0.6.0): evidence attached, rules staged, awaiting the admin's explicit verification
 
 | | |
 |---|---|
-| Corpus | 29 requested families + 2 gap records (`DEL-RAM-002` Ramlila booking, `DEL-PROC-001` generic processions) |
+| Corpus | 29 requested families + a conservative generic-march baseline (`DEL-PROC-001…004`) + 2 held gap records (`DEL-RAM-002` Ramlila booking, `DEL-PROC-100` clause-level L&O/10/2022) |
 | Standing Order URL | `https://delhipolice.gov.in/StandingOrderFiles/83377_Law%20and%20Order-48-2022.pdf`, exactly as supplied. Type `OFFICIAL_ADMINISTRATIVE_RULE`; order date **2022-04-28** and title recorded from the official Standing Orders index (per the project owner). **I still could not read the PDF**: the sandbox proxy returns 403 for `delhipolice.gov.in`. Section references and excerpts remain blank. |
-| Dev database right now | `DEL-TRAFFIC-001`, `DEL-LIVE-001` ACTIVE (published earlier). **27 Standing Order / Ramlila-routing rules are DRAFT**, with the URL attached and evidence linked. 2 gap records UNDER_REVIEW. New Delhi District **not live**. |
+| Dev database right now | `DEL-TRAFFIC-001`, `DEL-LIVE-001` ACTIVE (published earlier). **27 Standing Order / Ramlila-routing rules + `DEL-PROC-002…004` are DRAFT** with evidence linked; `DEL-PROC-001` (existence notice) is UNDER_REVIEW; the 2 gap records are UNDER_REVIEW. New Delhi District **not live**. |
 | Why not published | Publishing needs the admin's explicit verification. That is a separate flag, not implied by loading. |
 
 ### Three separate decisions (all human, none implied by another)
@@ -63,7 +63,11 @@ The questionnaire gained **one** conditional field: a venue picker that appears 
 | DEL-LIVE-001 | Check for current Section 163 / temporary orders | any Delhi plan | **OG** | Required (level: recommended) |
 | DEL-RAM-001 | Ramlila Ground as the venue above 1,000, up to 50,000. **Venue routing only; says booking and land-owner process are not verified.** | attendance > 1,000 | PV | Critical (level: recommended) |
 | DEL-RAM-002 | Ramlila booking + land-owner authority workflow. **Gap record, UNDER_REVIEW, no content, never shown to users. Not marked complete.** | — | UNVERIFIED | — |
-| DEL-PROC-001 | Generic Delhi rallies/processions (marches outside Jantar Mantar). **Gap record, UNDER_REVIEW, no content**, waiting for extraction of the 25 May 2022 order. | march | UNVERIFIED | — |
+| DEL-PROC-001 | **Existence notice**: a current Delhi Police order (L&O/10/2022) governs rallies and processions; its organiser requirements are not yet extracted. Level UNKNOWN: shown as "unknown, please verify", never scored. | march | PV (existence only) | Recommended |
+| DEL-PROC-002 | Police permission process for processions (hedged: *may be required*; **no deadline**: the 10-day rule is Jantar Mantar-specific) | march | OG, medium confidence | Required |
+| DEL-PROC-003 | Route and timing can be set by Delhi Police (Delhi Police Act, ss. 28-29; subsection letters unconfirmed) | march | PV, medium confidence | Required |
+| DEL-PROC-004 | Sound permission for processions that use sound. **Low confidence → users see "Needs verification"**: the owner reports it as verified but the basis was not supplied and I could not find it | march + sound | OG, low confidence | Required |
+| DEL-PROC-100 | Clause-level organiser requirements of L&O/10/2022. **Held, UNDER_REVIEW, no content**, until the PDF text is extracted | march | UNVERIFIED | — |
 
 ## Sources and the evidence chain
 
@@ -71,7 +75,10 @@ The questionnaire gained **one** conditional field: a venue picker that appears 
 |---|---|---|---|
 | Standing Order L&O/48/2022 (order date 2022-04-28) | OFFICIAL_ADMINISTRATIVE_RULE | CURRENT | **Governing instrument** for all Jantar Mantar rules and the Ramlila routing. Monitored weekly. |
 | Standing Order No. 10/2018 | OFFICIAL_ADMINISTRATIVE_RULE | **HISTORICAL**, superseded by L&O/48/2022 | History only. Never evidence, never monitored, never used to derive a requirement. |
-| Delhi Police order dated 2022-05-25, "Guidelines for regulation of rallies/procession in Delhi" | OFFICIAL_ADMINISTRATIVE_RULE | **PLACEHOLDER** (no URL yet) | Research placeholder: becomes the governing source for generic Delhi procession/march logic once extracted. Cannot be attached to a rule yet. |
+| **L&O/10/2022**, "Guidelines for regulation of rallies/procession in Delhi", Commissioner of Police, Delhi, order date 2022-05-25 (code `DEL-SO-LNO-10-2022`) | OFFICIAL_ADMINISTRATIVE_RULE | **CURRENT**, **index-only** | The current generic framework for rallies/processions across Delhi. Evidence is the official Standing Orders index (serial 70, `https://kpkb.delhipolice.gov.in/standingorderNew`): it proves the instrument **exists** (title, number, date), not what it says. `document_url` is **empty**: no PDF URL is guessed. Watched weekly via the index; a change opens a review item and flags no rule. |
+| Delhi Police Standing Order 309, "Regulation of Processions and Rallies" (`DEL-SO-309`) | OFFICIAL_ADMINISTRATIVE_RULE | **HISTORICAL**, superseded in practice by L&O/10/2022 | Older generic framework (discussed by the Supreme Court; cited by MHA in 2015). It must **not** be assumed that every clause of 309 survives into L&O/10/2022. No URL known; never evidence. |
+| *In re Ramlila Maidan Incident*, Supreme Court, 23 Feb 2012, [2012] 4 S.C.R. 971; (2012) 5 SCC 1 (`IN-SC-RAMLILA-2012`) | BINDING_CASE_LAW | CURRENT | Official SCR PDF. Context for Standing Order 309; supporting evidence only for `DEL-PROC-002`. Not read in full by the build assistant. |
+| The Delhi Police Act, 1978 (`IN-DL-POLICE-ACT-1978`) | PRIMARY_LAW | CURRENT | Statutory basis for regulating processions (ss. 28-29 per search results; **section text was not read**: confirm before verifying). Not auto-monitored. |
 | Current Delhi Police statements and refusal letters (2025–26, incl. 7–9 Oct 2026; Dec 2025 letter) | OFFICIAL_CURRENT_PRACTICE | CURRENT, no URL yet | **Current deadline confirmation** for the 10-day rule. The statements/letter themselves still need to be attached. |
 | ANI and India TV reports (7 Oct 2026) | SECONDARY_LEAD | CURRENT | Press leads for the same statement. Seen only as search results, not read in full. They can never verify a rule. |
 | Delhi Traffic Police NOC page | OFFICIAL_CURRENT_PRACTICE | CURRENT | `DEL-TRAFFIC-001`. Monitored weekly. |
@@ -81,6 +88,8 @@ The questionnaire gained **one** conditional field: a venue picker that appears 
 
 **Guards added with this delta:** a source has a lifecycle (`CURRENT` / `HISTORICAL` / `PLACEHOLDER`). Only CURRENT sources count as evidence anywhere (display, publish gate, monitoring); linking a historical or placeholder source to a rule is refused, and a row forced in by SQL is ignored.
 
+**Index-only evidence.** A source with an index URL but no document URL proves an instrument *exists*. It cannot be PRIMARY evidence for a requirement (refused at link time); it may be primary only for an informational UNKNOWN-level rule like `DEL-PROC-001`. The citation shown to users is chosen by strength, with index-only entries last, so a claim is attributed to the source that actually carries it.
+
 ## What changed in the platform to support this
 - **`legal_certainty`** on rules (`PRIMARY_VERIFIED` / `OFFICIAL_GUIDANCE` / `UNVERIFIED`). Publishing needs a value other than UNVERIFIED; `PRIMARY_VERIFIED` additionally needs a source attached with **PRIMARY** evidence strength. A cloned version resets to UNVERIFIED until a human re-confirms it. Users see "Primary source verified" or "Official guidance".
 - **`rule_sources.flag_on_change`.** The notifications feed is linked to DEL-LIVE-001 with this off: a feed change opens a review item (so a human can record new Section 163 orders under *Admin → Restrictions*) without flipping the rule to CHANGE_DETECTED every day.
@@ -88,7 +97,7 @@ The questionnaire gained **one** conditional field: a venue picker that appears 
 - Two Jantar Mantar document templates (venue-level, versioned, selected automatically): a request letter addressed to the DCP, and an **undertaking preparation sheet** (programme date, venue, time, participants, volunteers, organizer details and the commitments). The sheet says it is not the official undertaking.
 - Monitored: Standing Order (weekly, once its URL exists), Traffic Police NOC page (weekly), Delhi Police Notifications (daily).
 
-## Tests (all pass; `npm test`: 106 total, 36 in the Delhi suite)
+## Tests (all pass; `npm test`: 123 total, 51 in the Delhi suite)
 Scenario 1, 300 static at Jantar Mantar → 22 families; deadline = event − 10 days; the five blockers; no march/sound/vehicle/Ramlila rules.
 Scenario 2, 2,000 → only DEL-JM-005 + Ramlila routing + Traffic NOC + live check (also with no venue: no Jantar Mantar rules); exact boundary 1,000 vs 1,001; the held Ramlila record never appears at 1,500 / 2,000 / 50,000 / 60,000.
 Scenario 3, 500 + march + loudspeaker → DEL-JM-008/009/010/011 + Traffic NOC, all four permission items critical; no vehicle rules.
@@ -105,15 +114,17 @@ Plus: corpus shape, human-reviewer attribution, certainty marking, no invented R
 2. **Attach the current-practice documents** (the Oct 2026 police statements, the Dec 2025 refusal letter) to the "current Delhi Police statements" source. Today that source has no URL, so it supports but cannot verify.
 3. **Traffic NOC URL** (`traffic.delhipolice.gov.in/node/80`) came from a search result; confirm it is the NOC page. Procedure, fee and timeline are not asserted.
 4. **Live Section 163 orders matter right now.** Search results (Oct 2026) report orders in New Delhi district prohibiting assemblies of five or more except at the designated Jantar Mantar site with prior permission. None are entered as temporary restrictions because I could not read the notifications. Do this before enabling Delhi.
-5. **March logic is only partly covered.** A march *at* Jantar Mantar is covered by DEL-JM-008/009 (from L&O/48/2022). A march elsewhere in Delhi currently gets only the Traffic NOC and the live-order check; no march rules are invented. Scenario 3 therefore reflects the Jantar Mantar order only until the 25 May 2022 order is extracted.
+5. **Generic march logic is now a conservative baseline, not the full order.** Anywhere in Delhi a march gets: the existence notice (UNKNOWN), a hedged permission-process item, route/timing from the Delhi Police Act, the Traffic NOC and the live-order check; plus sound permission (low confidence) when sound is used. No deadline and no clause of L&O/10/2022 is asserted. Police operating instructions in that order (three-tier barricading, control over use of force, repeated PA announcements, videography, minimum-injury principle, medical assistance) are **police duties and are never turned into organiser tasks** (a test enforces this). The reported assessment criteria (nature of the demand, participating leaders/members, other intelligence incl. social media) are not presented as organiser requirements either.
+   - *Open:* confirm ss. 28-29 against the Act text (subsection letters, current amendments incl. the Jan Vishwas (Amendment Provisions) Act, 2026) before verifying `DEL-PROC-002/003`; supply the basis for `DEL-PROC-004`; static rallies at venues other than Jantar Mantar have no generic rule yet (the baseline is march-triggered).
 6. Above 50,000 (reports mention Burari): not loaded; DEL-RAM-001 says there is no verified guidance above 50,000.
 7. The 10:00–17:00 window is stated but a plan outside it is not flagged yet.
 8. Level/severity/category choices are mine; they are data, editable via clone → publish.
 9. When you run step 2, rules are published as the admin with `last_verified_at` = that day. That date records the load, not an independent check.
 
 ## Next missing chunks
-1. **Extract the 25 May 2022 "Guidelines for regulation of rallies/procession in Delhi" order**: supply its PDF URL, then convert it into generic Delhi procession/march rules (resolving `DEL-PROC-001`) and re-run the march scenario against it. This is the hole to close before Delhi goes live.
-2. Ramlila Ground booking workflow and the land-owner authority/NOC process: not guessed. `DEL-RAM-002` stays UNDER_REVIEW until a clean official source exists.
+1. **Recover the actual L&O/10/2022 PDF** (put its URL in `document_url`, never guess), extract the clauses organisers must act on, and promote them one by one from `DEL-PROC-100` into sourced rules. Separate organiser obligations from police operating instructions.
+2. Confirm the Delhi Police Act ss. 28-29 text and record the exact subsection references; give `DEL-PROC-004` a real basis or remove it.
+3. Ramlila Ground booking workflow and land-owner authority/NOC process: not guessed. `DEL-RAM-002` stays UNDER_REVIEW until a clean official source exists.
 
 ## TheDuck learning capture
 Added for this corpus: which Delhi rules triggered manual clarification, how often users hit the Ramlila routing, and how often the Traffic NOC / land-owner NOC items stayed incomplete (the two with no verified procedure). See [THEDUCK-LEARNING-CAPTURE.md](THEDUCK-LEARNING-CAPTURE.md).

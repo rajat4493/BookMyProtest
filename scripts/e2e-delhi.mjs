@@ -4,7 +4,7 @@ import { chromium } from "playwright-core";
 import { mkdirSync, readdirSync } from "node:fs";
 
 const BASE = process.env.BASE ?? "http://localhost:3101";
-const OUT = process.env.SHOTS ?? "docs/previews/v0.4.0/images";
+const OUT = process.env.SHOTS ?? "docs/previews/v0.6.0/images";
 mkdirSync(OUT, { recursive: true });
 const exe = "/opt/pw-browsers/" + readdirSync("/opt/pw-browsers").filter((d) => d.startsWith("chromium-"))[0] + "/chrome-linux/chrome";
 const browser = await chromium.launch({ executablePath: exe });
@@ -57,5 +57,16 @@ await p.getByText("No march to or from Jantar Mantar").first().scrollIntoViewIfN
 await p.goto(p.url() + "/pack"); await p.getByRole("button", { name: /generate my preparation pack/i }).click(); await p.waitForURL(/ready=1/); await p.waitForTimeout(800);
 ok(await has(p, "Undertaking preparation sheet (Jantar Mantar)"), "documents use the Jantar Mantar venue template");
 await p.getByText("Undertaking preparation sheet (Jantar Mantar)").first().scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/6-jantar-mantar-undertaking-sheet.png` });
+// Scenario 4: a march elsewhere in Delhi (no venue): conservative generic baseline, nothing borrowed from Jantar Mantar
+p = await run("s4", { attendance: 500, march: true, sound: true, venue: false });
+for (const t of ["Police permission process for processions", "Route and timing are set by Delhi Police", "Sound permission for processions that use sound", "A current Delhi Police order governs rallies and processions", "Traffic NOC for rallies"]) ok(await has(p, t), `S4: shows "${t}"`);
+for (const t of ["No march to or from Jantar Mantar", "Apply at least 10 days ahead", "Loudspeaker only with specific permission"]) ok(!(await has(p, t)), `S4: does not show the Jantar Mantar rule "${t}"`);
+ok(await has(p, "Needs verification"), "S4: the sound item is honestly labelled 'Needs verification'");
+const routeRow = p.locator("li", { hasText: "Route and timing are set by Delhi Police" }).first();
+ok((await routeRow.innerText()).includes("The Delhi Police Act, 1978"), "S4: the route/timing rule cites the Delhi Police Act (the source that carries the claim), not the index entry");
+const permRow = p.locator("li", { hasText: "Police permission process for processions" }).first();
+ok(!/Guidelines for regulation of rallies\/procession in Delhi/.test((await permRow.innerText()).split("Details")[0]), "S4: the permission rule's headline citation is not the index-only entry");
+await p.getByText("Route and timing are set by Delhi Police").first().scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/7-s4-march-elsewhere-in-delhi.png` });
+await p.getByText("Other notes").first().click(); await p.getByText("A current Delhi Police order governs rallies and processions").first().scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/8-s4-existence-notice-unknown.png` });
 await browser.close();
 console.log("DELHI SCENARIOS VERIFIED IN THE UI");

@@ -113,6 +113,8 @@ export interface RuleSource {
   excerpt?: string;
   sectionRef?: string;
   flagOnChange?: boolean;
+  /** Index entry only: proves the instrument exists, not what it says. Never the headline citation for a requirement. */
+  indexOnly?: boolean;
 }
 
 export interface Rule {

@@ -12,7 +12,7 @@ import { applicableFor, chainFor, linkSource, listChangeEvents, recordSourceCont
 import { createEvent, getEvent, getRulesByIds, listSupportedCities } from "@/lib/store";
 import { ensureDefaultTemplates } from "@/lib/default-templates";
 import { loadDelhiCorpus } from "../data/delhi/loader";
-import { RULES, SOURCES, STANDING_ORDER_URL } from "../data/delhi/corpus";
+import { OFFICIAL_INDEX_URL, RULES, SOURCES, STANDING_ORDER_URL } from "../data/delhi/corpus";
 import { baseAnswers } from "./fixtures";
 
 const TEST_FIXTURE_URL = "https://example.org/test-fixture/standing-order-L&O-48-2022.pdf";
@@ -55,25 +55,27 @@ describe("corpus shape", () => {
   let report: Awaited<ReturnType<typeof reset>>;
   beforeAll(async () => { report = await reset(true); });
 
-  it("defines exactly the 29 requested rule families plus two gap records (Ramlila booking, generic processions)", () => {
+  it("defines the 29 requested families, the conservative generic-march baseline (PROC-001…004) and two held gap records", () => {
     const wanted = [...Array.from({ length: 26 }, (_, i) => `DEL-JM-${String(i + 1).padStart(3, "0")}`), "DEL-TRAFFIC-001", "DEL-LIVE-001", "DEL-RAM-001"];
-    expect(RULES.map((r) => r.family).filter((f) => !["DEL-RAM-002", "DEL-PROC-001"].includes(f)).sort()).toEqual(wanted.sort());
-    expect(RULES.filter((r) => r.holdForReview).map((r) => r.family).sort()).toEqual(["DEL-PROC-001", "DEL-RAM-002"]);
+    const extra = ["DEL-PROC-001", "DEL-PROC-002", "DEL-PROC-003", "DEL-PROC-004"];
+    expect(RULES.map((r) => r.family).filter((f) => !["DEL-RAM-002", "DEL-PROC-100"].includes(f)).sort()).toEqual([...wanted, ...extra].sort());
+    expect(RULES.filter((r) => r.holdForReview).map((r) => r.family).sort()).toEqual(["DEL-PROC-100", "DEL-RAM-002"]);
   });
   it("publishes all 29 with a named human reviewer, and keeps the Ramlila booking workflow UNDER_REVIEW", async () => {
-    expect(report).toMatchObject({ published: 29, drafted: 0, heldForReview: 2, districtLive: true });
+    expect(report).toMatchObject({ published: 33, drafted: 0, heldForReview: 2, districtLive: true });
     const rows = await query("SELECT rule_family_id, rule_status, legal_certainty, reviewed_by FROM rules ORDER BY rule_family_id");
     const status = new Map(rows.map((r) => [r.rule_family_id, r]));
     expect(status.get("DEL-RAM-002")).toMatchObject({ rule_status: "UNDER_REVIEW", legal_certainty: "UNVERIFIED", reviewed_by: null });
-    expect(status.get("DEL-PROC-001")).toMatchObject({ rule_status: "UNDER_REVIEW", legal_certainty: "UNVERIFIED", reviewed_by: null });
+    expect(status.get("DEL-PROC-100")).toMatchObject({ rule_status: "UNDER_REVIEW", legal_certainty: "UNVERIFIED", reviewed_by: null });
     for (const r of RULES.filter((x) => !x.holdForReview)) {
       expect(status.get(r.family)).toMatchObject({ rule_status: "ACTIVE", reviewed_by: actor.userId });
     }
   });
   it("marks Standing Order and Traffic Police rules PRIMARY_VERIFIED; the notifications check is OFFICIAL_GUIDANCE", async () => {
     const cert = Object.fromEntries((await query("SELECT rule_family_id, legal_certainty FROM rules")).map((r) => [r.rule_family_id, r.legal_certainty]));
-    for (const r of RULES.filter((x) => !x.holdForReview && x.family !== "DEL-LIVE-001")) expect(cert[r.family]).toBe("PRIMARY_VERIFIED");
-    expect(cert["DEL-LIVE-001"]).toBe("OFFICIAL_GUIDANCE");
+    const guidance = ["DEL-LIVE-001", "DEL-PROC-002", "DEL-PROC-004"]; // official current practice / hedged: never labelled primary-verified
+    for (const r of RULES.filter((x) => !x.holdForReview && !guidance.includes(x.family))) expect(cert[r.family], r.family).toBe("PRIMARY_VERIFIED");
+    for (const f of guidance) expect(cert[f], f).toBe("OFFICIAL_GUIDANCE");
   });
   it("does not invent Ramlila booking steps or the land-owner process", async () => {
     const [ram1] = await query("SELECT plain_text FROM (SELECT description AS plain_text FROM rules WHERE rule_family_id='DEL-RAM-001') x");
@@ -83,12 +85,12 @@ describe("corpus shape", () => {
     const [noc] = await query("SELECT description FROM rules WHERE rule_family_id='DEL-JM-022'");
     expect(noc.description).toMatch(/not yet verified/i);
   });
-  it("monitors exactly the Standing Order, the Traffic Police NOC page and the Police notifications feed", async () => {
+  it("monitors exactly the L&O/48/2022 PDF, the L&O/10/2022 index entry, the Traffic Police NOC page and the notifications feed", async () => {
     const s = await query("SELECT title, source_type, monitoring_enabled, monitoring_frequency FROM sources ORDER BY title");
     expect(s).toHaveLength(SOURCES.length);
     const monitored = s.filter((x) => x.monitoring_enabled).map((x) => x.title);
-    expect(monitored).toHaveLength(3);
-    expect(monitored.some((t) => /L&O\/48\/2022/.test(t)) && monitored.some((t) => /Traffic Police/.test(t)) && monitored.some((t) => /Notifications/.test(t))).toBe(true);
+    expect(monitored).toHaveLength(4);
+    expect(monitored.some((t) => /L&O\/48\/2022/.test(t)) && monitored.some((t) => /Traffic Police/.test(t)) && monitored.some((t) => /Notifications/.test(t)) && monitored.some((t) => /rallies\/procession/.test(t))).toBe(true);
     expect(s.find((x) => /Notifications/.test(x.title))).toMatchObject({ monitoring_frequency: "DAILY", source_type: "OFFICIAL_CURRENT_PRACTICE" });
   });
   it("is idempotent: loading again changes nothing", async () => {
@@ -159,8 +161,10 @@ describe("scenario 3: 500-person Jantar Mantar protest with a march and a loudsp
     for (const f of ["DEL-JM-008", "DEL-JM-009", "DEL-JM-010", "DEL-TRAFFIC-001"]) expect(p.by.get(f)!.rule.severity, f).toBe("CRITICAL");
     expect(p.by.get("DEL-JM-010")!.rule.description).toMatch(/specific permission/i);
     expect(p.by.get("DEL-JM-009")!.rule.description).toMatch(/own police permission/i);
-    // still no vehicle rules, still not routed to Ramlila
-    for (const f of ["DEL-JM-013", "DEL-JM-014", "DEL-RAM-001"]) expect(p.by.has(f), f).toBe(false);
+    // the generic Delhi march baseline applies on top (conservatively worded, hedged)
+    for (const f of ["DEL-PROC-001", "DEL-PROC-002", "DEL-PROC-003", "DEL-PROC-004"]) expect(p.by.has(f), f).toBe(true);
+    // still no vehicle rules, still not routed to Ramlila, and the held clause-level record never shows
+    for (const f of ["DEL-JM-013", "DEL-JM-014", "DEL-RAM-001", "DEL-PROC-100"]) expect(p.by.has(f), f).toBe(false);
   });
   it("treats those as blockers alongside the base permission", async () => {
     const p = await plan({ attendance: 500, kind: "march", destination: "Parliament Street", sound: true });
@@ -302,23 +306,132 @@ describe("Standing Order 10/2018 is history, never a current rule", () => {
   });
 });
 
-describe("the 25 May 2022 rallies/processions order is a research placeholder", () => {
+describe("L&O/10/2022: the current generic rallies/processions order (identity known, text not yet extracted)", () => {
   beforeAll(async () => { await reset(true); });
-  it("is registered with its date and no URL, cannot be evidence, and drives no rule yet", async () => {
-    const s = (await one<{ id: string; lifecycle: string; canonical_url: string | null; pd: string; source_type: string; monitoring_enabled: boolean }>(
-      "SELECT id, lifecycle, canonical_url, to_char(publication_date,'YYYY-MM-DD') AS pd, source_type, monitoring_enabled FROM sources WHERE title ILIKE '%25 May 2022%'"))!;
-    expect(s).toMatchObject({ lifecycle: "PLACEHOLDER", canonical_url: null, pd: "2022-05-25", source_type: "OFFICIAL_ADMINISTRATIVE_RULE", monitoring_enabled: false });
-    expect((await query("SELECT count(*)::int AS n FROM rule_sources WHERE source_id=$1", [s.id]))[0].n).toBe(0);
-    const draft = await one<{ id: string }>("INSERT INTO rules (rule_family_id, jurisdiction_id, title, category, level, severity) SELECT 'TEST-PH', jurisdiction_id, 'x','permissions','REQUIRED','REQUIRED' FROM rules LIMIT 1 RETURNING id");
-    await expect(linkSource(draft!.id, s.id, { strength: "PRIMARY" }, actor)).rejects.toThrow(/placeholder source cannot be evidence/);
+  const src = async () => (await one<Record<string, any>>("SELECT *, to_char(publication_date,'YYYY-MM-DD') AS pd FROM sources WHERE source_code='DEL-SO-LNO-10-2022'"))!;
+
+  it("records the exact identity metadata", async () => {
+    expect(await src()).toMatchObject({
+      source_code: "DEL-SO-LNO-10-2022", title: "Guidelines for regulation of rallies/procession in Delhi", order_number: "L&O/10/2022", issuing_authority: "Commissioner of Police, Delhi",
+      pd: "2022-05-25", source_type: "OFFICIAL_ADMINISTRATIVE_RULE", lifecycle: "CURRENT", index_url: "https://kpkb.delhipolice.gov.in/standingorderNew",
+    });
+    expect(OFFICIAL_INDEX_URL).toBe("https://kpkb.delhipolice.gov.in/standingorderNew");
   });
-  it("is tracked by a held gap record that never reaches users, so march logic is only what the Jantar Mantar order says", async () => {
-    expect((await query("SELECT rule_status, legal_statement FROM rules WHERE rule_family_id='DEL-PROC-001'"))[0]).toMatchObject({ rule_status: "UNDER_REVIEW", legal_statement: "" });
-    const p = await plan({ attendance: 500, kind: "march", destination: "Parliament Street", sound: true });
-    expect(p.by.has("DEL-PROC-001")).toBe(false);
-    expect(p.by.has("DEL-JM-008") && p.by.has("DEL-JM-009")).toBe(true);
-    const outsideJm = await plan({ attendance: 500, kind: "march", destination: "Parliament Street" }, null);
-    expect(outsideJm.families).toEqual(["DEL-LIVE-001", "DEL-TRAFFIC-001"]); // a march elsewhere in Delhi: no verified march rules yet, and none are invented
+  it("has NO document URL, and no StandingOrderFiles URL is invented anywhere for it", async () => {
+    const s = await src();
+    expect(s.document_url).toBeNull();
+    expect(s.canonical_url).toBe(OFFICIAL_INDEX_URL); // what we cite and watch is the index entry
+    const all = await query("SELECT canonical_url, document_url FROM sources WHERE source_code <> 'DEL-SO-LNO-48-2022' OR source_code IS NULL");
+    expect(all.some((x) => /StandingOrderFiles/.test(`${x.canonical_url} ${x.document_url}`))).toBe(false);
+  });
+  it("the index is primary evidence for existence only: it is PRIMARY on exactly one rule (the informational existence notice)", async () => {
+    const rows = await query("SELECT r.rule_family_id, r.level, rs.evidence_strength, rs.flag_on_change FROM rule_sources rs JOIN rules r ON r.id=rs.rule_id WHERE rs.source_id=$1", [(await src()).id]);
+    expect(rows.filter((x) => x.evidence_strength === "PRIMARY").map((x) => x.rule_family_id)).toEqual(["DEL-PROC-001"]);
+    expect(rows.find((x) => x.rule_family_id === "DEL-PROC-001")!.level).toBe("UNKNOWN");
+    expect(rows.every((x) => x.flag_on_change === false)).toBe(true); // the index changing opens a review item but never flags a rule
+  });
+  it("structurally refuses an index-only source as primary evidence for a real requirement", async () => {
+    const draft = await one<{ id: string }>("INSERT INTO rules (rule_family_id, jurisdiction_id, title, category, level, severity) SELECT 'TEST-IDX', jurisdiction_id, 'x','permissions','REQUIRED','REQUIRED' FROM rules LIMIT 1 RETURNING id");
+    await expect(linkSource(draft!.id, (await src()).id, { strength: "PRIMARY" }, actor)).rejects.toThrow(/index-only source establishes that the instrument exists/);
+    await expect(linkSource(draft!.id, (await src()).id, { strength: "SUPPORTING" }, actor)).resolves.toBeUndefined();
+  });
+  it("the existence notice is shown as UNKNOWN and is not scored", async () => {
+    const p = await plan({ attendance: 500, kind: "march", destination: "India Gate" }, null);
+    const n = p.by.get("DEL-PROC-001")!;
+    expect(n).toMatchObject({ level: "UNKNOWN", freshness: "UNKNOWN" });
+    expect(n.rule.description).toMatch(/not yet extracted/);
+    expect(p.readiness.totalItems).toBe(p.items.filter((i) => i.level !== "UNKNOWN" && i.level !== "NOT_REQUIRED").length);
+  });
+  it("is watched via its index entry; a change opens a review item and flags no rule", async () => {
+    const id = (await src()).id;
+    await recordSourceContent(id, "Serial 69 ...\nSerial 70 Guidelines for regulation of rallies/procession in Delhi 25 May 2022");
+    await recordSourceContent(id, "Serial 69 ...\nSerial 70 Guidelines for regulation of rallies/procession in Delhi 25 May 2022 [PDF]");
+    const [ev] = await listChangeEvents("PENDING");
+    expect(ev.sourceTitle).toMatch(/rallies\/procession/);
+    expect(ev.affectedRules).toEqual([]);
+    expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='CHANGE_DETECTED'"))[0].n).toBe(0);
+  });
+});
+
+describe("Standing Order 309 and the Ramlila Maidan judgment are context, not current rules", () => {
+  beforeAll(async () => { await reset(true); });
+  it("309 is HISTORICAL context, superseded in practice by L&O/10/2022, with no URL guessed", async () => {
+    const o = (await one<Record<string, any>>("SELECT * FROM sources WHERE source_code='DEL-SO-309'"))!;
+    const cur = (await one<{ id: string }>("SELECT id FROM sources WHERE source_code='DEL-SO-LNO-10-2022'"))!;
+    expect(o).toMatchObject({ lifecycle: "HISTORICAL", superseded_by_source_id: cur.id, canonical_url: null, document_url: null, monitoring_enabled: false, order_number: "309" });
+    expect(o.notes).toMatch(/must NOT be assumed that every clause of 309 survives/);
+  });
+  it("cannot be evidence for any rule", async () => {
+    const o = (await one<{ id: string }>("SELECT id FROM sources WHERE source_code='DEL-SO-309'"))!;
+    expect((await query("SELECT count(*)::int AS n FROM rule_sources WHERE source_id=$1", [o.id]))[0].n).toBe(0);
+    const draft = await one<{ id: string }>("INSERT INTO rules (rule_family_id, jurisdiction_id, title, category, level, severity) SELECT 'TEST-309', jurisdiction_id, 'x','permissions','REQUIRED','REQUIRED' FROM rules LIMIT 1 RETURNING id");
+    await expect(linkSource(draft!.id, o.id, { strength: "SUPPORTING" }, actor)).rejects.toThrow(/historical source cannot be evidence/);
+  });
+  it("the Supreme Court judgment is binding case law, only supports the procedure rule, and never anything clause-level", async () => {
+    const j = (await one<Record<string, any>>("SELECT * FROM sources WHERE source_code='IN-SC-RAMLILA-2012'"))!;
+    expect(j).toMatchObject({ source_type: "BINDING_CASE_LAW", lifecycle: "CURRENT" });
+    expect(j.canonical_url).toMatch(/^https:\/\/digiscr\.sci\.gov\.in\//);
+    const links = await query("SELECT r.rule_family_id, rs.evidence_strength FROM rule_sources rs JOIN rules r ON r.id=rs.rule_id WHERE rs.source_id=$1", [j.id]);
+    expect(links).toEqual([{ rule_family_id: "DEL-PROC-002", evidence_strength: "SUPPORTING" }]);
+  });
+});
+
+describe("generic Delhi marches: conservative, sourced, and never borrowed from Jantar Mantar", () => {
+  beforeAll(async () => { await reset(true); });
+  const march = (over: Record<string, unknown> = {}, venue: string | null = null) => plan({ attendance: 500, kind: "march", destination: "India Gate", ...over }, venue);
+
+  it("a march elsewhere in Delhi gets the baseline, the Traffic NOC and the live-order check, and no Jantar Mantar rule", async () => {
+    const p = await march();
+    expect(p.families).toEqual(["DEL-LIVE-001", "DEL-PROC-001", "DEL-PROC-002", "DEL-PROC-003", "DEL-TRAFFIC-001"]);
+    expect(p.by.get("DEL-PROC-002")).toMatchObject({ level: "LIKELY_REQUIRED" }); // hedged, not REQUIRED
+    expect(p.by.get("DEL-PROC-003")).toMatchObject({ level: "LIKELY_REQUIRED", freshness: "CURRENT" });
+  });
+  it("sound adds a sound-permission item, honestly labelled as needing verification", async () => {
+    const p = await march({ sound: true });
+    expect(p.families).toContain("DEL-PROC-004");
+    expect(p.by.get("DEL-PROC-004")).toMatchObject({ freshness: "VERIFY_REQUIRED", evidence: "needs_verification" });
+    expect(p.by.get("DEL-PROC-004")!.rule.confidence).toBe("low");
+  });
+  it("never carries the Jantar Mantar 10-day deadline, or any other invented deadline", async () => {
+    const p = await march({ sound: true });
+    expect(p.items.every((i) => i.deadline === null)).toBe(true);
+    expect(p.by.get("DEL-PROC-002")!.rule.deadline.kind).toBe("UNKNOWN");
+  });
+  it("the route-and-timing rule rests on the Delhi Police Act as primary law, and says the subsection letters are unconfirmed", async () => {
+    const r = (await getRulesByIds([(await one<{ id: string }>("SELECT id FROM rules WHERE rule_family_id='DEL-PROC-003'"))!.id]))[0];
+    const act = r.sources.find((x) => x.sourceType === "PRIMARY_LAW")!;
+    expect(act).toMatchObject({ strength: "PRIMARY", url: "https://www.indiacode.nic.in/handle/123456789/1742?locale=en" });
+    expect(act.sectionRef).toMatch(/ss\. 28 and 29/);
+    expect(act.sectionRef).toMatch(/to be confirmed/);
+    expect(r.confidence).toBe("medium"); // users are told to verify with the authority
+    expect(r.legalStatement).toMatch(/to be confirmed against the Act/);
+  });
+  it("a march at Jantar Mantar still gets the Jantar Mantar rules plus the baseline", async () => {
+    const p = await march({}, jm);
+    for (const f of ["DEL-JM-008", "DEL-JM-009", "DEL-PROC-002", "DEL-PROC-003"]) expect(p.by.has(f), f).toBe(true);
+  });
+  it("police operating instructions are never turned into organiser tasks", async () => {
+    const rows = await query("SELECT rule_family_id, title, description, user_action, legal_statement FROM rules WHERE rule_family_id LIKE 'DEL-%'");
+    const police = /barricad|use of force|videograph|minimum[- ]injury|PA announcement/i;
+    for (const r of rows.filter((x) => x.rule_family_id !== "DEL-PROC-100")) expect(police.test(`${r.title} ${r.description} ${r.user_action} ${r.legal_statement}`), r.rule_family_id).toBe(false);
+    const held = (await query("SELECT admin_notes, rule_status, legal_statement FROM rules WHERE rule_family_id='DEL-PROC-100'"))[0];
+    expect(held).toMatchObject({ rule_status: "UNDER_REVIEW", legal_statement: "" });
+    expect(held.admin_notes).toMatch(/NOT organiser tasks/);
+  });
+  it("clause-level L&O/10/2022 content stays UNDER_REVIEW and never reaches users", async () => {
+    for (const a of [100, 500, 5000]) expect((await march({ attendance: a })).by.has("DEL-PROC-100")).toBe(false);
+  });
+});
+
+describe("the old placeholder row is adopted, not duplicated", () => {
+  it("a database loaded by the previous version gets its 25 May 2022 source upgraded in place", async () => {
+    await wipe();
+    await loadDelhiCorpus({ actor, standingOrderUrl: TEST_FIXTURE_URL, verifiedOn: "2026-10-01" });
+    await query("UPDATE sources SET title='Delhi Police order dated 25 May 2022 — Guidelines for regulation of rallies/procession in Delhi (research placeholder)', lifecycle='PLACEHOLDER', source_code=NULL, order_number='', canonical_url=NULL, index_url=NULL, monitoring_enabled=false WHERE source_code='DEL-SO-LNO-10-2022'");
+    const before = (await query("SELECT count(*)::int AS n FROM sources"))[0].n;
+    await loadDelhiCorpus({ actor, standingOrderUrl: TEST_FIXTURE_URL, verifiedOn: "2026-10-01" });
+    expect((await query("SELECT count(*)::int AS n FROM sources"))[0].n).toBe(before);
+    expect((await query("SELECT lifecycle, source_code, order_number, canonical_url FROM sources WHERE source_code='DEL-SO-LNO-10-2022'"))[0]).toMatchObject({ lifecycle: "CURRENT", order_number: "L&O/10/2022", canonical_url: OFFICIAL_INDEX_URL });
   });
 });
 
@@ -331,13 +444,13 @@ describe("loading, verifying and going live are three separate decisions", () =>
     expect(so).toMatchObject({ canonical_url: STANDING_ORDER_URL, source_type: "OFFICIAL_ADMINISTRATIVE_RULE", monitoring_enabled: true, lifecycle: "CURRENT", pd: "2022-04-28" });
     expect(r.published).toBe(0);
     expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='ACTIVE'"))[0].n).toBe(0);
-    expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='DRAFT'"))[0].n).toBe(29);
+    expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='DRAFT'"))[0].n).toBe(33);
     expect(r.warnings.join(" ")).toMatch(/not confirmed/);
     expect(await listSupportedCities()).toEqual([]);
   });
   it("publishing needs the admin's explicit confirmation; it still does not make Delhi selectable", async () => {
     const r = await loadDelhiCorpus({ actor, verifiedOn: "2026-10-01", confirmVerified: true });
-    expect(r).toMatchObject({ published: 29, districtLive: false, heldForReview: 2 });
+    expect(r).toMatchObject({ published: 33, districtLive: false, heldForReview: 2 });
     expect(r.warnings.join(" ")).toMatch(/NOT enabled in the planner/);
     expect(await listSupportedCities()).toEqual([]);
     expect((await query("SELECT count(DISTINCT reviewed_by)::int AS n FROM rules WHERE rule_status='ACTIVE' AND reviewed_by IS NOT NULL"))[0].n).toBe(1);

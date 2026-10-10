@@ -105,7 +105,7 @@ async function attachRelations(rows: any[]): Promise<Rule[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const src = await query(
-    `SELECT rs.rule_id, rs.flag_on_change, rs.evidence_strength, rs.interpretation_note, rs.excerpt, rs.section_ref, s.id AS source_id, s.title, s.source_type, s.canonical_url,
+    `SELECT rs.rule_id, rs.flag_on_change, rs.evidence_strength, rs.interpretation_note, rs.excerpt, rs.section_ref, s.id AS source_id, s.title, s.source_type, s.canonical_url, (s.document_url IS NULL AND s.index_url IS NOT NULL) AS index_only,
             to_char(s.retrieved_at,'YYYY-MM-DD') AS retrieved_at
        FROM rule_sources rs JOIN sources s ON s.id=rs.source_id WHERE rs.rule_id = ANY($1) AND s.active AND s.lifecycle = 'CURRENT' ORDER BY s.title`, [ids]);
   const docs = await query("SELECT rule_id, name FROM rule_documents WHERE rule_id = ANY($1) AND required ORDER BY name", [ids]);
@@ -114,7 +114,7 @@ async function attachRelations(rows: any[]): Promise<Rule[]> {
       r,
       src.filter((s: any) => s.rule_id === r.id).map((s: any): RuleSource => ({
         sourceId: s.source_id, sourceType: s.source_type, strength: s.evidence_strength, url: s.canonical_url, title: s.title,
-        retrievedAt: s.retrieved_at, notes: s.interpretation_note, excerpt: s.excerpt, sectionRef: s.section_ref, flagOnChange: s.flag_on_change,
+        retrievedAt: s.retrieved_at, notes: s.interpretation_note, excerpt: s.excerpt, sectionRef: s.section_ref, flagOnChange: s.flag_on_change, indexOnly: s.index_only,
       })),
       docs.filter((d: any) => d.rule_id === r.id).map((d: any) => d.name),
     ),

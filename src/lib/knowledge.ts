@@ -76,12 +76,14 @@ export interface Source {
   publicationDate: string | null; effectiveDate: string | null; retrievedAt: string | null; lastCheckedAt: string | null; contentHash: string | null;
   active: boolean; monitoringEnabled: boolean; monitoringFrequency: "DAILY" | "WEEKLY" | "MONTHLY" | "MANUAL"; notes: string;
   lifecycle: "CURRENT" | "HISTORICAL" | "PLACEHOLDER"; supersededBySourceId: string | null;
+  sourceCode: string | null; orderNumber: string; documentUrl: string | null; indexUrl: string | null;
 }
 const mapSource = (r: any): Source => ({
   id: r.id, title: r.title, sourceType: r.source_type, issuingAuthority: r.issuing_authority, jurisdictionId: r.jurisdiction_id, canonicalUrl: r.canonical_url,
   publicationDate: r.pd, effectiveDate: r.ed, retrievedAt: r.ra, lastCheckedAt: r.last_checked_at ? new Date(r.last_checked_at).toISOString() : null, contentHash: r.content_hash,
   active: r.active, monitoringEnabled: r.monitoring_enabled, monitoringFrequency: r.monitoring_frequency, notes: r.notes,
   lifecycle: r.lifecycle, supersededBySourceId: r.superseded_by_source_id,
+  sourceCode: r.source_code, orderNumber: r.order_number, documentUrl: r.document_url, indexUrl: r.index_url,
 });
 const SRC_SELECT = `SELECT *, to_char(publication_date,'YYYY-MM-DD') AS pd, to_char(effective_date,'YYYY-MM-DD') AS ed, to_char(retrieved_at,'YYYY-MM-DD') AS ra FROM sources`;
 
@@ -93,22 +95,25 @@ export async function getSource(id: string): Promise<Source | null> {
   const r = await one(`${SRC_SELECT} WHERE id=$1`, [id]);
   return r ? mapSource(r) : null;
 }
-export type SourceInput = Omit<Source, "id" | "lastCheckedAt" | "contentHash" | "lifecycle" | "supersededBySourceId"> & { lifecycle?: Source["lifecycle"]; supersededBySourceId?: string | null };
+export type SourceInput = Omit<Source, "id" | "lastCheckedAt" | "contentHash" | "lifecycle" | "supersededBySourceId" | "sourceCode" | "orderNumber" | "documentUrl" | "indexUrl"> & {
+  lifecycle?: Source["lifecycle"]; supersededBySourceId?: string | null; sourceCode?: string | null; orderNumber?: string; documentUrl?: string | null; indexUrl?: string | null;
+};
 export async function saveSource(id: string | null, i: SourceInput, actor: Actor): Promise<string> {
   assertHuman(actor);
   const url = i.canonicalUrl && /^https?:\/\//i.test(i.canonicalUrl) ? i.canonicalUrl : null;
   const lifecycle = i.lifecycle ?? "CURRENT";
   // History and placeholders are never monitored: nothing downstream may depend on them.
-  const p = [i.title, i.sourceType, i.issuingAuthority, i.jurisdictionId, url, i.publicationDate, i.effectiveDate, i.retrievedAt, i.active, i.monitoringEnabled && !!url && lifecycle === "CURRENT", i.monitoringFrequency, i.notes, lifecycle, i.supersededBySourceId ?? null];
+  const p = [i.title, i.sourceType, i.issuingAuthority, i.jurisdictionId, url, i.publicationDate, i.effectiveDate, i.retrievedAt, i.active, i.monitoringEnabled && !!url && lifecycle === "CURRENT", i.monitoringFrequency, i.notes, lifecycle, i.supersededBySourceId ?? null,
+    i.sourceCode ? i.sourceCode.trim() : null, i.orderNumber ?? "", i.documentUrl && /^https?:\/\//i.test(i.documentUrl) ? i.documentUrl : null, i.indexUrl && /^https?:\/\//i.test(i.indexUrl) ? i.indexUrl : null];
   return tx(async (q) => {
     const before = id ? (await q(`${SRC_SELECT} WHERE id=$1`, [id]))[0] : null;
     let sid = id;
     if (id) {
       await q(`UPDATE sources SET title=$2, source_type=$3, issuing_authority=$4, jurisdiction_id=$5, canonical_url=$6, publication_date=$7, effective_date=$8, retrieved_at=$9,
-        active=$10, monitoring_enabled=$11, monitoring_frequency=$12, notes=$13, lifecycle=$14, superseded_by_source_id=$15 WHERE id=$1`, [id, ...p]);
+        active=$10, monitoring_enabled=$11, monitoring_frequency=$12, notes=$13, lifecycle=$14, superseded_by_source_id=$15, source_code=$16, order_number=$17, document_url=$18, index_url=$19 WHERE id=$1`, [id, ...p]);
     } else {
-      sid = (await q(`INSERT INTO sources (title, source_type, issuing_authority, jurisdiction_id, canonical_url, publication_date, effective_date, retrieved_at, active, monitoring_enabled, monitoring_frequency, notes, lifecycle, superseded_by_source_id)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`, p))[0].id;
+      sid = (await q(`INSERT INTO sources (title, source_type, issuing_authority, jurisdiction_id, canonical_url, publication_date, effective_date, retrieved_at, active, monitoring_enabled, monitoring_frequency, notes, lifecycle, superseded_by_source_id, source_code, order_number, document_url, index_url)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`, p))[0].id;
     }
     await auditQ(q, actor.userId, id ? "source.update" : "source.create", "source", sid!, { before, after: i });
     return sid!;
@@ -123,11 +128,13 @@ export async function listSnapshots(sourceId: string) {
 export async function linkSource(ruleId: string, sourceId: string, link: { strength: EvidenceStrength; relevance?: string; excerpt?: string; sectionRef?: string; note?: string; flagOnChange?: boolean }, actor: Actor) {
   assertHuman(actor);
   await tx(async (q) => {
-    const [rule] = await q("SELECT rule_status FROM rules WHERE id=$1", [ruleId]);
+    const [rule] = await q("SELECT rule_status, level FROM rules WHERE id=$1", [ruleId]);
     if (!rule || !["DRAFT", "UNDER_REVIEW"].includes(rule.rule_status)) throw new Error("Evidence can only be changed on a draft. Clone the rule as a new version first.");
-    const [src] = await q("SELECT lifecycle FROM sources WHERE id=$1", [sourceId]);
+    const [src] = await q("SELECT lifecycle, document_url, index_url FROM sources WHERE id=$1", [sourceId]);
     if (!src) throw new Error("Source not found");
     if (src.lifecycle !== "CURRENT") throw new Error(`A ${src.lifecycle.toLowerCase()} source cannot be evidence for a current rule.`);
+    // An index entry proves an instrument exists (title, number, date), not what it says. It may be primary evidence only for an informational (UNKNOWN-level) rule.
+    if (!src.document_url && src.index_url && link.strength === "PRIMARY" && rule.level !== "UNKNOWN") throw new Error("An index-only source establishes that the instrument exists; it cannot be primary evidence for a requirement.");
     await q(`INSERT INTO rule_sources (rule_id, source_id, evidence_strength, relevance, excerpt, section_ref, interpretation_note, flag_on_change) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       ON CONFLICT (rule_id, source_id) DO UPDATE SET evidence_strength=$3, relevance=$4, excerpt=$5, section_ref=$6, interpretation_note=$7, flag_on_change=$8`,
       [ruleId, sourceId, link.strength, link.relevance ?? "", link.excerpt ?? "", link.sectionRef ?? "", link.note ?? "", link.flagOnChange ?? true]);

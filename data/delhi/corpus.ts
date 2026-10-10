@@ -21,27 +21,49 @@ export const PLACES: { key: PlaceKey; name: string; level: "country" | "region" 
 /** Exact URL supplied by the project owner. Not guessed; the PDF itself was not readable from the build sandbox (proxy 403). */
 export const STANDING_ORDER_URL = "https://delhipolice.gov.in/StandingOrderFiles/83377_Law%20and%20Order-48-2022.pdf";
 
-export type SourceKey = "SO" | "SO_2018" | "PROC_2022" | "CURRENT_PRACTICE" | "NEWS_ANI" | "NEWS_INDIATV" | "TRAFFIC" | "NOTIF";
+/** Official Delhi Police Standing Orders index (lists title, number and date; the PDFs are served separately). */
+export const OFFICIAL_INDEX_URL = "https://kpkb.delhipolice.gov.in/standingorderNew";
+
+export type SourceKey = "SO" | "SO_2018" | "SO_10_2022" | "SO_309" | "SC_RAMLILA" | "ACT_1978" | "CURRENT_PRACTICE" | "NEWS_ANI" | "NEWS_INDIATV" | "TRAFFIC" | "NOTIF";
 export interface SourceSpec {
   key: SourceKey; title: string; type: SourceType; issuer: string; place: PlaceKey; url: string | null; monitoring: "DAILY" | "WEEKLY" | null; notes: string;
   lifecycle?: "CURRENT" | "HISTORICAL" | "PLACEHOLDER"; publicationDate?: string; supersededBy?: SourceKey;
+  code?: string; orderNumber?: string; documentUrl?: string | null; indexUrl?: string | null; legacyTitles?: string[];
 }
 
 export const SOURCES: SourceSpec[] = [
   {
     key: "SO", title: "Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar", type: "OFFICIAL_ADMINISTRATIVE_RULE", issuer: "Delhi Police", place: "NCT",
-    url: STANDING_ORDER_URL, monitoring: "WEEKLY", publicationDate: "2022-04-28",
+    url: STANDING_ORDER_URL, monitoring: "WEEKLY", publicationDate: "2022-04-28", code: "DEL-SO-LNO-48-2022", orderNumber: "L&O/48/2022", documentUrl: STANDING_ORDER_URL, indexUrl: OFFICIAL_INDEX_URL,
     notes: "Governing instrument for Jantar Mantar. Order title and date are corroborated by the official Delhi Police Standing Orders index (per the project owner): \"Guidelines for organizing protests or demonstrations at or near Central Vista including Jantar Mantar and Boat Club\", order date 28 April 2022. Current Delhi Police reporting and Delhi High Court records cite this order number. URL supplied by the project owner. The PDF could not be read from the build sandbox, so section references and excerpts are still to be added by a reviewer. It supersedes Standing Order No. 10/2018 (kept as history). The 10-day lead time is evidenced separately (see the current-practice source). Reports mention Burari for gatherings above 50,000: not in the supplied summary and not loaded.",
   },
   {
     key: "SO_2018", title: "Delhi Police Standing Order No. 10/2018 — protests at Central Vista, Jantar Mantar and Boat Club (historical)", type: "OFFICIAL_ADMINISTRATIVE_RULE", issuer: "Delhi Police", place: "NCT",
-    url: "https://delhipolice.gov.in/doc/standing-order/10.pdf", monitoring: null, lifecycle: "HISTORICAL", supersededBy: "SO",
+    url: "https://delhipolice.gov.in/doc/standing-order/10.pdf", monitoring: null, lifecycle: "HISTORICAL", supersededBy: "SO", code: "DEL-SO-10-2018", orderNumber: "No. 10/2018", documentUrl: "https://delhipolice.gov.in/doc/standing-order/10.pdf",
     notes: "HISTORY ONLY. Governed Jantar Mantar after the 2018 Supreme Court judgment (Mazdoor Kisan Shakti Sangathan v. Union of India). Superseded by L&O/48/2022; later Delhi High Court proceedings refer to the 2022 order. Never evidence for a current rule, never monitored, and must not be used to derive the 10-day lead time or any other current requirement.",
   },
   {
-    key: "PROC_2022", title: "Delhi Police order dated 25 May 2022 — Guidelines for regulation of rallies/procession in Delhi (research placeholder)", type: "OFFICIAL_ADMINISTRATIVE_RULE", issuer: "Delhi Police", place: "NCT",
-    url: null, monitoring: null, lifecycle: "PLACEHOLDER", publicationDate: "2022-05-25",
-    notes: "RESEARCH PLACEHOLDER. Listed on the official Delhi Police Standing Orders index (per the project owner). PDF URL not yet supplied and content not yet extracted. Once extracted it becomes the governing source for generic Delhi procession/march logic (see DEL-PROC-001). Until then, march outcomes come only from the Jantar Mantar-specific rules DEL-JM-008 and DEL-JM-009. A placeholder cannot be attached to a rule as evidence.",
+    key: "SO_10_2022", title: "Guidelines for regulation of rallies/procession in Delhi", type: "OFFICIAL_ADMINISTRATIVE_RULE", issuer: "Commissioner of Police, Delhi", place: "NCT",
+    url: OFFICIAL_INDEX_URL, monitoring: "WEEKLY", publicationDate: "2022-05-25", code: "DEL-SO-LNO-10-2022", orderNumber: "L&O/10/2022", documentUrl: null, indexUrl: OFFICIAL_INDEX_URL,
+    legacyTitles: ["Delhi Police order dated 25 May 2022 — Guidelines for regulation of rallies/procession in Delhi (research placeholder)"],
+    notes: "CURRENT generic framework for rallies, demonstrations and processions throughout Delhi (not only Jantar Mantar). The official Delhi Police Standing Orders index lists it at serial 70 with order date 25 May 2022; current legal reporting identifies it as Standing Order L&O/10/2022 and cites it in 2026 Delhi High Court-related reporting on rallies/processions and crowd-control videography (per the project owner). INDEX-ONLY EVIDENCE: the index establishes that the instrument exists and its title and date. It says nothing about the clauses. The document_url is deliberately EMPTY until the actual Delhi Police PDF is recovered; no URL is guessed. Clause-level organiser requirements stay UNDER_REVIEW (DEL-PROC-100). Much of the order is internal police operational instruction (barricading, use of force, announcements, videography, medical assistance): those are police duties, not organiser tasks, and are not turned into requirements. The weekly check watches the index so a review item opens when the document appears or changes; it flags no rule.",
+  },
+  {
+    key: "SO_309", title: "Delhi Police Standing Order 309 — Regulation of Processions and Rallies (historical)", type: "OFFICIAL_ADMINISTRATIVE_RULE", issuer: "Delhi Police", place: "NCT",
+    url: null, monitoring: null, lifecycle: "HISTORICAL", supersededBy: "SO_10_2022", code: "DEL-SO-309", orderNumber: "309",
+    notes: "HISTORICAL CONTEXT. The older generic procession framework: the Supreme Court discussed it in the Ramlila Maidan judgment as laying down the procedure for permission applications, their acceptance/rejection and how demonstrations and processions are regulated; a 2015 Ministry of Home Affairs parliamentary answer says Delhi Police were granting permissions under it at that time. Superseded in practice by L&O/10/2022, but it must NOT be assumed that every clause of 309 survives unchanged into L&O/10/2022. No URL known; never evidence for a current rule.",
+  },
+  {
+    key: "SC_RAMLILA", title: "In re Ramlila Maidan Incident, Supreme Court, 23 Feb 2012 — [2012] 4 S.C.R. 971; (2012) 5 SCC 1", type: "BINDING_CASE_LAW", issuer: "Supreme Court of India", place: "IN",
+    url: "https://digiscr.sci.gov.in/admin/judgement_file/judgement_pdf/2012/volume%204/Part%20I/__971-%201152_1703914973.pdf", monitoring: null, publicationDate: "2012-02-23", code: "IN-SC-RAMLILA-2012", orderNumber: "Suo Motu Writ Petition (Crl.) No. 122 of 2011",
+    documentUrl: "https://digiscr.sci.gov.in/admin/judgement_file/judgement_pdf/2012/volume%204/Part%20I/__971-%201152_1703914973.pdf",
+    notes: "Official Supreme Court Reports PDF (link from a web search result; not read by the build assistant). The headnote lists Delhi Police Standing Order 309 among the provisions considered. Used here only as context for Standing Order 309 and as supporting evidence that Delhi Police regulate processions through a permission procedure. Not used for any specific clause.",
+  },
+  {
+    key: "ACT_1978", title: "The Delhi Police Act, 1978 (Act 34 of 1978)", type: "PRIMARY_LAW", issuer: "Parliament of India", place: "NCT",
+    url: "https://www.indiacode.nic.in/handle/123456789/1742?locale=en", monitoring: null, code: "IN-DL-POLICE-ACT-1978", orderNumber: "Act 34 of 1978",
+    documentUrl: "https://www.indiacode.nic.in/bitstream/123456789/13669/1/delhi_police_act.pdf",
+    notes: "Primary-law foundation for regulating processions: per search results, sections 28 and 29 let the police regulate the routes by which and the times at which processions may pass (and, for section 29, specify routes/times at which they may not pass); section 28 also touches licensing/controlling places of assembly and noisy activities; section 31 concerns disorder at places of public assembly and is NOT a licensing power. SUBSECTION LETTERS AND EXACT WORDING WERE NOT READ by the build assistant (India Code is unreachable from the sandbox) and must be confirmed against the Act text before a reviewer verifies any rule that cites it. India Code shows the text as current to 1 June 2026 and lists recent amendments (e.g. the Jan Vishwas (Amendment Provisions) Act, 2026): check whether they touch ss. 28-29. Not monitored automatically (the India Code page changes for unrelated reasons); review manually.",
   },
   {
     key: "CURRENT_PRACTICE", title: "Current Delhi Police statements and refusal letters confirming the 10-day application requirement", type: "OFFICIAL_CURRENT_PRACTICE", issuer: "Delhi Police", place: "NCT",
@@ -83,7 +105,7 @@ const JM_CAP = c("attendance", "lte", 1000);
 export interface RuleSpec {
   family: string; title: string; place: PlaceKey; authority: AuthKey | null; category: Category; level: Level; severity: Severity; certainty: LegalCertainty;
   legal: string; plain: string; action: string; condition: Condition; deadline?: DeadlineDef; docs?: string[]; vendor?: string;
-  sources: { key: SourceKey; strength: "PRIMARY" | "SUPPORTING" | "LEAD"; flagOnChange?: boolean; note?: string }[]; confidence: "low" | "medium" | "high";
+  sources: { key: SourceKey; strength: "PRIMARY" | "SUPPORTING" | "LEAD"; flagOnChange?: boolean; note?: string; section?: string; relevance?: string }[]; confidence: "low" | "medium" | "high";
   /** Leave in UNDER_REVIEW: never shown to users. */
   holdForReview?: boolean; note?: string;
 }
@@ -180,9 +202,45 @@ export const RULES: RuleSpec[] = [
   { family: "DEL-RAM-002", title: "Ramlila Ground booking and land-owner authority workflow", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "UNVERIFIED",
     legal: "", plain: "Not yet verified. No steps are given.", action: "", condition: cond(c("attendance", "gt", 1000)), sources: [], confidence: "low", holdForReview: true,
     note: "GAP RECORD. No clean current official page found for the end-to-end Ramlila Ground booking or land-owner form. Kept UNDER_REVIEW so it never reaches users. Do not guess steps." },
-  { family: "DEL-PROC-001", title: "Delhi rallies and processions (generic march rules)", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "UNVERIFIED",
+  // ---- Generic Delhi procession/march baseline (conservative). Applies to any plan with a march, anywhere in NCT Delhi.
+  // Everything here is deliberately limited to what the sources support; clause-level L&O/10/2022 content is held (DEL-PROC-100).
+  { family: "DEL-PROC-001", title: "A current Delhi Police order governs rallies and processions", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "PRIMARY_VERIFIED",
+    legal: "Delhi Police Standing Order L&O/10/2022, \"Guidelines for regulation of rallies/procession in Delhi\", order date 25 May 2022, issued by the Commissioner of Police, Delhi, is listed in the official Delhi Police Standing Orders index.",
+    plain: "Marches and processions anywhere in Delhi are covered by a current Delhi Police standing order. We have not yet extracted what it asks of organisers, so we can't tell you its requirements. Please verify with Delhi Police.",
+    action: "Ask Delhi Police for the current rally and procession guidelines before you finalise your route.",
+    condition: cond(c("march", "eq", true)), sources: [{ key: "SO_10_2022", strength: "PRIMARY", flagOnChange: false, relevance: "Existence, title, number and date of the instrument only; not its clauses.", section: "Official index, serial 70" }], confidence: "high",
+    note: "Existence notice only (index-only evidence: it cannot support any requirement). Level UNKNOWN on purpose: it is shown as 'unknown, please verify' and is not scored." },
+  { family: "DEL-PROC-002", title: "Police permission process for processions", place: "NCT", authority: null, category: "permissions", level: "LIKELY_REQUIRED", severity: "REQUIRED", certainty: "OFFICIAL_GUIDANCE",
+    legal: "Delhi Police regulate rallies and processions in Delhi under the Delhi Police Act, 1978 and Standing Order L&O/10/2022, and assess permission applications. (The detailed procedure in L&O/10/2022 has not been extracted.)",
+    plain: "Delhi Police regulate processions and assess permission applications. We haven't extracted the application steps or timelines for general processions, so we don't give a deadline here, and the Jantar Mantar rules don't automatically apply to other routes.",
+    action: "Contact Delhi Police about permission for your procession and apply early.",
+    condition: cond(c("march", "eq", true)), deadline: { kind: "UNKNOWN", specialNotes: "No published deadline verified for general processions. The 10-day rule is specific to Jantar Mantar." },
+    sources: [
+      { key: "ACT_1978", strength: "SUPPORTING", flagOnChange: true, relevance: "Statutory basis for regulating processions.", section: "ss. 28-29 (subsection letters to be confirmed)" },
+      { key: "SO_10_2022", strength: "SUPPORTING", flagOnChange: false, relevance: "Existence of the current framework only." },
+      { key: "SC_RAMLILA", strength: "SUPPORTING", flagOnChange: false, relevance: "Supreme Court context on the permission procedure (Standing Order 309, now historical)." },
+    ], confidence: "medium",
+    note: "Hedged on purpose (LIKELY_REQUIRED, OFFICIAL_GUIDANCE): the supporting sources show the power to regulate and that a permission procedure exists, but the current procedure's text is not extracted. Never carries a deadline." },
+  { family: "DEL-PROC-003", title: "Route and timing are set by Delhi Police", place: "NCT", authority: null, category: "permissions", level: "LIKELY_REQUIRED", severity: "REQUIRED", certainty: "PRIMARY_VERIFIED",
+    legal: "Under the Delhi Police Act, 1978 (sections 28 and 29; subsection references to be confirmed against the Act), the police may regulate the routes by which and the times at which processions pass, and may specify routes and times at which they may not pass.",
+    plain: "Delhi Police can decide which route a procession takes and when. Give them your proposed route and timing, and follow what is permitted.",
+    action: "Prepare your proposed route and timing to submit, and stay on the permitted route.", docs: ["Proposed route and timing"],
+    condition: cond(c("march", "eq", true)),
+    sources: [
+      { key: "ACT_1978", strength: "PRIMARY", flagOnChange: true, relevance: "Power to regulate routes and times of processions.", section: "ss. 28 and 29 (subsection letters to be confirmed)" },
+      { key: "SO_10_2022", strength: "SUPPORTING", flagOnChange: false, relevance: "Existence of the current framework only." },
+    ], confidence: "medium",
+    note: "REVIEWER MUST READ ss. 28-29 of the Act before verifying: the build assistant could not read the text (India Code unreachable) and took the sections from search results. Confidence is MEDIUM so users see 'please verify with the authority'." },
+  { family: "DEL-PROC-004", title: "Sound permission for processions that use sound", place: "NCT", authority: null, category: "permissions", level: "LIKELY_REQUIRED", severity: "REQUIRED", certainty: "OFFICIAL_GUIDANCE",
+    legal: "Use of music or loudspeakers in public places is subject to police regulation under the Delhi Police Act, 1978. (Basis not yet confirmed; see notes.)",
+    plain: "If your procession uses a sound system or loudspeaker, expect to need permission for it. We haven't confirmed the exact basis or procedure, so please verify with Delhi Police.",
+    action: "Ask Delhi Police whether your sound set-up needs permission, and apply with your route and timing.",
+    condition: cond(c("march", "eq", true), c("sound", "eq", true)),
+    sources: [{ key: "ACT_1978", strength: "SUPPORTING", flagOnChange: true, relevance: "Section 28 touches control of noisy activities and music in public places (per search results, unread).", section: "s. 28 (to be confirmed)" }], confidence: "low",
+    note: "The project owner reports sound permission as an independently verified generic requirement but did not supply the basis, and none could be found. Surfaced with LOW confidence so users see 'Needs verification' rather than a fact. Attach the actual provision/order and raise confidence to promote it. At Jantar Mantar the verified DEL-JM-010 applies instead/in addition." },
+  { family: "DEL-PROC-100", title: "L&O/10/2022 clause-level requirements for organisers", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "UNVERIFIED",
     legal: "", plain: "Not yet extracted. No rules are given.", action: "", condition: cond(c("march", "eq", true)), sources: [], confidence: "low", holdForReview: true,
-    note: "GAP RECORD. The official Delhi Police order dated 25 May 2022, \"Guidelines for regulation of rallies/procession in Delhi\", is registered as a research placeholder source. Once extracted it will govern generic Delhi march/procession logic. Until then a march at Jantar Mantar is covered only by DEL-JM-008 and DEL-JM-009 (from L&O/48/2022); marches elsewhere in Delhi have no verified rules. Kept UNDER_REVIEW so it never reaches users." },
+    note: "GAP RECORD. Everything specific to L&O/10/2022 stays UNDER_REVIEW until its text is extracted from the actual PDF, including: how permission applications are made and assessed (reporting says assessment can consider the nature of the demand, participating leaders/members and other intelligence including social-media information: do not present that as an organiser requirement without the text), required documents, deadlines, route and timing conditions. NOT organiser tasks and never to be turned into any: the police's own operating instructions (three-tier barricading, senior-officer control over use of force, repeated PA announcements, videography, the minimum-injury principle, medical assistance)." },
 ];
 
 export const TEMPLATES = [

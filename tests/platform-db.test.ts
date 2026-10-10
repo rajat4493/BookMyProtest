@@ -310,6 +310,22 @@ describe("source lifecycle", () => {
   });
 });
 
+describe("source identity", () => {
+  it("stores code, order number and separate index/document URLs; document URL stays empty unless supplied", async () => {
+    const id = await officialSource("Indexed order", { sourceCode: "TEST-SO-1", orderNumber: "X/1/2022", indexUrl: "https://example.org/index", documentUrl: null, canonicalUrl: "https://example.org/index" });
+    expect((await query("SELECT source_code, order_number, index_url, document_url FROM sources WHERE id=$1", [id]))[0]).toMatchObject({ source_code: "TEST-SO-1", order_number: "X/1/2022", index_url: "https://example.org/index", document_url: null });
+    await expect(officialSource("Dup", { sourceCode: "TEST-SO-1" })).rejects.toThrow(); // codes are unique
+  });
+  it("an index-only source can back only an informational (UNKNOWN-level) rule as PRIMARY", async () => {
+    const idx = await officialSource("Index entry", { indexUrl: "https://example.org/index", documentUrl: null, canonicalUrl: "https://example.org/index" });
+    const req = await saveRuleDraft(null, input(), admin);
+    await expect(linkSource(req, idx, { strength: "PRIMARY" }, admin)).rejects.toThrow(/index-only source establishes/);
+    await expect(linkSource(req, idx, { strength: "SUPPORTING" }, admin)).resolves.toBeUndefined();
+    const info = await saveRuleDraft(null, input({ level: "UNKNOWN" }), admin);
+    await expect(linkSource(info, idx, { strength: "PRIMARY" }, admin)).resolves.toBeUndefined();
+  });
+});
+
 describe("document templates are data", () => {
   it("each save creates the next version; selection honours jurisdiction specificity and effective dates", async () => {
     const base = { templateKey: "request-letter", name: "Letter", authorityId: null, disclaimer: "d", sourceId: null };
@@ -330,7 +346,7 @@ describe("migration of V0-shaped data", () => {
   it("rules table keeps the V0 columns and the new model coexists", async () => {
     const cols = (await query("SELECT column_name FROM information_schema.columns WHERE table_name='rules'")).map((r) => r.column_name);
     expect(cols).toEqual(expect.arrayContaining(["description", "required_documents", "deadline_days_before", "rule_family_id", "version", "rule_status", "supersedes_rule_id", "deadline_definition", "legal_certainty"]));
-    expect((await query("SELECT name FROM schema_migrations ORDER BY name")).map((r) => r.name)).toEqual(["db/migrations/002_rules_platform.sql", "db/migrations/003_legal_certainty.sql", "db/migrations/004_source_lifecycle.sql", "db/schema.sql"]);
+    expect((await query("SELECT name FROM schema_migrations ORDER BY name")).map((r) => r.name)).toEqual(["db/migrations/002_rules_platform.sql", "db/migrations/003_legal_certainty.sql", "db/migrations/004_source_lifecycle.sql", "db/migrations/005_source_identity.sql", "db/schema.sql"]);
     expect(await rulesForChain([city])).toEqual([]);
   });
 });

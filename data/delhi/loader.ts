@@ -67,15 +67,19 @@ export async function loadDelhiCorpus(opts: LoadOptions): Promise<LoadReport> {
     const url = s.key === "SO" ? soUrl : s.url;
     const lifecycle = s.lifecycle ?? "CURRENT";
     const supersededBy = s.supersededBy ? src[s.supersededBy]?.id ?? null : null;
-    const found = await one<{ id: string; canonical_url: string | null; lifecycle: string; superseded_by_source_id: string | null; pd: string | null; monitoring_enabled: boolean }>(
-      "SELECT id, canonical_url, lifecycle, superseded_by_source_id, to_char(publication_date,'YYYY-MM-DD') AS pd, monitoring_enabled FROM sources WHERE title=$1", [s.title]);
+    const found = await one<{ id: string; canonical_url: string | null; lifecycle: string; superseded_by_source_id: string | null; pd: string | null; monitoring_enabled: boolean; source_code: string | null; order_number: string; document_url: string | null; index_url: string | null; title: string }>(
+      "SELECT id, title, canonical_url, lifecycle, superseded_by_source_id, to_char(publication_date,'YYYY-MM-DD') AS pd, monitoring_enabled, source_code, order_number, document_url, index_url FROM sources WHERE source_code=$1 OR title = ANY($2)",
+      [s.code ?? null, [s.title, ...(s.legacyTitles ?? [])]]);
     const wantMonitoring = !!url && !!s.monitoring && lifecycle === "CURRENT";
-    const stale = !found || found.canonical_url !== url || found.lifecycle !== lifecycle || found.superseded_by_source_id !== supersededBy || found.pd !== (s.publicationDate ?? null) || found.monitoring_enabled !== wantMonitoring;
+    const docUrl = s.key === "SO" ? soUrl : s.documentUrl ?? null;
+    const stale = !found || found.title !== s.title || found.canonical_url !== url || found.lifecycle !== lifecycle || found.superseded_by_source_id !== supersededBy || found.pd !== (s.publicationDate ?? null)
+      || found.monitoring_enabled !== wantMonitoring || found.source_code !== (s.code ?? null) || found.order_number !== (s.orderNumber ?? "") || found.document_url !== docUrl || found.index_url !== (s.indexUrl ?? null);
     let id = found?.id;
     if (stale) {
       id = await saveSource(id ?? null, {
         title: s.title, sourceType: s.type, issuingAuthority: s.issuer, jurisdictionId: place[s.place]!, canonicalUrl: url, publicationDate: s.publicationDate ?? null, effectiveDate: null,
         retrievedAt: opts.verifiedOn, active: true, monitoringEnabled: wantMonitoring, monitoringFrequency: s.monitoring ?? "WEEKLY", notes: s.notes, lifecycle, supersededBySourceId: supersededBy,
+        sourceCode: s.code ?? null, orderNumber: s.orderNumber ?? "", documentUrl: docUrl, indexUrl: s.indexUrl ?? null,
       }, actor);
     }
     src[s.key] = { id: id!, current: lifecycle === "CURRENT", hasUrl: !!url };
@@ -101,7 +105,17 @@ export async function loadDelhiCorpus(opts: LoadOptions): Promise<LoadReport> {
     if (!id) id = await saveRuleDraft(null, inputFor(r), actor);
     else if (status === "DRAFT" || status === "UNDER_REVIEW") await saveRuleDraft(id, inputFor(r), actor); // keep drafts in sync with the corpus
     else { report.rules[r.family] = status; continue; }
-    for (const s of r.sources) await linkSource(id, src[s.key]!.id, { strength: s.strength, flagOnChange: s.flagOnChange ?? true, note: s.note ?? "Per project-owner source review; section reference not recorded." }, actor);
+    let evidencePending = false;
+    for (const s of r.sources) {
+      try {
+        await linkSource(id, src[s.key]!.id, { strength: s.strength, flagOnChange: s.flagOnChange ?? true, note: s.note ?? "Per project-owner source review; section reference not recorded.", sectionRef: s.section ?? "", relevance: s.relevance ?? "" }, actor);
+      } catch (e) {
+        // e.g. the Standing Order has no document URL yet, so it is index-only and cannot be primary evidence: stay DRAFT, retry next run.
+        if (/index-only/.test((e as Error).message)) { evidencePending = true; continue; }
+        throw e;
+      }
+    }
+
 
     if (r.holdForReview) {
       if (status === "NEW" || status === "DRAFT") await submitForReview(id, actor);
@@ -110,6 +124,7 @@ export async function loadDelhiCorpus(opts: LoadOptions): Promise<LoadReport> {
       continue;
     }
     const sourcesReady = r.sources.some((s) => s.strength !== "LEAD" && src[s.key]!.hasUrl && src[s.key]!.current) && r.sources.filter((s) => s.strength === "PRIMARY").every((s) => src[s.key]!.hasUrl);
+    if (evidencePending) { report.rules[r.family] = "DRAFT (document URL missing: evidence not yet attachable)"; report.drafted++; continue; }
     if (!sourcesReady) { report.rules[r.family] = "DRAFT (source URL missing)"; report.drafted++; continue; }
     if (!opts.confirmVerified) { report.rules[r.family] = "DRAFT (awaiting explicit admin verification)"; report.drafted++; continue; }
     try {
