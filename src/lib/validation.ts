@@ -27,6 +27,7 @@ export const answersSchema = z
     speakers: text(500).default(""),
     promoStatus: z.enum(PROMO_STATUSES).default("NONE"),
     trafficFootprint: text(500).default(""),
+    buses: z.coerce.number().int().min(0).max(1000).default(0),
   })
   .superRefine((a, ctx) => {
     if (a.kind === "march" && a.destination.length < 3) ctx.addIssue({ code: "custom", path: ["destination"], message: "Where does the march end?" });

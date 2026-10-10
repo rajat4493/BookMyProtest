@@ -90,8 +90,8 @@ export function composeAvailability(i: {
     return {
       ...base, state: "SHARED_CAPACITY", tone: known.length ? "warn" : "info", headline: "Shared venue",
       message: known.length
-        ? `This venue is shared. ${known.length} other event${known.length > 1 ? "s are" : " is"} known for this date. That does not block your date, but your permission still depends on the authority and any capacity limit.`
-        : "This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date. That is not confirmation of anything: your permission still comes from the authority.",
+        ? `This venue is shared. ${known.length} other event${known.length > 1 ? "s are" : " is"} known for this date. That does not block your date, but your permission still depends on the authority and any capacity limit. Any remaining space is for the authority to allot: it is not an entitlement.`
+        : "This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date, which tells you nothing about whether space will be allotted to you: your permission, and any remaining capacity, is for the authority to decide.",
     };
   }
   if (confirmed.length) {

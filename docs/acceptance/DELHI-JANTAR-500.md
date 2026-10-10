@@ -1,6 +1,6 @@
-# Acceptance test v0.9: Jantar Mantar, 500 people, first-time organizer
+# Acceptance test v0.9 (re-run as v0.9.1): Jantar Mantar, 500 people, first-time organizer
 
-Run date: 2026-10-10. Build: v0.8.0 plus two wording fixes made during this run (see "Fixed during the run").
+Run date: 2026-10-10. First run on v0.8.0 (initial evidence kept in `evidence-initial-run/`); **re-run after the v0.9.1 gap closure on the same scenario** (current evidence in `evidence/`, `images/`). Two bus-count details changed in the scenario: it now enters **2 buses**, which the questionnaire can capture.
 Evidence: `docs/acceptance/evidence/*.txt` (exactly what the organizer saw, as text) and `docs/acceptance/images/*.png` (full-page mobile screenshots).
 Scripts: `scripts/acceptance-jm-500.mjs` (UI journey) and `scripts/acceptance-jm-500-part2.ts` (live-restriction states, T-72h/T-24h with an injected clock, "everything ticked" view).
 
@@ -11,6 +11,21 @@ Scripts: `scripts/acceptance-jm-500.mjs` (UI journey) and `scripts/acceptance-jm
 - I judged as a first-time organizer would, from the screens and the downloaded pack, not from the code.
 
 ---
+
+## What changed in the v0.9.1 re-run (before / after)
+| Area | Before | After |
+|---|---|---|
+| Submission location | FAIL / UNKNOWN | **PASS** for location, branch and telephone; electronic submission remains **UNKNOWN** and is said to be unverified |
+| Official undertaking | PARTIAL (no link) | **PASS**: "View official Annexure B" (PDF pages 11–14), our sheet labelled a preparation copy |
+| Bus parking | UNKNOWN | **PASS / PARTIAL**: rule and Jai Singh Road verified; exact bay stays event-specific and is not promised |
+| 2 buses | not capturable | **PASS**: "2 buses are within the venue maximum of 25" |
+| Clause references | FAIL | **PASS**: exact section and page on every referenced rule (shown to the organizer) |
+| Next action | FAIL | **PASS**: "Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by 21 October 2026." |
+| Multiple protests | PASS | PASS, now explicit that remaining capacity is never an entitlement |
+| Land-owner NOC | REQUIRED, vague | REQUIRED (Annexure B), with the exact "route not yet verified" wording; no issuer named |
+| Notifications feed | synthetic-only | **Still not verified against the real feed**: it is unreachable from this sandbox (HTTP 403 from the proxy). A page-to-candidate pipeline test on a clearly-labelled synthetic fixture now exists, it found and fixed two real parser defects, and `npm run probe:feed` will capture and check the live page on any networked machine. **I could not honestly mark this "real-source integration verified".** |
+
+Facts supplied by the project owner and used as given (not read by me): the Standing Order sections and pages, the HAX Branch location, the DCP/NDD address and telephone, Annexure B's title and pages. The official contact page's URL was not supplied, so the contact **source is stored without a URL** (nothing invented).
 
 ## A. Scenario
 | | |
@@ -36,33 +51,34 @@ Scripts: `scripts/acceptance-jm-500.mjs` (UI journey) and `scripts/acceptance-jm
 | # | Area | Result | Why (one line) |
 |---|---|---|---|
 | 1a | Is Jantar Mantar right for 500? | **PASS** | "Maximum 1,000 participants" shown; 500 is inside it. (It is presented as a to-do, not as "you're fine".) |
-| 1b | Can several protests happen there? | **PASS** | "Shared venue … not reserved to one organiser." |
+| 1b | Can several protests happen there? | **PASS** | "Several protests can take place on the same day if there is space and enough time between them … 1,000 in total. Any space left is for the police to allot: it is not guaranteed to you." |
 | 1c | Known conflict on the day | **PARTIAL** | Only BookMyProtest's own knowledge exists. The police side reads "NOT CHECKED"; nobody is recording official checks yet. |
 | 1d | "No conflict found" is not availability | **PASS** | Wording is explicit; no "available" state exists. |
 | 2 | Deadline | **PASS** | "Apply at least 10 days ahead … 21 October 2026", event day excluded, late-application caveat. *UX note:* a second date (17 Oct, our 14-day buffer) is shown above it and can confuse. |
 | 3a | Which authority | **PASS** | "DCP, New Delhi District (Delhi Police)" on every row. |
-| 3b | Where/how to submit | **UNKNOWN** | Product says plainly "we have not verified how it is submitted". No office address, contact, or portal is known. |
-| 4a | Online / physical / email | **UNKNOWN** | Honestly stated as unverified. |
-| 4b | Form vs letter vs undertaking | **PARTIAL** | Tells you to submit "the official form from the Standing Order" but **gives no link to it**, and the pack's draft letter is separate. |
+| 3b | Where/how to submit | **PASS** (location, branch, telephone) / **UNKNOWN** (electronic) | "Submit at the HAX Branch of the DCP/NDD office, Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001, tel. 011-23747777." Email/online is stated as NOT verified; no email is stored or implied. (was UNKNOWN) |
+| 3c | Clause-level evidence | **PASS** | Every cited rule shows its exact section/page (e.g. "Section 3(i), PDF page 3"; "Section 4(ii), PDF page 4"; "Annexure B, PDF pages 11–14"). Sections the owner did not supply are left blank, not guessed. (was FAIL) |
+| 4a | Online / physical / email | **PARTIAL** | Physical submission known; online/email explicitly unverified, which is the honest answer. (was UNKNOWN) |
+| 4b | Form vs letter vs undertaking | **PASS** | The undertaking is Annexure B (pages 11–14), linked as "View official Annexure B"; our sheet is labelled "Prepared from official Annexure B — verify against the current official form before submission" and says it is not the official form. The request letter lists the undertaking and the land-owner NOC as enclosures. (was PARTIAL) |
 | 4c | Who signs | **PARTIAL** | The organizer gives the undertaking (stated); who signs the application is not. |
 | 4d | Keep the acknowledgement | **FAIL** | Not mentioned anywhere. |
 | 4e | Status to track afterwards | **FAIL** | Only "I've submitted" and "I've received an approval" buttons; no status concept, no date or reference field. |
 | 5a | Consolidated preparation list | **PARTIAL** | A "Document checklist" exists but is the full rules list (limits, prohibitions, documents, commitments mixed). |
 | 5b | REQUIRED / CONDITIONAL / RECOMMENDED / UNKNOWN separation | **FAIL** | 22 of 24 rows say "REQUIRED"; no CONDITIONAL or UNKNOWN grouping; limits ("No weapons") sit beside documents to produce. Land-owner NOC is "REQUIRED" yet issuer unknown. |
-| 5c | Items present | **PARTIAL** | Organizer, estimate, date/time, venue, purpose, undertaking, NOC, original permission, police liaison, volunteers, water/first aid all listed. But liaison, volunteer count, water and first-aid arrangements have **nowhere to enter details**, so the pack shows blanks. |
+| 5c | Items present | **PARTIAL** | Everything is listed, each with its exact Standing Order section and page. Liaison, volunteer count, water and first-aid arrangements still have nowhere to enter details. |
 | 6a | Traffic NOC applies to 2 buses | **PASS** | Shown (CRITICAL) with the authority DCP (Headquarters), Delhi Traffic Police HQ. |
 | 6b | Traffic NOC steps | **UNKNOWN** | "We have not verified the application steps, fee or processing time." |
-| 6c | Bus parking | **UNKNOWN (clearly flagged)** | "Designated parking only … We have not verified where that is." Correctly shown as a gap. |
-| 6d | Extra bus information to submit | **FAIL** | Unknown, and the product cannot even record the number of buses. |
+| 6c | Bus parking | **PASS / PARTIAL** | Rule and road verified (Section 4(ii), PDF p. 4: designated Jai Singh Road location specified in the permission, or another place the police direct). We state we do not promise an exact bay. The precise point stays event-specific. (was UNKNOWN) |
+| 6d | Extra bus information to submit | **PARTIAL** | The plan now captures the number of buses and shows "2 buses are within the venue maximum of 25"; whether the application must carry bus details is still not established. (was FAIL) |
 | 7 | Live restrictions | **PARTIAL** | Wording is safe in all four states (below). Not shown: geographic scope, effective period, review status. Feed never actually fetched. |
 | 8 | Date conflict intelligence | **PASS** | Shared capacity; others inform not block; BMP-only data labelled; no "available". |
 | 9a | Event brief | **PASS** | Accurate, includes purpose. |
 | 9b | Police request draft | **PARTIAL** | Usable, but dates are ISO ("2026-10-31"), it never lists enclosures (undertaking, land-owner NOC), never mentions buses (count), and does not tell the organizer to apply by 21 Oct. |
-| 9c | Undertaking preparation sheet | **PARTIAL** | Useful collection sheet; the official form is not linked; several blanks the product could have asked earlier. |
+| 9c | Undertaking preparation copy | **PASS** | Linked to the official Annexure B, labelled as a preparation copy, explains what to sign. (was PARTIAL) |
 | 9d | Submission checklist | **FAIL** | None. The "Document checklist" is a rules tick-list, not "what to put in the envelope". |
 | 9e | Traffic-related item | **FAIL** | Rule lists "Traffic NOC application" as a document but no template or checklist item is produced. |
 | 9f | Event-day checklist | **FAIL** | None generated. |
-| 10 | Exact next action | **FAIL** | Dashboard says "Next action: Prior police permission", i.e. the "bad" example. Dates, authority and the first concrete step are not stated. |
+| 10 | Exact next action | **PASS** | "Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by 21 October 2026." (was FAIL) |
 | 11a | Marked submitted | **PARTIAL** | Works; the date is "now", not the real submission date; no acknowledgement/reference field. |
 | 11b | Non-material edit | **PASS** | Phone change recorded, **no** warning. |
 | 11c | Material edit | **PASS** | Crowd 500 to 800 raised the re-confirm banner naming "expected crowd". |
@@ -81,6 +97,7 @@ Scripts: `scripts/acceptance-jm-500.mjs` (UI journey) and `scripts/acceptance-jm
 | Restriction recorded | "1 temporary restriction may affect your event: <title>. Please verify." plus a separate card with explanation and basis | PARTIAL: no effective dates, scope, issuing authority, source link or review status on the card |
 
 ## D. Screens that evidence the failures
+*(Initial-run observations. Items marked fixed no longer reproduce in the re-run; the initial text evidence is kept in `evidence-initial-run/`.)*
 | Failure | Where to look |
 |---|---|
 | Generic "next action" | `images/10-dashboard.png`, top, "Next action" |
@@ -98,44 +115,45 @@ Every point the organizer must leave the product. "Solvable" = answerable from p
 
 | # | Question | State | Why BookMyProtest could not answer | External action required | Solvable via public data? | Reduces effort? | Priority |
 |---|---|---|---|---|---|---|---|
-| 1 | Where/how exactly is the application submitted (in person, email, portal)? office address, hours, contact? | UNKNOWN | Owner's summary says "DCP, New Delhi District" only; Standing Order PDF not read; no official contact recorded | Call/visit DCP New Delhi District office | Likely yes: Standing Order text, Delhi Police directory, current practice pages | **Very high**: it is the one step every organizer must do | **P0** |
-| 2 | Where is the official undertaking form? | PARTIAL | We tell the organizer it is "in the Standing Order" without linking it. The URL is in our own source registry | Search for the PDF | **Yes, already have it** (`STANDING_ORDER_URL`) | High, zero research cost | **P0** |
+| 1 | Is email or an online route accepted for submission? | PARTIAL (in-person route now known) | Standing Order and district details give a physical HAX Branch address and telephone; no authoritative source says email/online is accepted | Call 011-23747777 only if the organizer wants to use email | Maybe | Medium (most organizers will submit in person) | P1 |
+| 2 | Where is the official undertaking form? | **SOLVED** | Annexure B, PDF pages 11–14, linked from the row and the pack | none | n/a | n/a | done |
 | 3 | Who is the land-owner and how is the NOC obtained? | UNKNOWN | Not in the owner's summary; `DEL-JM-022` says ask the police | Ask police / land-owning agency | Possibly (Standing Order undertaking text, past permissions) | High: a CRITICAL blocker with no route to resolve it | **P0** |
 | 4 | Traffic NOC: how, where, fee, time, what to attach for 2 buses | UNKNOWN | Page confirms mandatory only; procedure not found | Call Traffic HQ, Todapur | Maybe (page may list a form or portal) | High | **P1** |
-| 5 | Designated parking for the buses | UNKNOWN | Not in owner's summary | Ask police/traffic | Maybe (Standing Order annex) | Medium | **P1** |
-| 6 | Is the Section 163 notification feed clear today? | PARTIAL | Feed never fetched; parser calibrated on press wording | Open delhipolice.gov.in/notification | **Yes**: public daily feed | High: removes a daily manual check | **P0** (to prove the fetch/parse end to end) |
+| 5 | Which exact parking point for the buses? | PARTIAL (road known) | Jai Singh Road designated location is specified in the issued permission; exact point is event-specific | Read the issued permission; ask the DCP/NDD office if it names none | No (set per event) | Low | P2 |
+| 6 | Is the Section 163 notification feed clear today? | PARTIAL | Feed publicly accessible per the owner but **unreachable from this sandbox**, so the live fetch and parser are still unverified against the real page; fixture + probe script added | Run `npm run probe:feed` once on a networked machine | **Yes** | High | **P0** |
 | 7 | Does the police office hold another application for 31 Oct? | UNKNOWN | No official check is ever recorded; BMP knows only its own users | Ask the police | No (not published) | Low-medium; shared venue, informational | P2 |
 | 8 | What to keep as proof and what status to expect | FAIL | No acknowledgement/status model | Common sense, ask the office | Partly (practice) | Medium | **P1** |
 | 9 | Police liaison / volunteer count / water / first aid arrangements | PARTIAL | No fields to capture; sheet shows blanks | Organizer decides | n/a (organizer data) | Medium | P1 |
 | 10 | Whether to apply before 21 Oct or 17 Oct | PARTIAL | Two dates shown | None, but confusing | n/a | Low, cheap fix | P1 |
 | 11 | Whether the time window and bus cap apply to this plan | PARTIAL | Shown only as tick-list items; no check against the entered time or bus count | Self-check | n/a | Medium | P1 |
-| 12 | What is actually in the Standing Order (clause numbers) | UNKNOWN | PDF never read; no section references | Read the PDF | Yes | Medium (trust) | **P0 for pilot**: a reviewer must add references |
+| 12 | What is actually in the Standing Order (clause numbers) | PARTIAL (references now recorded) | References come from the owner's review, not from our reading of the PDF | Reviewer confirms the references against the PDF | Yes | Medium (trust) | P1 |
 
 ## F. Legal / evidence gaps
-1. **Nothing in this scenario is independently verified by BookMyProtest.** All Jantar Mantar and Traffic NOC content comes from the owner's summary; section references and excerpts are absent. "Primary source verified" and "Last verified: <load date>" overstate what has been checked. Fix: record clause references and a reviewer-entered verification date before any pilot.
-2. The **10-day rule's current-practice evidence** (police statements, December 2025 refusal letter) has no attached documents; the on-screen "Sources" list for that rule includes two press reports. (Fixed: press reports are now labelled "lead only: not evidence".)
-3. **Land-owner NOC** is CRITICAL/REQUIRED on the strength of the undertaking text, but who issues it is unknown. Showing it as flatly REQUIRED may overstate; it is better as CONDITIONAL/UNKNOWN until the issuer is known.
-4. **Window 10:00–17:00 and 25-bus cap** are stated but never compared with the plan's own inputs (time, number of buses).
-5. The **live-restriction parser** has only been tested on synthetic wording; the feed's real markup is unseen.
-6. L&O/10/2022 remains metadata only (correct and intentional): it does not apply to this static scenario.
+1. **Clause references are now recorded and shown, but they are the owner's, not independently read by BookMyProtest.** "Primary source verified · Last verified: <date>" still reports the owner's verification and the (simulated) load date. A reviewer should open the PDF and confirm each reference, then set a real verification date. (P1; was P0)
+2. The 10-day rule's *current-practice* evidence (police statements, December 2025 refusal letter) still has no attached documents; press reports are labelled "lead only".
+3. **Land-owner NOC**: REQUIRED by Annexure B; issuer and submission route UNKNOWN / UNDER REVIEW. This is stated in plain words, and no issuer is named.
+4. **HAX Branch**: the clause that states the location is not separately recorded (cited under Section 3(i)); the owner should supply it.
+5. **Email / online submission**: not established by any source. We say so and store no email.
+6. The Notifications **parser has never met the real page**. Two defects were found and fixed by the fixture pipeline test (newlines flattened, so several orders on one page merged into one candidate; an order number such as "12/DCP/NW/2026" was read as the issuing authority "DCP").
+7. L&O/10/2022 remains metadata only (intentional); it does not apply to this static scenario.
 
 ## G. UX gaps
-1. "Next action" is a rule title, not an instruction with a date and an authority (P0).
+1. ~~"Next action" is a rule title~~ **Fixed in v0.9.1**: it now names the branch and the calculated date.
 2. Two deadline dates (17 Oct buffer, 21 Oct legal) compete (P1).
 3. All rows are "REQUIRED"; no grouping into must-do-before-applying, must-do-before-the-day, limits to respect, unknown (P0/P1).
 4. The percentage ring is large, and for this scenario meaningless at 0% until permission exists; no READY/NOT READY statement (P0).
 5. The restriction card hides scope/effective dates/source/review status (P1).
-6. Questions that change nothing: *Stage*, *Food or water*, *organizer type*, *end time* alter no requirement for Delhi. *Vehicles* is yes/no, but the one thing that matters (how many buses) cannot be entered (P1).
+6. (Buses are now captured.) Questions that change nothing: *Stage*, *Food or water*, *organizer type*, *end time* alter no requirement for Delhi. *Vehicles* is yes/no, but the one thing that matters (how many buses) cannot be entered (P1).
 7. Hero "GET QUOTES" sits above the compliance list (P2, see I).
 8. Letter dates are ISO (2026-10-31) for a police office (P2).
 
 ## H. Product gaps
-1. No **permission status** (not applied / applied / acknowledged / granted / refused) and no real submission date or acknowledgement reference.
-2. Scheduled T-72h/T-24h checks are restriction-only and **silent**: there is no way to tell the organizer.
-3. No **event-day readiness** state; "done" ticks are self-asserted and unconnected to evidence.
-4. No **submission checklist / event-day checklist / traffic NOC** documents.
-5. No official **undertaking form** link in pack or dashboard.
-6. Scope of "conflict intelligence" depends on someone recording official checks: today the police side is always "not checked".
+1. No **permission status** (not applied / applied / acknowledged / granted / refused) and no real submission date or acknowledgement reference. (P0)
+2. No **event-day readiness** state (READY / READY WITH WARNINGS / NOT READY / UNKNOWN); ticks are self-asserted. (P0)
+3. T-72h/T-24h checks are restriction-only and silent. (P1)
+4. No **submission checklist / event-day checklist / traffic NOC** documents. (P1)
+5. Venue conflict intelligence depends on recorded official checks; the police side reads "not checked". (P2)
+*Closed in v0.9.1:* undertaking link, submission location/contact, bus count and parking wording, exact clause references, next action.
 
 ## I. Monetization signals (no payments implemented; none should appear before the compliance need is established)
 | Need | Mark | Natural moment |
@@ -153,43 +171,39 @@ Every point the organizer must leave the product. "Solvable" = answerable from p
 The header "Get quotes" button (top of the dashboard, next to "Generate my preparation pack") appears **before** the organizer has seen any requirement. That violates the trust rule and should be removed or demoted once the per-row prompts carry the load.
 
 ## J. Calls and searches eliminated (qualitative, not precise)
-**Without BookMyProtest**, a first-time organizer would likely need roughly **10–12** independent searches or calls: find the governing order; find the deadline; find which office; find how to submit; find the undertaking form; find who gives the land-owner NOC; find the Traffic NOC and its office; ask about bus parking; check the Section 163 notifications; check for clashing events; check the allowed hours and sound/stage rules; learn what to do about water, medical and volunteers.
+**Without BookMyProtest**: roughly **10–12** independent searches or calls (governing order, deadline, which office, how to submit, the form, land-owner NOC, Traffic NOC, bus parking, live Section 163 orders, clashing events, allowed hours and limits, water/medical/volunteers).
 
-**With BookMyProtest today**, still needed: how/where to submit (1 call), land-owner NOC (usually the same call), the undertaking form (0 if the link is added, 1 now), Traffic NOC procedure (1 call), designated parking (usually asked on that call), checking the live notifications page (0–1 once the feed is proven), confirming no clash (same call). That is about **4–6 contacts, realistically 2–3 phone calls** (DCP office, Traffic HQ).
+**With BookMyProtest after v0.9.1**, still needed: land-owner NOC route (1 call, unresolvable from our data), Traffic NOC procedure (1 call, to Traffic HQ), the live notifications page (0–1 once the feed is proven), and optionally one call to 011-23747777 to ask whether email is accepted. That is about **2–4 contacts, realistically 2 phone calls**.
 
-**External effort eliminated ≈ 6 of ~11**: about half, concentrated in *understanding the rules, the deadline and the correct authority*. None of the *operational* "how do I physically submit" effort is eliminated yet; that is the part that matters most.
+**External effort eliminated ≈ 8 of ~11** (was ≈ 6). The gain came from the *operational* answers: where to go, which form, which road for the buses, and what to do next.
 
 ## K. Fixes
-**Fixed during the run (obvious / misleading wording only)**
-- Readiness headline at 100% said "You're prepared." even beside an unconfirmed permission or live restriction. Now: "Checklist complete. Ticking items is not permission. Confirm your permission and the latest orders with the authority before the day." (test updated)
-- The Sources line mixed press reports with official sources. Press leads are now labelled "(press report, lead only: not evidence)".
+**Done earlier in v0.9 (wording):** the 100% headline now reads "Checklist complete. Ticking items is not permission…" and press reports are labelled "lead only".
 
-**P0 (needed before any private pilot)**
-1. Reviewer adds Standing Order clause references and a real verification date; the owner verifies, then (separately) publishes. Without this nothing on screen should be called "Primary source verified".
-2. Source and show the **application submission method, office and contact** (or state "unpublished: call this number" with a source). Smallest delta: a data field on the authority plus display on the rule row.
-3. **Link the official undertaking form** (the Standing Order URL) from the dashboard row and the pack.
-4. **Concrete next action** that names the authority and the date ("Prepare the undertaking and apply to the DCP, New Delhi District by 21 Oct 2026").
-5. **Permission status + real submission date + acknowledgement reference**, and an event-day state (NOT READY because police permission is not confirmed) derived from it. A tick must not equal permission.
-6. Prove the Notifications fetch/parse against the live page once (run `npm run watch` where network allows).
+**Done in v0.9.1 (the verified P0 gaps)**
+- Submission: HAX Branch, address and telephone shown on the rows and in the next action; official contact source stored (no URL invented); no email stored or implied.
+- Annexure B linked ("View official Annexure B", PDF pages 11–14); generated sheet labelled "Prepared from official Annexure B — verify against the current official form before submission".
+- Exact section and page references on the Jantar Mantar rules, displayed in the evidence line and the Sources list.
+- Bus count captured; 2 buses within the maximum of 25; over 25 is critical; Jai Singh Road parking wording without guaranteeing a bay.
+- Shared-capacity wording: remaining capacity is never an entitlement.
+- Land-owner NOC wording per Annexure B with no route claimed.
+- Notifications pipeline fixture, two parser fixes, `npm run probe:feed`.
+- Next action is now data (`{deadline}` is filled from the plan).
 
-**P1**
-7. Group the list: *Apply with* (permission application, undertaking, land-owner NOC), *Before the day*, *Limits to respect*, *Unknown*. Show CONDITIONAL/UNKNOWN honestly (land-owner NOC).
-8. Capture **number of buses**; check time against 10:00–17:00 and buses against 25.
-9. Restriction card: effective period, scope, issuer, source, review status.
-10. Source Traffic NOC steps and designated parking, or keep them as flagged unknowns with the right office.
-11. T-72h/T-24h: also compare venue signals and permission status, and **tell the organizer**.
-12. Pack: a submission checklist (enclosures), traffic-NOC item, event-day checklist; real date format in the letter.
-13. Show one deadline (legal), hide the 14-day buffer unless the deadline has passed.
+**Still P0 before any private pilot**
+1. **Permission status + real submission date + acknowledgement reference**, and an event-day state derived from evidence (e.g. "NOT READY because police permission is not confirmed"). A tick must not equal permission.
+2. **Run `npm run probe:feed` against the real Notifications page**, calibrate the parser to its markup, and commit the captured fixture. Until then the live check is unproven.
+3. **Human verification and publication of the Delhi rules** (clause references confirmed against the PDF; a real verification date). The Delhi rules are still drafts in the real database, and nothing here changes that.
+4. **Land-owner NOC route** (required, unresolved): either sourced or accepted by pilot organizers as a known "ask the DCP/NDD office" step.
 
-**P2**
-14. Remove the hero "Get quotes"; keep per-row prompts.
-15. Drop questions that change nothing (Stage, Food) or make them change the output.
-16. Official venue check records for Jantar Mantar police-side so "Police: not checked" can become a real answer.
+**P1**: group the list (apply-with / before the day / limits / unknown); one deadline only; restriction card with period, scope, source and review status; Traffic NOC steps; scheduled checks that also look at venue signals and permission status **and tell the organizer**; submission, traffic and event-day documents; date format in the letter; check time and bus count against the venue's limits.
+
+**P2**: remove the hero "Get quotes"; drop questions that change nothing (Stage, Food); official venue-check records for Jantar Mantar's police side.
 
 ## L. Final verdict
 **NOT READY FOR PRIVATE PILOT**
 
-Why: the product is honest and gets the *rules, deadline and authority* right (PASS), and its change tracking and live-restriction wording are sound. But a first-time organizer still cannot learn **how and where to submit**, cannot find the **official form**, gets **no concrete next action**, cannot record or track **permission status**, and the event-day view cannot say NOT READY for the right reason. In addition, none of the Delhi content has been verified or published by a human against the source documents. The smallest delta that would change this verdict is items 1 to 6 in P0. Items 2 and 3 may be solvable in a day each if the Standing Order text is read; item 1 needs a human.
+The v0.9.1 closure removed the biggest *operational* gaps: the organizer now knows where to go, what to sign, which road the buses use, and what to do next, with clause-level references. It is not enough to flip the verdict, because the remaining P0 blockers are real: (1) there is no permission status or evidence-based event-day state, so "Checklist complete" can still sit beside an unconfirmed permission; (2) the live-restriction feed and parser have never touched the real page; (3) the Delhi rules are unpublished and their references have not been confirmed by a person against the PDF; (4) the land-owner NOC, a critical required item, has no verified route. Items 2 and 3 are small and need a person with network access; item 1 is the one piece of product work left. When those four are done the verdict can be reconsidered.
 
 ---
 

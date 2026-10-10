@@ -1,4 +1,4 @@
-URL: http://localhost:3101/plan/9dc8e07b-06e2-4bf5-a159-b38d877aca2b
+URL: http://localhost:3101/plan/41cb6cfd-1392-4e25-8961-d1294e7129ae
 
 BOOKMYPROTEST
 HOME
@@ -27,22 +27,28 @@ We could not confirm the latest orders
 
 We could not confirm the latest orders: the Delhi Police — Notifications (Section 163 BNSS orders) has not been checked yet. Please check it yourself before the event.
 
-Plan rechecked · 2026-10-10 09:33 UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.
+Plan rechecked · 2026-10-10 11:52 UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.
 
 Check history (5)
-2026-10-10 09:33 · Plan rechecked · feed stale
-2026-10-10 09:33 · Plan rechecked · feed stale
-2026-10-10 09:32 · Plan rechecked · feed stale
-2026-10-10 09:32 · Documents generated · feed stale
-2026-10-10 09:32 · Plan generated · feed stale
+2026-10-10 11:52 · Plan rechecked · feed stale
+2026-10-10 11:51 · Plan rechecked · feed stale
+2026-10-10 11:51 · Plan rechecked · feed stale
+2026-10-10 11:51 · Documents generated · feed stale
+2026-10-10 11:51 · Plan generated · feed stale
 
 DATE CONFLICT CHECK
 
 Shared venue
 
-This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date. That is not confirmation of anything: your permission still comes from the authority.
+This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date, which tells you nothing about whether space will be allotted to you: your permission, and any remaining capacity, is for the authority to decide.
 
 POLICE: NOT CHECKED
+
+HEADS-UP
+
+2 buses are within the venue maximum of 25. Your issued permission should specify the designated Jai Singh Road parking point or an alternative location.
+
+Please verify with the relevant authority.
 
 Save your plan
 
@@ -57,8 +63,8 @@ UNDO: I HAVEN’T APPLIED
 I’VE RECEIVED AN APPROVAL
 EDIT PLAN DETAILS
 NEXT ACTION
+Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by 21 October 2026.
 Prior police permission
-You need police permission before you gather at Jantar Mantar.
 Progress by category
 PERMISSIONS
 
@@ -115,15 +121,19 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3
 
 Details
 
 You need police permission before you gather at Jantar Mantar.
 
+WHAT TO DO: Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by 21 October 2026.
+
+HOW TO SUBMIT: Submit at the HAX Branch of the DCP/New Delhi District office: Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001. Telephone 011-23747777. The application is addressed to the DCP/New Delhi District. Whether email or an online route is accepted is NOT verified: do not rely on it.
+
 DOCUMENTS: Permission application
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Section 3(i), PDF page 3); Delhi Police — DCP/New Delhi District: official district details (address and telephone)
 
 Apply at least 10 days ahead
 ■
@@ -131,15 +141,17 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3
 
 Details
 
 Apply at least 10 days before your event, not counting the event day. A late application might still be considered, but only if space and time allow.
 
+WHAT TO DO: Work back from your event date and submit well before the deadline shown.
+
 TARGET DATE: 21 October 2026 — Excluding the event day. Late applications may be considered subject to space and time for arrangements. Confirmed as the current requirement by Delhi Police practice in 2025–26; older 2018 material does not override it.
 
-SOURCES: ANI (7 Oct 2026): “Prior permission is mandatory for organizing demonstration, sit-in, or protest at Jantar Mantar”: Delhi Police; Current Delhi Police statements and refusal letters confirming the 10-day application requirement; Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar; India TV (7 Oct 2026): ‘Permission must be sought 10 days before protest’: Delhi Police amid INDIA bloc stir at Jantar Mantar
+SOURCES: ANI (7 Oct 2026): “Prior permission is mandatory for organizing demonstration, sit-in, or protest at Jantar Mantar”: Delhi Police (press report, lead only: not evidence); Current Delhi Police statements and refusal letters confirming the 10-day application requirement; Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Section 3(i), PDF page 3); India TV (7 Oct 2026): ‘Permission must be sought 10 days before protest’: Delhi Police amid INDIA bloc stir at Jantar Mantar (press report, lead only: not evidence)
 
 Organizer undertaking
 ■
@@ -147,15 +159,19 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 
-You sign an undertaking with your application. Use our preparation sheet to gather what it asks for, but submit the official form from the Standing Order.
+You give an undertaking with your application: Annexure B of the Standing Order, "Undertaking by the organizer for Jantar Mantar". Use our preparation copy to gather what it asks for, then complete and sign the official Annexure B.
+
+WHAT TO DO: Open the official Annexure B, gather the details it asks for, and sign it for your application.
 
 DOCUMENTS: Organizer undertaking
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+View official Annexure B
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Annexure B, PDF pages 11–14)
 
 Land-owner NOC
 ■
@@ -163,15 +179,17 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 
-You need a land-owner NOC. We have not yet verified who issues it for Jantar Mantar or how to apply for it, so ask the police when you apply.
+Land-owner NOC is required by Annexure B. We have not yet verified the current submission route for obtaining it.
+
+WHAT TO DO: Treat the land-owner NOC as a required enclosure for your undertaking and allow time to obtain it. Do not assume a route: none is verified yet.
 
 DOCUMENTS: Land-owner NOC
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Annexure B, PDF pages 11–14)
 
 Traffic NOC for rallies, meetings and protest gatherings
 ■
@@ -185,6 +203,8 @@ Details
 
 You need a Traffic NOC from Delhi Traffic Police. We have not verified the application steps, fee or processing time.
 
+WHAT TO DO: Contact DCP (Headquarters), Delhi Traffic Police HQ, Todapur, to apply.
+
 DOCUMENTS: Traffic NOC application
 
 SOURCES: Delhi Traffic Police — NOC for processions, rallies, meetings and morchas
@@ -197,13 +217,17 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3 (addressee DCP/NDD; the clause for the HAX Branch location is not separately recorded)
 
 Details
 
-Your application goes to the DCP, New Delhi District. We have not verified how it is submitted (in person, email or portal).
+Your application is addressed to the DCP/New Delhi District and submitted at the HAX Branch of the DCP/NDD office (Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001; telephone 011-23747777). We have not verified that email or any online route is accepted, so do not assume it is.
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+WHAT TO DO: Take or send your application to the HAX Branch, DCP/New Delhi District, and call 011-23747777 if you need to confirm anything.
+
+HOW TO SUBMIT: In person at the HAX Branch of the DCP/NDD office, Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001 (telephone 011-23747777). Email / online submission: NOT verified.
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Section 3(i), PDF page 3 (addressee DCP/NDD; the clause for the HAX Branch location is not separately recorded)); Delhi Police — DCP/New Delhi District: official district details (address and telephone)
 
 Maximum 1,000 participants
 ▲
@@ -211,13 +235,15 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 5(i)-(ii)
 
 Details
 
-Jantar Mantar can host up to 1,000 people. If you expect more, plan another venue.
+Jantar Mantar can host up to 1,000 people in total. Several protests can take place on the same day if there is space and enough time between them. Any space left is for the police to allot: it is not guaranteed to you. If you expect more than 1,000, plan another venue.
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+WHAT TO DO: Keep attendance within 1,000, or choose a larger venue.
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Section 5(i)-(ii))
 
 Protest window 10:00–17:00
 ▲
@@ -225,13 +251,15 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 9
 
 Details
 
 Plan to be finished by 5 pm, and not start before 10 am.
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+WHAT TO DO: Set your programme within 10:00–17:00.
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Section 9)
 
 No continuous multi-day programme
 ▲
@@ -244,6 +272,8 @@ Current · Primary source verified · Last verified: 1 October 2026 · Delhi Pol
 Details
 
 Each day needs to stand on its own. No round-the-clock or overnight sit-ins.
+
+WHAT TO DO: Plan single-day programmes.
 
 SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
 
@@ -259,6 +289,8 @@ Details
 
 No tents or temporary structures. If you were planning a stage or canopy, ask the police first.
 
+WHAT TO DO: Do not plan tents or temporary structures.
+
 SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
 
 Maximum 25 protester buses
@@ -267,13 +299,15 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 4(i), PDF page 4
 
 Details
 
-You planned vehicles. No more than 25 protester buses are allowed in New Delhi District.
+No more than 25 protester buses are allowed in New Delhi District.
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+WHAT TO DO: Plan for 25 buses or fewer.
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Section 4(i), PDF page 4)
 
 GET QUOTES
 Designated parking only
@@ -282,13 +316,15 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 4(ii), PDF page 4
 
 Details
 
-Buses and other vehicles must use designated parking. We have not verified where that is.
+Buses and permitted vehicles must park at the designated parking location on Jai Singh Road that is specified in your permission, or at another location the police direct. Your issued permission should specify the designated Jai Singh Road parking point or an alternative location. We do not know, and do not promise, an exact parking bay: it is set for your event.
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+WHAT TO DO: When your permission is issued, check which parking point it names. If it names none, ask the DCP/NDD office (011-23747777).
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Section 4(ii), PDF page 4)
 
 Prohibited vehicles and animals
 ▲
@@ -301,6 +337,8 @@ Current · Primary source verified · Last verified: 1 October 2026 · Delhi Pol
 Details
 
 No tractors, trolleys, bullock carts, cycle-rickshaws, hand carts or animals.
+
+WHAT TO DO: Do not bring these.
 
 SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
 
@@ -315,6 +353,8 @@ Current · Primary source verified · Last verified: 1 October 2026 · Delhi Pol
 Details
 
 Banners and flags up to 9 × 6 feet; sticks no longer than 2 feet.
+
+WHAT TO DO: Check banner and flag sizes before printing.
 
 SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
 
@@ -331,6 +371,8 @@ Details
 
 No weapons of any kind.
 
+WHAT TO DO: Brief your volunteers and participants.
+
 SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
 
 No provocative or incendiary speech
@@ -344,6 +386,8 @@ Current · Primary source verified · Last verified: 1 October 2026 · Delhi Pol
 Details
 
 Speeches must not be provocative or incendiary.
+
+WHAT TO DO: Brief your speakers.
 
 SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
 
@@ -359,6 +403,8 @@ Details
 
 Don't damage property.
 
+WHAT TO DO: Brief your volunteers and participants.
+
 SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
 
 No burning, cooking or littering
@@ -373,6 +419,8 @@ Details
 
 No burning of effigies or documents, no cooking, and no littering.
 
+WHAT TO DO: Plan a cleanup, and brief participants.
+
 SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
 
 GET QUOTES
@@ -382,15 +430,17 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 
 Bring the original permission on the day.
 
+WHAT TO DO: Keep the original permission with the organizer.
+
 DOCUMENTS: Original permission
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Annexure B, PDF pages 11–14)
 
 Name a police liaison
 ▲
@@ -398,13 +448,15 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 
 Name one person who will liaise with the police.
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+WHAT TO DO: Choose a liaison and share their details.
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Annexure B, PDF pages 11–14)
 
 Drinking water and first aid
 ▲
@@ -412,13 +464,15 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 
 Arrange drinking water and first aid or medical help for participants.
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+WHAT TO DO: Book water and first aid support.
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Annexure B, PDF pages 11–14)
 
 GET QUOTES
 Volunteers and contact list
@@ -427,15 +481,17 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 
 Have enough volunteers, and keep a list of who is where and how to reach them.
 
+WHAT TO DO: Prepare a volunteer deployment and contact list.
+
 DOCUMENTS: Volunteer deployment and contact list
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Annexure B, PDF pages 11–14)
 
 GET QUOTES
 Check for current Section 163 or other temporary orders
@@ -449,6 +505,8 @@ Details
 
 Temporary orders can override the usual rules for a few days. Check the Delhi Police notifications for your date and place, and again just before the event.
 
+WHAT TO DO: Check the Delhi Police notifications page now and again the day before.
+
 SOURCES: Delhi Police — Notifications (Section 163 BNSS orders)
 
 Recommended
@@ -459,12 +517,14 @@ RECOMMENDED
 RECOMMENDED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(ii) (first come, first served; assessment); Section 3(iii)-(vi) (DCP/NDD decision), PDF page 3
 
 Details
 
 Permission is not automatic. It is first come, first served, and the police assess each application.
 
-SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+WHAT TO DO: Apply as early as you can.
+
+SOURCES: Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar (Section 3(ii) (first come, first served; assessment); Section 3(iii)-(vi) (DCP/NDD decision), PDF page 3)
 
 BookMyProtest helps organizers understand and prepare for public-assembly requirements. Final permissions and approvals are issued solely by the relevant authorities.

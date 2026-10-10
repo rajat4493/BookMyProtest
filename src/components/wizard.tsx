@@ -16,13 +16,13 @@ interface Form {
   cityId: string; venueId: string; name: string; date: string; startTime: string; endTime: string; kind: "static" | "march"; startLocation: string; destination: string;
   description: string; attendance: string; stage: boolean; sound: boolean; vehicles: boolean; food: boolean;
   organizerType: string; organizerName: string; organizerEmail: string; organizerPhone: string;
-  speakers: string; promoStatus: string; trafficFootprint: string;
+  speakers: string; promoStatus: string; trafficFootprint: string; buses: string;
 }
 
 const EMPTY: Form = {
   cityId: "", venueId: "", name: "", date: "", startTime: "10:00", endTime: "13:00", kind: "static", startLocation: "", destination: "", description: "", attendance: "",
   stage: false, sound: false, vehicles: false, food: false, organizerType: "individual", organizerName: "", organizerEmail: "", organizerPhone: "",
-  speakers: "", promoStatus: "NONE", trafficFootprint: "",
+  speakers: "", promoStatus: "NONE", trafficFootprint: "", buses: "",
 };
 
 /** Which step does each server-side error key belong to? */
@@ -266,6 +266,9 @@ export function Wizard({ cities, venues = {}, today, largeAbove = {} }: { cities
               <Toggle id="stage" checked={f.stage} onChange={(v) => set("stage", v)} title="Stage" hint="A raised platform or structure" />
               <Toggle id="sound" checked={f.sound} onChange={(v) => set("sound", v)} title="Loudspeaker / sound" hint="Amplified speech or music" />
               <Toggle id="vehicles" checked={f.vehicles} onChange={(v) => set("vehicles", v)} title="Vehicles" hint="Buses, trucks or cars involved" />
+              {f.vehicles && (
+                <div className="slide-in"><Label htmlFor="buses" hint="Optional. The number of buses you expect. Some venues cap them.">How many buses?</Label><input id="buses" inputMode="numeric" pattern="[0-9]*" className="field" value={f.buses} onChange={(e) => set("buses", e.target.value.replace(/\D/g, "").slice(0, 4))} /></div>
+              )}
               <Toggle id="food" checked={f.food} onChange={(v) => set("food", v)} title="Food or water" hint="You plan to hand it out" />
             </div>
           )}

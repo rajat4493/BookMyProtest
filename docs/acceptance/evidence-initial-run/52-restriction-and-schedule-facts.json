@@ -1,0 +1,53 @@
+{
+ "1-feed-never-checked": {
+  "status": "FEED_STALE",
+  "message": "We could not confirm the latest orders: the Delhi Police — Notifications (Section 163 BNSS orders) has not been checked yet. Please check it yourself before the event.",
+  "pendingReview": 0,
+  "feedLastCheckedAt": null
+ },
+ "2-feed-checked-nothing-recorded": {
+  "status": "NO_RESTRICTION_RECORDED",
+  "message": "No temporary restriction is recorded for your date and place as of 2026-10-10 09:34 UTC, based on the Delhi Police — Notifications (Section 163 BNSS orders) (last checked 2026-10-10 09:34 UTC). New orders can be issued at short notice: check again before the event.",
+  "pendingReview": 0,
+  "feedLastCheckedAt": "2026-10-10T09:34:10.515Z"
+ },
+ "3-unreviewed-notification-exists": {
+  "status": "REVIEW_PENDING",
+  "message": "No temporary restriction is recorded for your date and place, but 1 new notification is awaiting review. Please check the Delhi Police — Notifications (Section 163 BNSS orders) yourself.",
+  "pendingReview": 1,
+  "feedLastCheckedAt": "2026-10-10T09:34:10.515Z"
+ },
+ "4-restriction-found": {
+  "status": "RESTRICTIONS_APPLY",
+  "message": "1 temporary restriction may affect your event: SYNTHETIC: Section 163 order, New Delhi District. Please verify with the relevant authority.",
+  "pendingReview": 0,
+  "feedLastCheckedAt": "2026-10-10T09:34:10.515Z"
+ },
+ "t72": [
+  {
+   "eventId": "9dc8e07b-06e2-4bf5-a159-b38d877aca2b",
+   "trigger": "T_72H",
+   "recorded": true
+  }
+ ],
+ "t24": [
+  {
+   "eventId": "9dc8e07b-06e2-4bf5-a159-b38d877aca2b",
+   "trigger": "T_24H",
+   "recorded": true
+  }
+ ],
+ "checkHistory": [
+  "T_24H RESTRICTIONS_APPLY",
+  "T_72H RESTRICTIONS_APPLY",
+  "RECHECK RESTRICTIONS_APPLY",
+  "RECHECK REVIEW_PENDING",
+  "RECHECK NO_RESTRICTION_RECORDED",
+  "RECHECK FEED_STALE",
+  "RECHECK FEED_STALE",
+  "RECHECK FEED_STALE",
+  "RECHECK FEED_STALE",
+  "DOCUMENT_GENERATION FEED_STALE",
+  "PLAN_GENERATED FEED_STALE"
+ ]
+}

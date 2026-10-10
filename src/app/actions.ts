@@ -213,7 +213,7 @@ async function guarded(back: string, fn: (actor: { userId: string }) => Promise<
 }
 
 const BOOL_FIELDS = new Set(["march", "sound", "vehicles", "stage", "food"]);
-const NUM_FIELDS = new Set(["attendance"]);
+const NUM_FIELDS = new Set(["attendance", "buses"]);
 
 function parseClauses(fd: FormData, prefix: string): Clause[] {
   const out: Clause[] = [];
@@ -271,7 +271,7 @@ export async function saveRuleDraftAction(fd: FormData) {
       completeWhen: (() => { const c = parseCondition(fd, "done"); return c.all.length + c.any.length > 0 ? c : null; })(),
       deadline: parseDeadline(fd),
       submissionMethod: str(fd, "submissionMethod"),
-      officialLink: httpOrNull(str(fd, "officialLink")),
+      officialLink: httpOrNull(str(fd, "officialLink")), officialLinkLabel: str(fd, "officialLinkLabel"),
       documents: parseDocs(fd),
       vendorCategory: nullable(str(fd, "vendorCategory")),
       effectiveFrom: dateOrNull(str(fd, "effectiveFrom")),

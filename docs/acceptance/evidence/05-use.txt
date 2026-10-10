@@ -12,6 +12,8 @@ NO
 VEHICLES
 Buses, trucks or cars involved
 YES
+HOW MANY BUSES?
+Optional. The number of buses you expect. Some venues cap them.
 FOOD OR WATER
 You plan to hand it out
 NO

@@ -25,6 +25,7 @@ export function DetailsForm({ eventId, initial, applied }: { eventId: string; in
       <div><label htmlFor="d-kind" className="label mb-1 block">Format</label><select id="d-kind" className="field" value={v.kind} onChange={set("kind")}><option value="static">Static gathering</option><option value="march">March</option></select></div>
       {text("startLocation", v.kind === "march" ? "Starting location" : "Location")}
       {v.kind === "march" && text("destination", "Destination")}
+      {v.vehicles && text("buses", "Number of buses")}
       {area("description", "Event purpose")}
       {area("speakers", "Speakers / VIPs")}
       {area("trafficFootprint", "Route and traffic footprint")}

@@ -181,6 +181,7 @@ export interface RuleInput {
   deadline: DeadlineDef;
   submissionMethod: string;
   officialLink: string | null;
+  officialLinkLabel?: string;
   documents: { name: string; required: boolean; conditional: boolean; templateKey: string | null; notes: string }[];
   vendorCategory: string | null;
   effectiveFrom: string | null;
@@ -219,14 +220,14 @@ export async function saveRuleDraft(id: string | null, i: RuleInput, actor: Acto
       await q(`UPDATE rules SET jurisdiction_id=$2, authority_id=$3, assembly_type=$4, title=$5, description=$6, legal_statement=$7, user_action=$8, category=$9, requirement_type=$10,
         level=$11, else_level=$12, severity=$13, condition=$14, complete_when=$15, deadline_definition=$16, submission_method=$17, official_link=$18, vendor_category=$19,
         effective_from=$20, effective_until=$21, last_verified_at=$22, needs_review=$23, confidence=$24, rule_owner=$25, admin_notes=$26, sort=$27, inheritance_mode=$28,
-        overrides_family_id=$29, legal_certainty=$30, updated_at=now() WHERE id=$1`, [id, ...params]);
+        overrides_family_id=$29, legal_certainty=$30, official_link_label=$31, updated_at=now() WHERE id=$1`, [id, ...params, i.officialLinkLabel ?? ""]);
     } else {
       const family = (i.ruleFamilyId ?? "").trim().toUpperCase() || newFamilyId();
       if ((await q("SELECT 1 FROM rules WHERE rule_family_id=$1", [family])).length) throw new Error(`Rule family ${family} already exists. Clone it as a new version instead.`);
       ruleId = (await q(`INSERT INTO rules (rule_family_id, version, rule_status, jurisdiction_id, authority_id, assembly_type, title, description, legal_statement, user_action, category,
         requirement_type, level, else_level, severity, condition, complete_when, deadline_definition, submission_method, official_link, vendor_category, effective_from, effective_until,
-        last_verified_at, needs_review, confidence, rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, legal_certainty)
-        VALUES ($30,1,'DRAFT',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29) RETURNING id`, [...params.slice(0, 28), i.legalCertainty, family]))[0].id;
+        last_verified_at, needs_review, confidence, rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, legal_certainty, official_link_label)
+        VALUES ($30,1,'DRAFT',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$31) RETURNING id`, [...params.slice(0, 28), i.legalCertainty, family, i.officialLinkLabel ?? ""]))[0].id;
     }
     await replaceDocs(q, ruleId!, i.documents);
     await auditQ(q, actor.userId, id ? "rule.update_draft" : "rule.create", "rule", ruleId!, { before, after: { title: i.title, jurisdictionId: i.jurisdictionId } });
@@ -254,10 +255,10 @@ export async function cloneAsNewVersion(ruleId: string, actor: Actor): Promise<s
     if (open > 0) throw new Error("This family already has a draft version in progress.");
     const id = (await q(`INSERT INTO rules (rule_family_id, version, rule_status, jurisdiction_id, authority_id, assembly_type, title, description, legal_statement, user_action, category,
         requirement_type, level, else_level, severity, condition, complete_when, deadline_definition, submission_method, official_link, vendor_category, needs_review, confidence,
-        rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, supersedes_rule_id)
+        rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, supersedes_rule_id, official_link_label)
       SELECT rule_family_id, $2, 'DRAFT', jurisdiction_id, authority_id, assembly_type, title, description, legal_statement, user_action, category, requirement_type, level, else_level,
         severity, condition, complete_when, deadline_definition, submission_method, official_link, vendor_category, true, confidence, rule_owner, admin_notes, sort, inheritance_mode,
-        overrides_family_id, id FROM rules WHERE id=$1 RETURNING id`, [ruleId, v + 1]))[0].id;
+        overrides_family_id, id, official_link_label FROM rules WHERE id=$1 RETURNING id`, [ruleId, v + 1]))[0].id;
     await q(`INSERT INTO rule_sources (rule_id, source_id, evidence_strength, relevance, excerpt, section_ref, interpretation_note)
              SELECT $2, source_id, evidence_strength, relevance, excerpt, section_ref, interpretation_note FROM rule_sources WHERE rule_id=$1`, [ruleId, id]);
     await q(`INSERT INTO rule_documents (rule_id, name, required, conditional, template_key, authority_id, notes, source_reference)
@@ -426,12 +427,21 @@ function isPublicHttpUrl(u: string): boolean {
   } catch { return false; }
 }
 
+/** Page HTML to the plain text the watch compares and the order parser reads. Pure, so it can be tested against fixtures. */
+const tidyLines = (t: string) => t.replace(/[ \t\u00a0]+/g, " ").split(/\r?\n/).map((l) => l.trim()).filter(Boolean).join("\n");
+export function htmlToText(html: string): string {
+  // Line breaks are kept (the order splitter works on lines); only runs of spaces and blank lines are collapsed.
+  return tidyLines(html.slice(0, 2_000_000)
+    .replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<\/(p|div|li|tr|h[1-6]|section|article|table)>|<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">"));
+}
+
 export const defaultFetcher: Fetcher = async (url) => {
   if (!isPublicHttpUrl(url)) throw new Error("Refusing to fetch a non-public URL");
   const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(15_000), headers: { "user-agent": "BookMyProtest-RegulatoryWatch/0.1" } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const html = (await res.text()).slice(0, 2_000_000);
-  return normalizeText(html.replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, "\n").replace(/&nbsp;/g, " "));
+  return htmlToText(await res.text());
 };
 
 export async function checkSource(sourceId: string, fetcher: Fetcher = defaultFetcher, assistant: ChangeAssistant = heuristicAssistant): Promise<CheckResult> {

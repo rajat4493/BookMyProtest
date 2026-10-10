@@ -4,6 +4,7 @@ import type { Answers, Clause, Condition, DeadlineDef, EvaluatedItem, EvidenceSt
 /** Reads a field the way rules see it. */
 export function fieldValue(a: Answers, field: Clause["field"]): string | number | boolean {
   if (field === "march") return a.kind === "march";
+  if (field === "buses") return a.buses ?? 0;
   return a[field];
 }
 

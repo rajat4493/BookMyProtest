@@ -1,4 +1,4 @@
-URL: http://localhost:3101/plan/9dc8e07b-06e2-4bf5-a159-b38d877aca2b
+URL: http://localhost:3101/plan/41cb6cfd-1392-4e25-8961-d1294e7129ae
 
 BOOKMYPROTEST
 HOME
@@ -27,7 +27,7 @@ We could not confirm the latest orders
 
 We could not confirm the latest orders: the Delhi Police — Notifications (Section 163 BNSS orders) has not been checked yet. Please check it yourself before the event.
 
-Documents generated · 2026-10-10 09:32 UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.
+Documents generated · 2026-10-10 11:51 UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.
 
 Check history (2)
 
@@ -35,9 +35,15 @@ DATE CONFLICT CHECK
 
 Shared venue
 
-This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date. That is not confirmation of anything: your permission still comes from the authority.
+This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date, which tells you nothing about whether space will be allotted to you: your permission, and any remaining capacity, is for the authority to decide.
 
 POLICE: NOT CHECKED
+
+HEADS-UP
+
+2 buses are within the venue maximum of 25. Your issued permission should specify the designated Jai Singh Road parking point or an alternative location.
+
+Please verify with the relevant authority.
 
 Save your plan
 
@@ -52,8 +58,8 @@ UNDO: I HAVEN’T APPLIED
 I’VE RECEIVED AN APPROVAL
 EDIT PLAN DETAILS
 NEXT ACTION
+Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by 21 October 2026.
 Prior police permission
-You need police permission before you gather at Jantar Mantar.
 Progress by category
 PERMISSIONS
 
@@ -110,7 +116,7 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3
 
 Details
 Apply at least 10 days ahead
@@ -119,7 +125,7 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3
 
 Details
 Organizer undertaking
@@ -128,7 +134,7 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 Land-owner NOC
@@ -137,7 +143,7 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 Traffic NOC for rallies, meetings and protest gatherings
@@ -157,7 +163,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3 (addressee DCP/NDD; the clause for the HAX Branch location is not separately recorded)
 
 Details
 Maximum 1,000 participants
@@ -166,7 +172,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 5(i)-(ii)
 
 Details
 Protest window 10:00–17:00
@@ -175,7 +181,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 9
 
 Details
 No continuous multi-day programme
@@ -202,7 +208,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 4(i), PDF page 4
 
 Details
 GET QUOTES
@@ -212,7 +218,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 4(ii), PDF page 4
 
 Details
 Prohibited vehicles and animals
@@ -277,7 +283,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 Name a police liaison
@@ -286,7 +292,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 Drinking water and first aid
@@ -295,7 +301,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 GET QUOTES
@@ -305,7 +311,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 Details
 GET QUOTES
@@ -325,7 +331,7 @@ RECOMMENDED
 RECOMMENDED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(ii) (first come, first served; assessment); Section 3(iii)-(vi) (DCP/NDD decision), PDF page 3
 
 Details
 

@@ -57,12 +57,12 @@ describe("corpus shape", () => {
 
   it("defines the 29 requested families, the conservative generic-march baseline (PROC-001…004) and two held gap records", () => {
     const wanted = [...Array.from({ length: 26 }, (_, i) => `DEL-JM-${String(i + 1).padStart(3, "0")}`), "DEL-TRAFFIC-001", "DEL-LIVE-001", "DEL-RAM-001"];
-    const extra = ["DEL-PROC-001", "DEL-PROC-002", "DEL-PROC-003", "DEL-PROC-004", "DEL-RAM-101", "DEL-RAM-102", "DEL-RAM-103"];
+    const extra = ["DEL-PROC-001", "DEL-PROC-002", "DEL-PROC-003", "DEL-PROC-004", "DEL-RAM-101", "DEL-RAM-102", "DEL-RAM-103", "DEL-JM-027", "DEL-JM-028"];
     expect(RULES.map((r) => r.family).filter((f) => !["DEL-RAM-002", "DEL-PROC-100"].includes(f)).sort()).toEqual([...wanted, ...extra].sort());
     expect(RULES.filter((r) => r.holdForReview).map((r) => r.family).sort()).toEqual(["DEL-PROC-100", "DEL-RAM-002"]);
   });
   it("publishes all 29 with a named human reviewer, and keeps the Ramlila booking workflow UNDER_REVIEW", async () => {
-    expect(report).toMatchObject({ published: 36, drafted: 0, heldForReview: 2, districtLive: true });
+    expect(report).toMatchObject({ published: 38, drafted: 0, heldForReview: 2, districtLive: true });
     const rows = await query("SELECT rule_family_id, rule_status, legal_certainty, reviewed_by FROM rules ORDER BY rule_family_id");
     const status = new Map(rows.map((r) => [r.rule_family_id, r]));
     expect(status.get("DEL-RAM-002")).toMatchObject({ rule_status: "UNDER_REVIEW", legal_certainty: "UNVERIFIED", reviewed_by: null });
@@ -444,13 +444,13 @@ describe("loading, verifying and going live are three separate decisions", () =>
     expect(so).toMatchObject({ canonical_url: STANDING_ORDER_URL, source_type: "OFFICIAL_ADMINISTRATIVE_RULE", monitoring_enabled: true, lifecycle: "CURRENT", pd: "2022-04-28" });
     expect(r.published).toBe(0);
     expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='ACTIVE'"))[0].n).toBe(0);
-    expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='DRAFT'"))[0].n).toBe(36);
+    expect((await query("SELECT count(*)::int AS n FROM rules WHERE rule_status='DRAFT'"))[0].n).toBe(38);
     expect(r.warnings.join(" ")).toMatch(/not confirmed/);
     expect(await listSupportedCities()).toEqual([]);
   });
   it("publishing needs the admin's explicit confirmation; it still does not make Delhi selectable", async () => {
     const r = await loadDelhiCorpus({ actor, verifiedOn: "2026-10-01", confirmVerified: true });
-    expect(r).toMatchObject({ published: 36, districtLive: false, heldForReview: 2 });
+    expect(r).toMatchObject({ published: 38, districtLive: false, heldForReview: 2 });
     expect(r.warnings.join(" ")).toMatch(/NOT enabled in the planner/);
     expect(await listSupportedCities()).toEqual([]);
     expect((await query("SELECT count(DISTINCT reviewed_by)::int AS n FROM rules WHERE rule_status='ACTIVE' AND reviewed_by IS NOT NULL"))[0].n).toBe(1);

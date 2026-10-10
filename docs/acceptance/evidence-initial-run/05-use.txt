@@ -1,0 +1,19 @@
+URL: http://localhost:3101/plan
+
+STEP 5 OF 6
+PLAN A PROTEST
+WHAT WILL YOU USE?
+STAGE
+A raised platform or structure
+NO
+LOUDSPEAKER / SOUND
+Amplified speech or music
+NO
+VEHICLES
+Buses, trucks or cars involved
+YES
+FOOD OR WATER
+You plan to hand it out
+NO
+BACK
+NEXT

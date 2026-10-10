@@ -73,6 +73,8 @@ export interface Answers {
   speakers?: string;
   promoStatus?: PromoStatus;
   trafficFootprint?: string;
+  /** Number of buses (asked when vehicles are used). */
+  buses?: number;
 }
 
 export const OPS = ["eq", "neq", "gt", "gte", "lt", "lte", "in", "present"] as const;
@@ -84,6 +86,7 @@ export const CONDITION_FIELDS = [
   "march",
   "sound",
   "vehicles",
+  "buses",
   "stage",
   "food",
   "organizerType",
@@ -157,6 +160,7 @@ export interface Rule {
   deadlineDaysBefore: number | null;
   deadlineNote: string;
   officialLink: string | null;
+  officialLinkLabel?: string;
   requiredDocuments: string[];
   vendorCategory: string | null;
   lastVerifiedAt: string | null;

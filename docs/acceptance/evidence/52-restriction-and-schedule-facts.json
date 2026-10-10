@@ -7,32 +7,32 @@
  },
  "2-feed-checked-nothing-recorded": {
   "status": "NO_RESTRICTION_RECORDED",
-  "message": "No temporary restriction is recorded for your date and place as of 2026-10-10 09:34 UTC, based on the Delhi Police — Notifications (Section 163 BNSS orders) (last checked 2026-10-10 09:34 UTC). New orders can be issued at short notice: check again before the event.",
+  "message": "No temporary restriction is recorded for your date and place as of 2026-10-10 11:52 UTC, based on the Delhi Police — Notifications (Section 163 BNSS orders) (last checked 2026-10-10 11:52 UTC). New orders can be issued at short notice: check again before the event.",
   "pendingReview": 0,
-  "feedLastCheckedAt": "2026-10-10T09:34:10.515Z"
+  "feedLastCheckedAt": "2026-10-10T11:52:12.912Z"
  },
  "3-unreviewed-notification-exists": {
   "status": "REVIEW_PENDING",
   "message": "No temporary restriction is recorded for your date and place, but 1 new notification is awaiting review. Please check the Delhi Police — Notifications (Section 163 BNSS orders) yourself.",
   "pendingReview": 1,
-  "feedLastCheckedAt": "2026-10-10T09:34:10.515Z"
+  "feedLastCheckedAt": "2026-10-10T11:52:12.912Z"
  },
  "4-restriction-found": {
   "status": "RESTRICTIONS_APPLY",
   "message": "1 temporary restriction may affect your event: SYNTHETIC: Section 163 order, New Delhi District. Please verify with the relevant authority.",
   "pendingReview": 0,
-  "feedLastCheckedAt": "2026-10-10T09:34:10.515Z"
+  "feedLastCheckedAt": "2026-10-10T11:52:12.912Z"
  },
  "t72": [
   {
-   "eventId": "9dc8e07b-06e2-4bf5-a159-b38d877aca2b",
+   "eventId": "41cb6cfd-1392-4e25-8961-d1294e7129ae",
    "trigger": "T_72H",
    "recorded": true
   }
  ],
  "t24": [
   {
-   "eventId": "9dc8e07b-06e2-4bf5-a159-b38d877aca2b",
+   "eventId": "41cb6cfd-1392-4e25-8961-d1294e7129ae",
    "trigger": "T_24H",
    "recorded": true
   }

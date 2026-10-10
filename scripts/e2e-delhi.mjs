@@ -56,8 +56,8 @@ p = await run("s3", { attendance: 500, march: true, sound: true });
 for (const t of ["No march to or from Jantar Mantar", "Symbolic march only with separate police permission", "Loudspeaker only with specific permission", "No vehicle-mounted PA system", "Traffic NOC for rallies"]) ok(await has(p, t), `S3: shows "${t}"`);
 await p.getByText("No march to or from Jantar Mantar").first().scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/5-s3-500-march-sound.png` });
 await p.goto(p.url() + "/pack"); await p.getByRole("button", { name: /generate my preparation pack/i }).click(); await p.waitForURL(/ready=1/); await p.waitForTimeout(800);
-ok(await has(p, "Undertaking preparation sheet (Jantar Mantar)"), "documents use the Jantar Mantar venue template");
-await p.getByText("Undertaking preparation sheet (Jantar Mantar)").first().scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/6-jantar-mantar-undertaking-sheet.png` });
+ok(await has(p, "Undertaking preparation copy (Jantar Mantar)"), "documents use the Jantar Mantar venue template");
+await p.getByText("Undertaking preparation copy (Jantar Mantar)").first().scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/6-jantar-mantar-undertaking-sheet.png` });
 // Scenario 4: a march elsewhere in Delhi (no venue): conservative generic baseline, nothing borrowed from Jantar Mantar
 p = await run("s4", { attendance: 500, march: true, sound: true, venue: false });
 for (const t of ["Police permission process for processions", "Route and timing are set by Delhi Police", "Sound permission for processions and large gatherings that use sound", "A current Delhi Police order governs rallies and processions", "Traffic NOC for rallies"]) ok(await has(p, t), `S4: shows "${t}"`);

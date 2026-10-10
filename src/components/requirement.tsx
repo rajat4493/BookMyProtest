@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { toggleRequirementAction } from "@/app/actions";
-import { LEVEL_LABEL, SEVERITY_LABEL, formatDate } from "@/lib/plan";
+import { LEVEL_LABEL, SEVERITY_LABEL, fillText, formatDate } from "@/lib/plan";
 import type { EvaluatedItem } from "@/lib/engine/types";
 import { Arrow, Bang, Check } from "./icons";
 
@@ -18,7 +18,7 @@ export function EvidenceLine({ item }: { item: EvaluatedItem }) {
       main = (
         <p className="text-sm text-mute">
           <span className="font-semibold text-ink">Current · {r.legalCertainty === "PRIMARY_VERIFIED" ? "Primary source verified" : "Official guidance"} · Last verified: {formatDate(r.lastVerifiedAt!)}</span>
-          {src && <> · <a className="underline underline-offset-2" href={src.url!} target="_blank" rel="noopener noreferrer">{src.title || "Source"}</a></>}
+          {src && <> · <a className="underline underline-offset-2" href={src.url!} target="_blank" rel="noopener noreferrer">{src.title || "Source"}</a>{src.sectionRef ? `, ${src.sectionRef}` : ""}</>}
           {r.confidence === "medium" && <> · Medium confidence. Please verify with the relevant authority.</>}
         </p>
       );
@@ -58,8 +58,9 @@ const TIER = {
   RECOMMENDED: "border-b border-hair px-0 py-5",
 } as const;
 
-export function RequirementRow({ item, eventId }: { item: EvaluatedItem; eventId: string }) {
+export function RequirementRow({ item, eventId, buses = 0, leadDeadline = null }: { item: EvaluatedItem; eventId: string; buses?: number; leadDeadline?: string | null }) {
   const r = item.rule;
+  const fill = (t: string) => fillText(t, { deadline: item.deadline ?? leadDeadline, buses });
   const chip = r.severity === "CRITICAL" ? "chip-critical" : r.severity === "REQUIRED" ? "chip-required" : "chip-recommended";
   const mark = r.severity === "CRITICAL" ? "■" : r.severity === "REQUIRED" ? "▲" : "●";
   return (
@@ -91,12 +92,14 @@ export function RequirementRow({ item, eventId }: { item: EvaluatedItem; eventId
         <details className="group">
           <summary className="cursor-pointer text-sm font-semibold underline underline-offset-2">Details</summary>
           <div className="mt-2 space-y-2 text-[0.95rem]">
-            <p>{r.description}</p>
+            <p>{fill(r.description)}</p>
+            {r.userAction && <p><span className="label">What to do: </span>{fill(r.userAction)}</p>}
+            {r.submissionMethod && <p><span className="label">How to submit: </span>{r.submissionMethod}</p>}
             {r.requiredDocuments.length > 0 && <p><span className="label">Documents: </span>{r.requiredDocuments.join(", ")}</p>}
             {item.deadline && <p><span className="label">Target date: </span>{formatDate(item.deadline)}{r.deadlineNote ? ` — ${r.deadlineNote}` : ""}</p>}
             {!item.deadline && r.deadlineNote && <p><span className="label">Deadline: </span>{r.deadlineNote}</p>}
-            {r.officialLink && <p><a className="underline underline-offset-2" href={r.officialLink} target="_blank" rel="noopener noreferrer">Official link</a></p>}
-            {r.sources.length > 0 && <p className="text-mute"><span className="label">Sources: </span>{r.sources.map((s) => (s.title || s.url) && `${s.title || s.url}${s.sourceType === "SECONDARY_LEAD" || s.strength === "LEAD" ? " (press report, lead only: not evidence)" : ""}`).filter(Boolean).join("; ")}</p>}
+            {r.officialLink && <p><a className="underline underline-offset-2" href={r.officialLink} target="_blank" rel="noopener noreferrer">{r.officialLinkLabel || "Official link"}</a></p>}
+            {r.sources.length > 0 && <p className="text-mute"><span className="label">Sources: </span>{r.sources.map((s) => (s.title || s.url) && `${s.title || s.url}${s.sectionRef ? ` (${s.sectionRef})` : ""}${s.sourceType === "SECONDARY_LEAD" || s.strength === "LEAD" ? " (press report, lead only: not evidence)" : ""}`).filter(Boolean).join("; ")}</p>}
           </div>
         </details>
         {r.vendorCategory && !item.done && (

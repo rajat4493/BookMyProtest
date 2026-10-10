@@ -60,11 +60,13 @@ export async function loadDelhiCorpus(opts: LoadOptions): Promise<LoadReport> {
   // 2. authorities
   const auth: Partial<Record<AuthKey, string>> = {};
   for (const a of AUTHORITIES) {
-    const found = await one<{ id: string }>("SELECT id FROM authorities WHERE name=$1 AND jurisdiction_id=$2", [a.name, place[a.place]]);
-    auth[a.key] = found?.id ?? (await saveAuthority(null, {
-      name: a.name, jurisdictionId: place[a.place]!, authorityType: a.type, website: a.website, contactEmail: "", contactPhone: "", submissionUrl: null, submissionMethod: "UNKNOWN",
+    const found = await one<{ id: string; office_address: string; contact_phone: string; submission_method: string; notes: string }>("SELECT id, office_address, contact_phone, submission_method, notes FROM authorities WHERE name=$1 AND jurisdiction_id=$2", [a.name, place[a.place]]);
+    const input = {
+      name: a.name, jurisdictionId: place[a.place]!, authorityType: a.type, website: a.website, contactEmail: "", contactPhone: a.phone ?? "", submissionUrl: null, submissionMethod: a.method ?? "UNKNOWN",
       officeAddress: a.address, active: true, notes: a.notes, lastVerifiedAt: null,
-    }, actor));
+    };
+    const stale = !found || found.office_address !== a.address || found.contact_phone !== (a.phone ?? "") || found.submission_method !== (a.method ?? "UNKNOWN") || found.notes !== a.notes;
+    auth[a.key] = stale ? await saveAuthority(found?.id ?? null, input as any, actor) : found!.id;
   }
 
   // 3. sources (order matters: a source is created before the one that supersedes it is referenced)
@@ -99,7 +101,7 @@ export async function loadDelhiCorpus(opts: LoadOptions): Promise<LoadReport> {
   const inputFor = (r: RuleSpec): RuleInput => ({
     ruleFamilyId: r.family, jurisdictionId: place[r.place]!, authorityId: r.authority ? auth[r.authority]! : null, assemblyType: "any", title: r.title, description: r.plain,
     legalStatement: r.legal, userAction: r.action, category: r.category, requirementType: r.type ?? "permission", level: r.level, elseLevel: null, severity: r.severity, legalCertainty: r.certainty,
-    condition: r.condition, completeWhen: null, deadline: r.deadline ?? { kind: "UNKNOWN" }, submissionMethod: "", officialLink: null,
+    condition: r.condition, completeWhen: null, deadline: r.deadline ?? { kind: "UNKNOWN" }, submissionMethod: r.submit ?? "", officialLink: r.link?.url ?? null, officialLinkLabel: r.link?.label ?? "",
     documents: (r.docs ?? []).map((name) => ({ name, required: true, conditional: false, templateKey: name === "Organizer undertaking" ? "undertaking" : name === "Permission application" ? "request-letter" : null, notes: "" })),
     vendorCategory: r.vendor ?? null, effectiveFrom: null, effectiveUntil: null, lastVerifiedAt: r.holdForReview ? null : opts.verifiedOn, needsReview: !!r.holdForReview,
     confidence: r.confidence, ruleOwner: "Project owner (primary-source corpus review)", adminNotes: r.note ?? "", sort: 1000 + RULES.indexOf(r) * 10, inheritanceMode: "ADD", overridesFamilyId: null,
@@ -153,10 +155,10 @@ export async function loadDelhiCorpus(opts: LoadOptions): Promise<LoadReport> {
     } else warnings.push("Go-live refused: not every Delhi rule is ACTIVE.");
   } else if (open.length === 0) warnings.push("All Delhi rules are ACTIVE but New Delhi District is NOT enabled in the planner (go-live is a separate step: --go-live).");
 
-  // 6. venue-level templates (Jantar Mantar), one version each, only if none exist
+  // 6. venue-level templates (Jantar Mantar): a new version only when the corpus text differs from the latest one
   for (const t of TEMPLATES) {
-    const has = await one("SELECT 1 FROM document_templates WHERE template_key=$1 AND jurisdiction_id=$2", [t.key, place.JM]);
-    if (!has) {
+    const latest = await one<{ content: string; name: string; disclaimer: string }>("SELECT content, name, disclaimer FROM document_templates WHERE template_key=$1 AND jurisdiction_id=$2 ORDER BY version DESC LIMIT 1", [t.key, place.JM]);
+    if (!latest || latest.content !== t.content || latest.name !== t.name || latest.disclaimer !== t.disclaimer) {
       const v = await saveTemplateVersion({ templateKey: t.key, name: t.name, jurisdictionId: place.JM!, authorityId: auth.DCP_ND!, content: t.content, disclaimer: t.disclaimer, effectiveFrom: null, effectiveUntil: null, sourceId: src.SO!.id }, actor);
       report.templates.push(`${t.key} v${v.version}`);
     }

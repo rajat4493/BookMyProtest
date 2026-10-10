@@ -42,6 +42,13 @@ export function formatDate(iso: string, locale = "en-GB"): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 }
 
+/** Fills {deadline} and {buses} in rule wording from the plan itself (the wording stays data; the numbers come from the plan). */
+export function fillText(text: string, v: { deadline?: string | null; buses?: number | null }): string {
+  return text
+    .replace(/\{deadline\}/g, v.deadline ? formatDate(v.deadline) : "the deadline shown below")
+    .replace(/\{buses\}/g, String(v.buses ?? 0));
+}
+
 export function daysUntil(iso: string): number {
   const today = new Date().toISOString().slice(0, 10);
   return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);

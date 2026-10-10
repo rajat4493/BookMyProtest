@@ -3,9 +3,9 @@ import type { Answers } from "./types";
 /** Fields whose change can alter what an authority approved, with the words we use for them. */
 const LABELS: Record<string, string> = {
   attendance: "expected crowd", description: "purpose", speakers: "speakers or VIPs", startLocation: "route", destination: "route",
-  trafficFootprint: "route or traffic footprint", kind: "the nature of the event (march or static)", sound: "sound", stage: "stage or structures", vehicles: "vehicles",
+  trafficFootprint: "route or traffic footprint", kind: "the nature of the event (march or static)", sound: "sound", stage: "stage or structures", vehicles: "vehicles", buses: "vehicles",
 };
-const MATERIAL_FIELDS = ["description", "speakers", "startLocation", "destination", "trafficFootprint", "kind", "sound", "stage", "vehicles"] as const;
+const MATERIAL_FIELDS = ["description", "speakers", "startLocation", "destination", "trafficFootprint", "kind", "sound", "stage", "vehicles", "buses"] as const;
 /** A relative change in expected attendance at or above this counts as material. */
 export const ATTENDANCE_CHANGE_RATIO = 0.2;
 

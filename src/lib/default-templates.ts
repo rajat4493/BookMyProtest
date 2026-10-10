@@ -16,6 +16,9 @@ const T: Record<string, [string, string]> = {
 | Stage | {{stage_yn}}
 | Loudspeaker / sound | {{sound_yn}}
 | Vehicles involved | {{vehicles_yn}}
+{{#if buses}}
+| Number of buses | {{buses}}
+{{/if}}
 | Food or water distribution | {{food_yn}}
 {{#if speakers}}
 | Speakers / VIPs | {{speakers}}

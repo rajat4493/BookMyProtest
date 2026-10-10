@@ -26,7 +26,7 @@ export const STANDING_ORDER_URL = "https://delhipolice.gov.in/StandingOrderFiles
 /** Official Delhi Police Standing Orders index (lists title, number and date; the PDFs are served separately). */
 export const OFFICIAL_INDEX_URL = "https://kpkb.delhipolice.gov.in/standingorderNew";
 
-export type SourceKey = "SO" | "SO_2018" | "SO_10_2022" | "SO_309" | "SC_RAMLILA" | "ACT_1978" | "CURRENT_PRACTICE" | "NEWS_ANI" | "NEWS_INDIATV" | "TRAFFIC" | "NOTIF" | "LEAD_PTI" | "LEAD_LAWTREND" | "LEAD_LIVELAW";
+export type SourceKey = "SO" | "SO_2018" | "SO_10_2022" | "SO_309" | "SC_RAMLILA" | "ACT_1978" | "CURRENT_PRACTICE" | "NEWS_ANI" | "NEWS_INDIATV" | "TRAFFIC" | "NOTIF" | "DCP_CONTACT" | "LEAD_PTI" | "LEAD_LAWTREND" | "LEAD_LIVELAW";
 export interface SourceSpec {
   key: SourceKey; title: string; type: SourceType; issuer: string; place: PlaceKey; url: string | null; monitoring: "DAILY" | "WEEKLY" | null; notes: string;
   lifecycle?: "CURRENT" | "HISTORICAL" | "PLACEHOLDER"; publicationDate?: string; supersededBy?: SourceKey;
@@ -95,6 +95,11 @@ export const SOURCES: SourceSpec[] = [
     notes: "CANONICAL LIVE-RESTRICTION FEED for Delhi (Commissioner-level and district/ACP Section 163 BNSS orders). Checked daily. When new text appears, the Regulatory Watch order parser PROPOSES candidates (issuing authority, order date, legal basis, geographic scope, effective start/end where stated, prohibited or restricted activities); each field shows the text it came from and gaps stay blank. A human accepts a candidate as a DRAFT restriction and separately activates it with a source. Every Delhi event gets a restriction check at plan generation, recheck, document generation, T-72h and T-24h. The parser was written from order wording seen in reporting, not from this page's real markup (unreachable from the build sandbox): treat the first live runs as calibration. A change to the feed does NOT flag DEL-LIVE-001.",
   },
   {
+    key: "DCP_CONTACT", title: "Delhi Police — DCP/New Delhi District: official district details (address and telephone)", type: "OFFICIAL_CURRENT_PRACTICE", issuer: "Delhi Police", place: "DIST",
+    url: null, monitoring: null,
+    notes: "Official current Delhi Police district details for DCP/New Delhi District, as supplied by the project owner: Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001; telephone 011-23747777. The page's URL was NOT supplied and none is invented here: attach it. It supports contact details only. It does not establish that email, or any other electronic route, is an accepted way to submit a permission application.",
+  },
+  {
     key: "LEAD_PTI", title: "PTI via PSU Watch: Delhi HC asks authorities to respond to plea on permission for Ramlila Maidan meeting (2023)", type: "SECONDARY_LEAD", issuer: "PTI / PSU Watch", place: "NCT",
     url: "https://psuwatch.com/amp/story/newsupdates/pti/dl-hc-ramlila-maidan-meeting", monitoring: null,
     notes: "News report of a 2023 Delhi High Court matter. Per a search summary (page not read in full by the build assistant): the MCD Horticulture Department referred the applicant to Delhi Police for a no-objection certificate. A LEAD: it can never verify a rule. It is the only basis, with the other two leads, for the Ramlila 'separate approvals' warning, which therefore stays low confidence / Needs verification.",
@@ -112,10 +117,15 @@ export const SOURCES: SourceSpec[] = [
 ];
 
 export type AuthKey = "DCP_ND" | "TRAFFIC_HQ";
-export const AUTHORITIES: { key: AuthKey; name: string; place: PlaceKey; type: string; address: string; website: string | null; notes: string }[] = [
-  { key: "DCP_ND", name: "DCP, New Delhi District (Delhi Police)", place: "DIST", type: "POLICE", address: "", website: null, notes: "Receives Jantar Mantar permission applications per Standing Order L&O/48/2022. Submission method, office address and contact are NOT verified." },
+export const AUTHORITIES: { key: AuthKey; name: string; place: PlaceKey; type: string; address: string; website: string | null; notes: string; phone?: string; method?: "ONLINE" | "EMAIL" | "IN_PERSON" | "POST" | "UNKNOWN" }[] = [
+  { key: "DCP_ND", name: "DCP, New Delhi District (Delhi Police)", place: "DIST", type: "POLICE", address: "Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001", phone: "011-23747777", website: null, method: "IN_PERSON",
+    notes: "Receives Jantar Mantar permission applications per Standing Order L&O/48/2022: the application is addressed to the DCP/New Delhi District and submitted at the HAX Branch of the DCP/NDD office. Address and telephone are the current official Delhi Police district details (source: DCP_CONTACT; supplied by the project owner). Whether email or any online route is an ACCEPTED submission channel is NOT verified: no email is stored, and none may be presented as sufficient." },
   { key: "TRAFFIC_HQ", name: "Delhi Traffic Police — DCP (Headquarters)", place: "NCT", type: "TRAFFIC", address: "Delhi Traffic Police Headquarters, Todapur", website: "https://traffic.delhipolice.gov.in", notes: "Receives Traffic NOC applications for rallies, meetings, morchas and protest gatherings. Submission method not verified." },
 ];
+
+/** Annexure B of L&O/48/2022 ("Undertaking by the organizer for Jantar Mantar"): PDF pages 11–14. #page= is a standard PDF open parameter on the same official URL, not a new address. */
+export const ANNEXURE_B_URL = `${STANDING_ORDER_URL}#page=11`;
+export const ANNEXURE_B_LABEL = "View official Annexure B";
 
 const c = (field: Clause["field"], op: Clause["op"], value?: Clause["value"]): Clause => ({ field, op, value });
 const cond = (...all: Clause[]): Condition => ({ all, any: [] });
@@ -123,6 +133,7 @@ const JM_CAP = c("attendance", "lte", 1000);
 
 export interface RuleSpec {
   family: string; title: string; place: PlaceKey; authority: AuthKey | null; category: Category; level: Level; severity: Severity; certainty: LegalCertainty;
+  /** How to submit (shown under Details). */ submit?: string; /** A labelled official link for the rule. */ link?: { url: string; label: string };
   legal: string; plain: string; action: string; condition: Condition; deadline?: DeadlineDef; docs?: string[]; vendor?: string;
   sources: { key: SourceKey; strength: "PRIMARY" | "SUPPORTING" | "LEAD"; flagOnChange?: boolean; note?: string; section?: string; relevance?: string }[]; confidence: "low" | "medium" | "high";
   /** Rule type; "warning" is informational (a heads-up), not an action: it is never scored. Defaults to "permission". */
@@ -138,7 +149,8 @@ const base = { place: "JM" as const, authority: "DCP_ND" as const, certainty: "P
 export const RULES: RuleSpec[] = [
   { ...base, family: "DEL-JM-001", title: "Prior police permission", category: "permissions", level: "REQUIRED", severity: "CRITICAL", condition: cond(JM_CAP),
     legal: "A protest, demonstration or sit-in at Jantar Mantar requires prior permission from Delhi Police under Standing Order L&O/48/2022.",
-    plain: "You need police permission before you gather at Jantar Mantar.", action: "Prepare and submit a permission application to the DCP, New Delhi District.", docs: ["Permission application"] },
+    plain: "You need police permission before you gather at Jantar Mantar.", action: "Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by {deadline}.", docs: ["Permission application"],
+    submit: "Submit at the HAX Branch of the DCP/New Delhi District office: Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001. Telephone 011-23747777. The application is addressed to the DCP/New Delhi District. Whether email or an online route is accepted is NOT verified: do not rely on it." },
   { ...base, family: "DEL-JM-002", title: "Apply at least 10 days ahead", category: "permissions", level: "REQUIRED", severity: "CRITICAL", condition: cond(JM_CAP),
     legal: "The application must reach the DCP, New Delhi District at least 10 days in advance, excluding the day of the event. A late application may still be considered depending on space and the time available to make arrangements.",
     plain: "Apply at least 10 days before your event, not counting the event day. A late application might still be considered, but only if space and time allow.", action: "Work back from your event date and submit well before the deadline shown.",
@@ -153,13 +165,14 @@ export const RULES: RuleSpec[] = [
     note: "10 calendar days, excluding the event day, as the CURRENT operational deadline. Governing instrument = Standing Order L&O/48/2022; current confirmation = Delhi Police statements/refusal letters (stored as a separate source). Do NOT derive the 10 days from Standing Order No. 10/2018 (historical). Section reference not recorded — reviewer to add." },
   { ...base, family: "DEL-JM-003", title: "Applications go to the DCP, New Delhi District", category: "permissions", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP),
     legal: "Jantar Mantar permission applications are made to the Deputy Commissioner of Police (DCP), New Delhi District.",
-    plain: "Your application goes to the DCP, New Delhi District. We have not verified how it is submitted (in person, email or portal).", action: "Confirm the submission method with the DCP's office." },
+    plain: "Your application is addressed to the DCP/New Delhi District and submitted at the HAX Branch of the DCP/NDD office (Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001; telephone 011-23747777). We have not verified that email or any online route is accepted, so do not assume it is.", action: "Take or send your application to the HAX Branch, DCP/New Delhi District, and call 011-23747777 if you need to confirm anything.",
+    submit: "In person at the HAX Branch of the DCP/NDD office, Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001 (telephone 011-23747777). Email / online submission: NOT verified." },
   { ...base, family: "DEL-JM-004", title: "First come, first served, subject to police assessment", category: "permissions", level: "RECOMMENDED", severity: "RECOMMENDED", condition: cond(JM_CAP),
     legal: "Permission is granted on a first-come-first-served basis, subject to assessment by Special Branch, Traffic Police and New Delhi District Police.",
     plain: "Permission is not automatic. It is first come, first served, and the police assess each application.", action: "Apply as early as you can." },
   { ...base, family: "DEL-JM-005", title: "Maximum 1,000 participants", category: "permissions", level: "REQUIRED", severity: "REQUIRED", condition: cond(),
-    legal: "Jantar Mantar is limited to a maximum of 1,000 participants. Larger gatherings are directed elsewhere (see Ramlila Ground).",
-    plain: "Jantar Mantar can host up to 1,000 people. If you expect more, plan another venue.", action: "Keep attendance within 1,000, or choose a larger venue." },
+    legal: "Jantar Mantar is limited to a maximum of 1,000 participants in total. More than one protest may take place on the same day, subject to space, appropriate time gaps between them and the total cap. Larger gatherings are directed elsewhere (see Ramlila Ground).",
+    plain: "Jantar Mantar can host up to 1,000 people in total. Several protests can take place on the same day if there is space and enough time between them. Any space left is for the police to allot: it is not guaranteed to you. If you expect more than 1,000, plan another venue.", action: "Keep attendance within 1,000, or choose a larger venue." },
   { ...base, family: "DEL-JM-006", title: "Protest window 10:00–17:00", category: "logistics", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP),
     legal: "Protests at Jantar Mantar are permitted between 10:00 and 17:00.", plain: "Plan to be finished by 5 pm, and not start before 10 am.", action: "Set your programme within 10:00–17:00." },
   { ...base, family: "DEL-JM-007", title: "No continuous multi-day programme", category: "logistics", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP),
@@ -175,9 +188,13 @@ export const RULES: RuleSpec[] = [
   { ...base, family: "DEL-JM-012", title: "No tents, shamiana or temporary structures", category: "logistics", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP),
     legal: "Tents, shamiana and other temporary structures are not permitted at Jantar Mantar.", plain: "No tents or temporary structures. If you were planning a stage or canopy, ask the police first.", action: "Do not plan tents or temporary structures." },
   { ...base, family: "DEL-JM-013", title: "Maximum 25 protester buses", category: "logistics", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP, c("vehicles", "eq", true)), vendor: "buses",
-    legal: "A maximum of 25 protester buses is permitted in New Delhi District.", plain: "You planned vehicles. No more than 25 protester buses are allowed in New Delhi District.", action: "Plan for 25 buses or fewer." },
+    legal: "A maximum of 25 protester buses is permitted in New Delhi District.", plain: "No more than 25 protester buses are allowed in New Delhi District.", action: "Plan for 25 buses or fewer." },
+  { ...base, family: "DEL-JM-027", title: "Your buses are within the venue maximum", type: "warning", category: "logistics", level: "RECOMMENDED", severity: "RECOMMENDED", condition: cond(JM_CAP, c("vehicles", "eq", true), c("buses", "gt", 0), c("buses", "lte", 25)), vendor: undefined,
+    legal: "A maximum of 25 protester buses is permitted in New Delhi District.", plain: "{buses} buses are within the venue maximum of 25. Your issued permission should specify the designated Jai Singh Road parking point or an alternative location.", action: "" },
+  { ...base, family: "DEL-JM-028", title: "Too many buses for Jantar Mantar", category: "logistics", level: "REQUIRED", severity: "CRITICAL", condition: cond(JM_CAP, c("vehicles", "eq", true), c("buses", "gt", 25)),
+    legal: "A maximum of 25 protester buses is permitted in New Delhi District.", plain: "You entered {buses} buses. No more than 25 protester buses are allowed in New Delhi District.", action: "Reduce your plan to 25 buses or fewer." },
   { ...base, family: "DEL-JM-014", title: "Designated parking only", category: "logistics", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP, c("vehicles", "eq", true)),
-    legal: "Protester vehicles may park only at designated parking.", plain: "Buses and other vehicles must use designated parking. We have not verified where that is.", action: "Ask the police for the designated parking locations." },
+    legal: "Protester buses and permitted vehicles may park only at the designated location on Jai Singh Road specified in the permission, or at another location directed by the police.", plain: "Buses and permitted vehicles must park at the designated parking location on Jai Singh Road that is specified in your permission, or at another location the police direct. Your issued permission should specify the designated Jai Singh Road parking point or an alternative location. We do not know, and do not promise, an exact parking bay: it is set for your event.", action: "When your permission is issued, check which parking point it names. If it names none, ask the DCP/NDD office (011-23747777)." },
   { ...base, family: "DEL-JM-015", title: "Prohibited vehicles and animals", category: "logistics", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP),
     legal: "Tractors, trolleys, bullock carts, cycle-rickshaws, hand carts and animals are not permitted.", plain: "No tractors, trolleys, bullock carts, cycle-rickshaws, hand carts or animals.", action: "Do not bring these." },
   { ...base, family: "DEL-JM-016", title: "Banner, flag and stick size limits", category: "logistics", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP), vendor: "banners",
@@ -192,10 +209,11 @@ export const RULES: RuleSpec[] = [
     legal: "Burning effigies or documents, cooking, and littering are prohibited.", plain: "No burning of effigies or documents, no cooking, and no littering.", action: "Plan a cleanup, and brief participants.", vendor: "cleanup" },
   { ...base, family: "DEL-JM-021", title: "Organizer undertaking", category: "documents", level: "REQUIRED", severity: "CRITICAL", condition: cond(JM_CAP), docs: ["Organizer undertaking"],
     legal: "The organizer must give the undertaking contained in Standing Order L&O/48/2022, recording the programme date, venue, time, number of participants, number of volunteers and the organizer or organization details.",
-    plain: "You sign an undertaking with your application. Use our preparation sheet to gather what it asks for, but submit the official form from the Standing Order.", action: "Prepare the undertaking details and submit the official form." },
+    plain: "You give an undertaking with your application: Annexure B of the Standing Order, \"Undertaking by the organizer for Jantar Mantar\". Use our preparation copy to gather what it asks for, then complete and sign the official Annexure B.", action: "Open the official Annexure B, gather the details it asks for, and sign it for your application.",
+    link: { url: ANNEXURE_B_URL, label: ANNEXURE_B_LABEL } },
   { ...base, family: "DEL-JM-022", title: "Land-owner NOC", category: "documents", level: "REQUIRED", severity: "CRITICAL", condition: cond(JM_CAP), docs: ["Land-owner NOC"],
-    legal: "The undertaking requires a no-objection certificate (NOC) from the land-owner.",
-    plain: "You need a land-owner NOC. We have not yet verified who issues it for Jantar Mantar or how to apply for it, so ask the police when you apply.", action: "Find out who the land-owner is and how to get the NOC. Do not assume." },
+    legal: "Annexure B (the organizer's undertaking) requires a no-objection certificate (NOC) from the land-owner. The current process for obtaining it is UNDER REVIEW.",
+    plain: "Land-owner NOC is required by Annexure B. We have not yet verified the current submission route for obtaining it.", action: "Treat the land-owner NOC as a required enclosure for your undertaking and allow time to obtain it. Do not assume a route: none is verified yet." },
   { ...base, family: "DEL-JM-023", title: "Carry the original permission", category: "documents", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP), docs: ["Original permission"],
     legal: "The organizer undertakes to carry the original permission to the venue.", plain: "Bring the original permission on the day.", action: "Keep the original permission with the organizer." },
   { ...base, family: "DEL-JM-024", title: "Name a police liaison", category: "safety", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP),
@@ -310,7 +328,9 @@ I, {{organizer_name}}, writing as {{organizer_type_lower}} organizer, request pe
 
 Purpose: {{purpose|______________________}}
 
-Arrangements: loudspeaker/sound — {{sound_yn_lower}}; vehicles — {{vehicles_yn_lower}}; food or water distribution — {{food_yn_lower}}.
+Arrangements: loudspeaker/sound — {{sound_yn_lower}}; vehicles — {{vehicles_yn_lower}}{{buses_text}}; food or water distribution — {{food_yn_lower}}.
+
+Enclosures: the undertaking by the organizer (Annexure B of Standing Order L&O/48/2022) and the land-owner no-objection certificate required by it.
 
 I will follow the conditions of any permission granted and the applicable Delhi Police Standing Order. I can be reached using the details below.
 
@@ -325,8 +345,12 @@ ______________________
     disclaimer: "Draft generated by BookMyProtest. Verify requirements with the relevant authority before submission.",
   },
   {
-    key: "undertaking", name: "Undertaking preparation sheet (Jantar Mantar)",
-    content: `# Information the Jantar Mantar undertaking asks for
+    key: "undertaking", name: "Undertaking preparation copy (Jantar Mantar)",
+    content: `Prepared from official Annexure B — verify against the current official form before submission.
+
+Official Annexure B, "Undertaking by the organizer for Jantar Mantar" (Standing Order L&O/48/2022, PDF pages 11–14): ${ANNEXURE_B_URL}
+
+# Information the Jantar Mantar undertaking asks for
 | Programme date | {{event_date}}
 | Venue | Jantar Mantar
 | Time | {{start_time}}–{{end_time}}
@@ -346,8 +370,8 @@ ______________________
 - Venue and time rules followed (10:00–17:00)
 - No unauthorised march, no loudspeaker without specific permission, no tents or temporary structures
 
-This sheet only helps you collect the information. It is not the official undertaking. Submit the form contained in Delhi Police Standing Order L&O/48/2022.`,
-    disclaimer: "Draft generated by BookMyProtest. Verify requirements with the relevant authority before submission. This is a preparation sheet, not the official undertaking form.",
+This copy only helps you collect the information. It is NOT the official undertaking. Complete and sign the official Annexure B (link above) and submit it with your application to the HAX Branch, DCP/New Delhi District.`,
+    disclaimer: "Draft generated by BookMyProtest. Verify requirements with the relevant authority before submission. This is a preparation copy, not the official undertaking form.",
   },
 ] as const;
 
@@ -356,3 +380,23 @@ export const VENUE_EVIDENCE: { place: PlaceKey; source: SourceKey; kind: "CASE_L
   place: "RM" as const, source, kind: source === "LEAD_LIVELAW" ? "CASE_LAW" as const : "OPERATIONAL_LEARNING" as const,
   lesson: "A reported 2023 Delhi High Court matter indicates that the ground-allotting body's availability and the police NOC status can diverge: an applicant was referred to the police for a NOC. Check both, and treat a clear position from one as no evidence about the other.",
 }));
+
+/** Clause-level evidence for the Jantar Mantar rules (Standing Order L&O/48/2022), as supplied by the project owner's review. Sub-clause references not supplied stay blank rather than guessed. */
+export const SO_SECTIONS: Record<string, string> = {
+  "DEL-JM-001": "Section 3(i), PDF page 3", "DEL-JM-002": "Section 3(i), PDF page 3", "DEL-JM-003": "Section 3(i), PDF page 3 (addressee DCP/NDD; the clause for the HAX Branch location is not separately recorded)",
+  "DEL-JM-004": "Section 3(ii) (first come, first served; assessment); Section 3(iii)-(vi) (DCP/NDD decision), PDF page 3",
+  "DEL-JM-005": "Section 5(i)-(ii)", "DEL-JM-006": "Section 9", "DEL-JM-008": "Section 6", "DEL-JM-009": "Section 6",
+  "DEL-JM-010": "Section 7, PDF page 5", "DEL-JM-011": "Section 7, PDF page 5",
+  "DEL-JM-013": "Section 4(i), PDF page 4", "DEL-JM-014": "Section 4(ii), PDF page 4", "DEL-JM-027": "Section 4(i), PDF page 4", "DEL-JM-028": "Section 4(i), PDF page 4",
+  "DEL-JM-021": "Annexure B, PDF pages 11–14", "DEL-JM-022": "Annexure B, PDF pages 11–14", "DEL-JM-023": "Annexure B, PDF pages 11–14", "DEL-JM-024": "Annexure B, PDF pages 11–14",
+  "DEL-JM-025": "Annexure B, PDF pages 11–14", "DEL-JM-026": "Annexure B, PDF pages 11–14",
+};
+for (const r of RULES) {
+  const sec = SO_SECTIONS[r.family];
+  if (sec) r.sources = r.sources.map((x) => (x.key === "SO" ? { ...x, section: sec } : x)); // copies: the shared `SO` array is never mutated
+}
+// Contact details source supports the submission rules (contact details only).
+for (const f of ["DEL-JM-001", "DEL-JM-003"]) {
+  const r = RULES.find((x) => x.family === f)!;
+  r.sources = [...r.sources, { key: "DCP_CONTACT", strength: "SUPPORTING", flagOnChange: false, relevance: "Official address and telephone of the DCP/New Delhi District office. Does not establish an accepted electronic submission channel." }];
+}

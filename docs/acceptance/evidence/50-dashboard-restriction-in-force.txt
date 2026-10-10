@@ -33,9 +33,15 @@ DATE CONFLICT CHECK
 
 Shared venue
 
-This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date. That is not confirmation of anything: your permission still comes from the authority.
+This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date, which tells you nothing about whether space will be allotted to you: your permission, and any remaining capacity, is for the authority to decide.
 
 POLICE: NOT CHECKED
+
+HEADS-UP
+
+2 buses are within the venue maximum of 25. Your issued permission should specify the designated Jai Singh Road parking point or an alternative location.
+
+Please verify with the relevant authority.
 
 TEMPORARY RESTRICTION MAY APPLY
 
@@ -58,8 +64,8 @@ UNDO: I HAVEN’T APPLIED
 I’VE RECEIVED AN APPROVAL
 EDIT PLAN DETAILS
 NEXT ACTION
+Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by 21 October 2026.
 Prior police permission
-You need police permission before you gather at Jantar Mantar.
 Progress by category
 PERMISSIONS
 
@@ -116,7 +122,7 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -127,7 +133,7 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -138,7 +144,7 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -149,7 +155,7 @@ CRITICAL
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -173,7 +179,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3 (addressee DCP/NDD; the clause for the HAX Branch location is not separately recorded)
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -184,7 +190,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 5(i)-(ii)
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -195,7 +201,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 9
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -228,7 +234,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 4(i), PDF page 4
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -240,7 +246,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 4(ii), PDF page 4
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -319,7 +325,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -330,7 +336,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -341,7 +347,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -353,7 +359,7 @@ REQUIRED
 REQUIRED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 
@@ -377,7 +383,7 @@ RECOMMENDED
 RECOMMENDED
 · DCP, NEW DELHI DISTRICT (DELHI POLICE)
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
+Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(ii) (first come, first served; assessment); Section 3(iii)-(vi) (DCP/NDD decision), PDF page 3
 
 TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
 

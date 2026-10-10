@@ -46,6 +46,7 @@ export function templateVars(ctx: DocContext, authorityName = ""): Vars {
     stage_yn: yn(a.stage), sound_yn: yn(a.sound), vehicles_yn: yn(a.vehicles), food_yn: yn(a.food),
     stage_yn_lower: yn(a.stage).toLowerCase(), sound_yn_lower: yn(a.sound).toLowerCase(), vehicles_yn_lower: yn(a.vehicles).toLowerCase(), food_yn_lower: yn(a.food).toLowerCase(),
     readiness_pct: String(ctx.readiness.pct),
+    buses: a.buses ? String(a.buses) : "", buses_text: a.vehicles && a.buses ? ` (${a.buses} bus${a.buses === 1 ? "" : "es"})` : "",
     speakers: (a.speakers ?? "").trim(), traffic_footprint: (a.trafficFootprint ?? "").trim(),
     promo_label: PROMO_LABEL[a.promoStatus ?? "NONE"], promo_set: (a.promoStatus ?? "NONE") !== "NONE" ? "true" : "",
   };

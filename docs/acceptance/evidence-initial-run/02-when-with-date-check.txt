@@ -1,0 +1,20 @@
+URL: http://localhost:3101/plan
+
+STEP 2 OF 6
+PLAN A PROTEST
+WHEN?
+EVENT NAME
+A working title is fine.
+DATE
+STARTS
+ENDS
+
+DATE CONFLICT CHECK
+
+Shared venue
+
+This venue is shared between events, so a date is not reserved to one organiser. No other event is known to us for this date. That is not confirmation of anything: your permission still comes from the authority.
+
+POLICE: NOT CHECKED
+BACK
+NEXT

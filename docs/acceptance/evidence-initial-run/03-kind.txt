@@ -1,0 +1,16 @@
+URL: http://localhost:3101/plan
+
+STEP 3 OF 6
+PLAN A PROTEST
+WHAT KIND OF GATHERING?
+FORMAT
+STATIC GATHERING
+Stays in one place
+MARCH
+Moves along a route
+LOCATION
+Name the place as people would find it.
+WHAT IS IT ABOUT?
+Optional. One or two plain sentences. It becomes your event description.
+BACK
+NEXT

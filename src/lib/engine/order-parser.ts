@@ -53,7 +53,7 @@ const ACTIVITY_PATTERNS: [string, RegExp][] = [
   ["STAGE", /\bstage\b|\btents?\b|shamiana|pandal/i],
   ["VEHICLES", /\bvehicles?\b|\bbuses\b|\btractors?\b|\btrolleys?\b/i],
 ];
-const DESIGNATION = /(Special Commissioner of Police|Joint Commissioner of Police|Additional Commissioner of Police|Deputy Commissioner of Police|Assistant Commissioner of Police|Commissioner of Police|Police Commissioner|\bDCP\b|\bACP\b|Addl\.?\s*CP)/i;
+const DESIGNATION = /(Special Commissioner of Police|Joint Commissioner of Police|Additional Commissioner of Police|Deputy Commissioner of Police|Assistant Commissioner of Police|Commissioner of Police|Police Commissioner|(?<![\/\w-])DCP(?![\/\w-])|(?<![\/\w-])ACP(?![\/\w-])|Addl\.?\s*CP)/i;
 const LEGAL = /\b(?:section|sec\.?|s\.)\s*(\d+[A-Za-z]?(?:\(\d+\))?)\s*(?:of\s+)?(?:the\s+)?(BNSS|Bharatiya Nagarik Suraksha Sanhita(?:,?\s*2023)?|BNS|Bharatiya Nyaya Sanhita(?:,?\s*2023)?|Cr\.?P\.?C\.?|Code of Criminal Procedure(?:,?\s*1973)?|Delhi Police Act(?:,?\s*1978)?)/i;
 
 export function looksLikeOrder(block: string): boolean {

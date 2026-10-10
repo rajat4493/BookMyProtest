@@ -106,6 +106,7 @@ export default async function EditRule({ params, searchParams }: { params: Promi
           </div>
           <Field label="Submission method"><input name="submissionMethod" defaultValue={rule?.submissionMethod} className="field !min-h-11" placeholder="e.g. in person, online portal, email" /></Field>
           <Field label="Official link"><input name="officialLink" type="url" defaultValue={rule?.officialLink ?? ""} className="field !min-h-11" /></Field>
+          <Field label="Official link label (e.g. View official Annexure B)"><input name="officialLinkLabel" defaultValue={rule?.officialLinkLabel ?? ""} className="field !min-h-11" /></Field>
           <Field label="Required documents (one per line: Name | REQUIRED or CONDITIONAL | template key | notes)"><textarea name="documents" className="field !min-h-24" defaultValue={docRows.map((x: any) => `${x.name} | ${x.conditional ? "CONDITIONAL" : "REQUIRED"} | ${x.template_key ?? ""} | ${x.notes}`).join("\n")} /></Field>
           <CondEditor prefix="cond" cond={rule?.condition ?? null} title="Applies when (conditional logic)" />
           <CondEditor prefix="done" cond={rule?.completeWhen ?? null} title="Counts as complete automatically when (optional)" />

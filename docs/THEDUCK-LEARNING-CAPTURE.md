@@ -87,3 +87,14 @@ Full report: [acceptance/DELHI-JANTAR-500.md](acceptance/DELHI-JANTAR-500.md). V
 - No vendor feature that appears before the compliance need is established.
 - Every milestone ends with a real-organizer run like this one, with an external-dependency ledger; the KPI is *external effort eliminated*, not rules covered.
 - Method note: running the journey also surfaced two cheap wording bugs (a misleading "You're prepared." and press reports listed as sources) that no unit test had a reason to look for.
+
+## Acceptance gap closure (v0.9.1)
+Re-run of the Jantar Mantar / 500 people scenario after closing the verified P0 gaps. Verdict unchanged: NOT READY FOR PRIVATE PILOT, but for four smaller, named reasons.
+
+- **Supplying five facts closed more than a feature would have.** The HAX Branch address and telephone, the Annexure B identity and pages, the clause numbers, the Jai Singh Road bus rule and the "shared, not guaranteed" wording turned FAIL/UNKNOWN rows into PASS with almost no new architecture. External effort eliminated rose from about 6 to about 8 of roughly 11. The expensive work was knowing the facts, not coding them. Prioritise sourcing missing operational facts over new machinery.
+- **A rule is a sentence plus a place to go.** Rows that said what the law requires but not where to take the paper (or which page of which PDF) still sent organizers to search. Every row now carries its clause, its page and, where known, the office and number.
+- **"No invented URLs" cost nothing and paid off.** The contact source is stored with no URL and says so; no email is stored, so nothing can imply email is accepted. A test now scans every rule, authority and source note for any sentence that would.
+- **Testing the pipeline with a realistic page found two parser bugs that unit tests with tidy strings could not**: newlines flattened by the fetcher merged several orders into one candidate, and an order number such as `12/DCP/NW/2026` was read as the issuing authority. A synthetic fixture is still not the live page; the claim "real-source integration verified" was withheld because the sandbox cannot reach the site. `npm run probe:feed` exists so a person with network access can close it in one command.
+- **Wrong assumption corrected:** that the questionnaire's yes/no "vehicles" was enough. The one number the rules need (buses) was missing, which blocked a plain-language answer ("2 buses are within the maximum") that organizers actually want.
+- **Still the most valuable missing data:** a permission status the organizer can record, and an event-day state derived from evidence rather than ticks; the land-owner NOC route; the live feed's real markup.
+- **Gate for future work:** nothing new on venues, signals or scoring until permission status and the real feed are done; both directly cut organizer effort.

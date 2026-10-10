@@ -13,7 +13,7 @@ import { venueAvailability } from "@/lib/venue-signals";
 import { RECONFIRM_ADVICE, applicationSubmittedAt, approvalRecordedAt, openChangeNotices } from "@/lib/event-changes";
 import { TRIGGER_LABEL } from "@/lib/engine/restriction-check";
 import { listChecks } from "@/lib/restriction-checks";
-import { PLANNING_BUFFER_DAYS, daysUntil, formatDate, loadPlan, LEVEL_LABEL } from "@/lib/plan";
+import { PLANNING_BUFFER_DAYS, daysUntil, fillText, formatDate, loadPlan, LEVEL_LABEL } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your readiness" };
@@ -114,7 +114,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
           {warnings.map((w) => (
             <aside key={w.rule.id} className="panel bg-paper-2 p-5" role="note" data-testid="heads-up">
               <p className="label">Heads-up</p>
-              <p className="heading mt-1 text-lg">{w.rule.description}</p>
+              <p className="heading mt-1 text-lg">{fillText(w.rule.description, { buses: a.buses })}</p>
               <p className="mt-1 text-sm">{w.evidence === "verified" ? "" : "Needs verification. "}Please verify with the relevant authority.</p>
             </aside>
           ))}
@@ -147,7 +147,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
             <section aria-labelledby="next-h">
               <h2 id="next-h" className="label text-mute">Next action</h2>
               <a href={`#r-${next.rule.id}`} className="tile mt-3 flex items-center justify-between gap-4 bg-paper p-5">
-                <span><span className="heading block text-xl sm:text-2xl">{next.rule.title}</span><span className="text-mute">{next.rule.description}</span></span>
+                <span><span className="heading block text-xl sm:text-2xl">{next.rule.userAction ? fillText(next.rule.userAction, { deadline: next.deadline ?? critDeadlines[0]?.deadline ?? null, buses: a.buses }) : next.rule.title}</span><span className="text-mute">{next.rule.title}</span></span>
                 <Arrow className="shrink-0" />
               </a>
             </section>
@@ -206,7 +206,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
             {groups.filter((g) => g.items.length).map((g) => (
               <div key={g.key}>
                 <div className="mb-4 flex flex-wrap items-baseline gap-3"><h3 className="heading text-xl">{g.title}</h3><span className="label text-mute">{g.items.length} · {g.sub}</span></div>
-                <ul className={g.key === "RECOMMENDED" ? "border-t border-hair" : "space-y-3"}>{g.items.map((i) => <RequirementRow key={i.rule.id} item={i} eventId={event.id} />)}</ul>
+                <ul className={g.key === "RECOMMENDED" ? "border-t border-hair" : "space-y-3"}>{g.items.map((i) => <RequirementRow key={i.rule.id} item={i} eventId={event.id} buses={a.buses ?? 0} leadDeadline={critDeadlines[0]?.deadline ?? null} />)}</ul>
               </div>
             ))}
             {open.length === 0 && (
@@ -217,7 +217,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
             {done.length > 0 && (
               <details>
                 <summary className="heading cursor-pointer text-xl">Done <span className="text-mute">({done.length})</span></summary>
-                <ul className="mt-4 space-y-3">{done.map((i) => <RequirementRow key={i.rule.id} item={i} eventId={event.id} />)}</ul>
+                <ul className="mt-4 space-y-3">{done.map((i) => <RequirementRow key={i.rule.id} item={i} eventId={event.id} buses={a.buses ?? 0} leadDeadline={critDeadlines[0]?.deadline ?? null} />)}</ul>
               </details>
             )}
             {notes.length > 0 && (
