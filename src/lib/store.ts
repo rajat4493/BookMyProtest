@@ -107,7 +107,7 @@ async function attachRelations(rows: any[]): Promise<Rule[]> {
   const src = await query(
     `SELECT rs.rule_id, rs.flag_on_change, rs.evidence_strength, rs.interpretation_note, rs.excerpt, rs.section_ref, s.id AS source_id, s.title, s.source_type, s.canonical_url,
             to_char(s.retrieved_at,'YYYY-MM-DD') AS retrieved_at
-       FROM rule_sources rs JOIN sources s ON s.id=rs.source_id WHERE rs.rule_id = ANY($1) AND s.active ORDER BY s.title`, [ids]);
+       FROM rule_sources rs JOIN sources s ON s.id=rs.source_id WHERE rs.rule_id = ANY($1) AND s.active AND s.lifecycle = 'CURRENT' ORDER BY s.title`, [ids]);
   const docs = await query("SELECT rule_id, name FROM rule_documents WHERE rule_id = ANY($1) AND required ORDER BY name", [ids]);
   return rows.map((r) =>
     mapRule(

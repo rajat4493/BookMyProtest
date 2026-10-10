@@ -75,11 +75,13 @@ export interface Source {
   id: string; title: string; sourceType: SourceType; issuingAuthority: string; jurisdictionId: string | null; canonicalUrl: string | null;
   publicationDate: string | null; effectiveDate: string | null; retrievedAt: string | null; lastCheckedAt: string | null; contentHash: string | null;
   active: boolean; monitoringEnabled: boolean; monitoringFrequency: "DAILY" | "WEEKLY" | "MONTHLY" | "MANUAL"; notes: string;
+  lifecycle: "CURRENT" | "HISTORICAL" | "PLACEHOLDER"; supersededBySourceId: string | null;
 }
 const mapSource = (r: any): Source => ({
   id: r.id, title: r.title, sourceType: r.source_type, issuingAuthority: r.issuing_authority, jurisdictionId: r.jurisdiction_id, canonicalUrl: r.canonical_url,
   publicationDate: r.pd, effectiveDate: r.ed, retrievedAt: r.ra, lastCheckedAt: r.last_checked_at ? new Date(r.last_checked_at).toISOString() : null, contentHash: r.content_hash,
   active: r.active, monitoringEnabled: r.monitoring_enabled, monitoringFrequency: r.monitoring_frequency, notes: r.notes,
+  lifecycle: r.lifecycle, supersededBySourceId: r.superseded_by_source_id,
 });
 const SRC_SELECT = `SELECT *, to_char(publication_date,'YYYY-MM-DD') AS pd, to_char(effective_date,'YYYY-MM-DD') AS ed, to_char(retrieved_at,'YYYY-MM-DD') AS ra FROM sources`;
 
@@ -91,20 +93,22 @@ export async function getSource(id: string): Promise<Source | null> {
   const r = await one(`${SRC_SELECT} WHERE id=$1`, [id]);
   return r ? mapSource(r) : null;
 }
-export type SourceInput = Omit<Source, "id" | "lastCheckedAt" | "contentHash">;
+export type SourceInput = Omit<Source, "id" | "lastCheckedAt" | "contentHash" | "lifecycle" | "supersededBySourceId"> & { lifecycle?: Source["lifecycle"]; supersededBySourceId?: string | null };
 export async function saveSource(id: string | null, i: SourceInput, actor: Actor): Promise<string> {
   assertHuman(actor);
   const url = i.canonicalUrl && /^https?:\/\//i.test(i.canonicalUrl) ? i.canonicalUrl : null;
-  const p = [i.title, i.sourceType, i.issuingAuthority, i.jurisdictionId, url, i.publicationDate, i.effectiveDate, i.retrievedAt, i.active, i.monitoringEnabled && !!url, i.monitoringFrequency, i.notes];
+  const lifecycle = i.lifecycle ?? "CURRENT";
+  // History and placeholders are never monitored: nothing downstream may depend on them.
+  const p = [i.title, i.sourceType, i.issuingAuthority, i.jurisdictionId, url, i.publicationDate, i.effectiveDate, i.retrievedAt, i.active, i.monitoringEnabled && !!url && lifecycle === "CURRENT", i.monitoringFrequency, i.notes, lifecycle, i.supersededBySourceId ?? null];
   return tx(async (q) => {
     const before = id ? (await q(`${SRC_SELECT} WHERE id=$1`, [id]))[0] : null;
     let sid = id;
     if (id) {
       await q(`UPDATE sources SET title=$2, source_type=$3, issuing_authority=$4, jurisdiction_id=$5, canonical_url=$6, publication_date=$7, effective_date=$8, retrieved_at=$9,
-        active=$10, monitoring_enabled=$11, monitoring_frequency=$12, notes=$13 WHERE id=$1`, [id, ...p]);
+        active=$10, monitoring_enabled=$11, monitoring_frequency=$12, notes=$13, lifecycle=$14, superseded_by_source_id=$15 WHERE id=$1`, [id, ...p]);
     } else {
-      sid = (await q(`INSERT INTO sources (title, source_type, issuing_authority, jurisdiction_id, canonical_url, publication_date, effective_date, retrieved_at, active, monitoring_enabled, monitoring_frequency, notes)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`, p))[0].id;
+      sid = (await q(`INSERT INTO sources (title, source_type, issuing_authority, jurisdiction_id, canonical_url, publication_date, effective_date, retrieved_at, active, monitoring_enabled, monitoring_frequency, notes, lifecycle, superseded_by_source_id)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`, p))[0].id;
     }
     await auditQ(q, actor.userId, id ? "source.update" : "source.create", "source", sid!, { before, after: i });
     return sid!;
@@ -121,6 +125,9 @@ export async function linkSource(ruleId: string, sourceId: string, link: { stren
   await tx(async (q) => {
     const [rule] = await q("SELECT rule_status FROM rules WHERE id=$1", [ruleId]);
     if (!rule || !["DRAFT", "UNDER_REVIEW"].includes(rule.rule_status)) throw new Error("Evidence can only be changed on a draft. Clone the rule as a new version first.");
+    const [src] = await q("SELECT lifecycle FROM sources WHERE id=$1", [sourceId]);
+    if (!src) throw new Error("Source not found");
+    if (src.lifecycle !== "CURRENT") throw new Error(`A ${src.lifecycle.toLowerCase()} source cannot be evidence for a current rule.`);
     await q(`INSERT INTO rule_sources (rule_id, source_id, evidence_strength, relevance, excerpt, section_ref, interpretation_note, flag_on_change) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       ON CONFLICT (rule_id, source_id) DO UPDATE SET evidence_strength=$3, relevance=$4, excerpt=$5, section_ref=$6, interpretation_note=$7, flag_on_change=$8`,
       [ruleId, sourceId, link.strength, link.relevance ?? "", link.excerpt ?? "", link.sectionRef ?? "", link.note ?? "", link.flagOnChange ?? true]);
@@ -256,12 +263,12 @@ export async function publishRule(ruleId: string, actor: Actor, reason = ""): Pr
     if (!r) throw new Error("Rule not found");
     if (!["DRAFT", "UNDER_REVIEW"].includes(r.rule_status)) throw new Error("Only a draft or rule under review can be published.");
     const [{ n }] = await q(`SELECT count(*)::int AS n FROM rule_sources rs JOIN sources s ON s.id=rs.source_id
-      WHERE rs.rule_id=$1 AND s.active AND s.canonical_url IS NOT NULL AND s.source_type <> 'SECONDARY_LEAD' AND rs.evidence_strength <> 'LEAD'`, [ruleId]);
+      WHERE rs.rule_id=$1 AND s.active AND s.lifecycle='CURRENT' AND s.canonical_url IS NOT NULL AND s.source_type <> 'SECONDARY_LEAD' AND rs.evidence_strength <> 'LEAD'`, [ruleId]);
     if (n < 1) throw new Error("Attach at least one official source with a URL (secondary reporting alone cannot support a rule).");
     if (r.legal_certainty === "UNVERIFIED") throw new Error("Set the legal certainty (primary-verified or official guidance) before publishing.");
     if (r.legal_certainty === "PRIMARY_VERIFIED") {
       const [{ p }] = await q(`SELECT count(*)::int AS p FROM rule_sources rs JOIN sources s ON s.id=rs.source_id
-        WHERE rs.rule_id=$1 AND s.active AND s.canonical_url IS NOT NULL AND s.source_type <> 'SECONDARY_LEAD' AND rs.evidence_strength = 'PRIMARY'`, [ruleId]);
+        WHERE rs.rule_id=$1 AND s.active AND s.lifecycle='CURRENT' AND s.canonical_url IS NOT NULL AND s.source_type <> 'SECONDARY_LEAD' AND rs.evidence_strength = 'PRIMARY'`, [ruleId]);
       if (p < 1) throw new Error("PRIMARY_VERIFIED needs at least one source attached with PRIMARY evidence strength.");
     }
     if (!r.last_verified_at) throw new Error("Record the last-verified date before publishing.");
@@ -370,7 +377,7 @@ const EVERY_MS = { DAILY: 864e5, WEEKLY: 7 * 864e5, MONTHLY: 30 * 864e5 } as con
 export async function runDueChecks(fetcher: Fetcher = defaultFetcher, now = Date.now()) {
   const results: { sourceId: string; result: CheckResult }[] = [];
   for (const s of await listSources()) {
-    if (!s.active || !s.monitoringEnabled || !s.canonicalUrl || s.monitoringFrequency === "MANUAL") continue;
+    if (!s.active || s.lifecycle !== "CURRENT" || !s.monitoringEnabled || !s.canonicalUrl || s.monitoringFrequency === "MANUAL") continue;
     if (s.lastCheckedAt && now - Date.parse(s.lastCheckedAt) < EVERY_MS[s.monitoringFrequency]) continue;
     results.push({ sourceId: s.id, result: await checkSource(s.id, fetcher) });
   }

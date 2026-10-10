@@ -38,3 +38,5 @@ Where the data lives is noted so the capture is a query, not a research project.
 - How often DEL-TRAFFIC-001 and DEL-JM-022 stayed incomplete: these have no verified procedure, so they are the likeliest drop-off points.
 - Notifications-feed change events: how many were real new Section 163 orders vs noise, and the lag from order published to recorded as a temporary restriction.
 - Method note: summarised corpus handed over without the source document. The platform's "no URL → nothing published" guard turned a missing input into a safe partial load instead of a guess. Keep that pattern.
+- Evidence-chain note: separating the governing instrument from current-practice confirmation (and press leads) let a rule stay verifiable by its instrument while the *current* deadline is corroborated elsewhere. Record how often current practice and the written order disagree; each disagreement is a candidate for a reviewed rule update.
+- Track how long placeholder sources (e.g. the 25 May 2022 procession order) wait before extraction, and how many march plans hit the "no verified march rules" gap in the meantime.

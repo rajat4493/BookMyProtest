@@ -284,6 +284,7 @@ export async function saveSourceAction(fd: FormData) {
       title: str(fd, "title"), sourceType: oneOf(str(fd, "sourceType"), SOURCE_TYPES, "SECONDARY_LEAD"), issuingAuthority: str(fd, "issuingAuthority"),
       jurisdictionId: uuidOrNull(str(fd, "jurisdictionId")), canonicalUrl: httpOrNull(str(fd, "canonicalUrl")), publicationDate: dateOrNull(str(fd, "publicationDate")),
       effectiveDate: dateOrNull(str(fd, "effectiveDate")), retrievedAt: dateOrNull(str(fd, "retrievedAt")), active: fd.get("active") === "on",
+      lifecycle: oneOf(str(fd, "lifecycle"), ["CURRENT", "HISTORICAL", "PLACEHOLDER"] as const, "CURRENT"), supersededBySourceId: uuidOrNull(str(fd, "supersededBySourceId")),
       monitoringEnabled: fd.get("monitoringEnabled") === "on", monitoringFrequency: oneOf(str(fd, "monitoringFrequency"), ["DAILY", "WEEKLY", "MONTHLY", "MANUAL"] as const, "WEEKLY"), notes: str(fd, "notes"),
     }, actor);
     return `/admin/sources/${sid}?saved=1`;

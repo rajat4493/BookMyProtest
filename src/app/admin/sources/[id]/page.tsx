@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { checkSourceAction, recordContentAction, saveSourceAction } from "@/app/actions";
 import { Field, Flash } from "@/components/admin-ui";
 import { SOURCE_TYPES } from "@/lib/engine/types";
-import { getSource, listSnapshots } from "@/lib/knowledge";
+import { getSource, listSnapshots, listSources } from "@/lib/knowledge";
 import { listJurisdictions } from "@/lib/store";
 import { query } from "@/lib/db";
 
@@ -13,6 +13,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
   const src = id === "new" ? null : await getSource(id);
   if (id !== "new" && !src) notFound();
   const js = await listJurisdictions();
+  const allSources = await listSources();
   const snaps: any[] = src ? await listSnapshots(src.id) : [];
   const rules: any[] = src ? await query(`SELECT r.id, r.title, r.rule_family_id, r.version, r.rule_status FROM rules r JOIN rule_sources rs ON rs.rule_id=r.id WHERE rs.source_id=$1 ORDER BY r.rule_family_id, r.version`, [src.id]) : [];
   const sel = (name: string, opts: readonly string[], v?: string) => <select name={name} defaultValue={v} className="field !min-h-11">{opts.map((o) => <option key={o}>{o}</option>)}</select>;
@@ -31,6 +32,8 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
           <Field label="Publication date"><input name="publicationDate" type="date" defaultValue={src?.publicationDate ?? ""} className="field !min-h-11" /></Field>
           <Field label="Effective date"><input name="effectiveDate" type="date" defaultValue={src?.effectiveDate ?? ""} className="field !min-h-11" /></Field>
           <Field label="Retrieved"><input name="retrievedAt" type="date" defaultValue={src?.retrievedAt ?? ""} className="field !min-h-11" /></Field>
+          <label>Lifecycle{sel("lifecycle", ["CURRENT", "HISTORICAL", "PLACEHOLDER"], src?.lifecycle ?? "CURRENT")}</label>
+          <label>Superseded by<select name="supersededBySourceId" defaultValue={src?.supersededBySourceId ?? ""} className="field !min-h-11"><option value="">—</option>{allSources.filter((x) => x.id !== src?.id).map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}</select></label>
           <label>Monitoring frequency{sel("monitoringFrequency", ["DAILY", "WEEKLY", "MONTHLY", "MANUAL"], src?.monitoringFrequency ?? "WEEKLY")}</label>
         </div>
         <label className="flex items-center gap-2"><input type="checkbox" name="monitoringEnabled" defaultChecked={src?.monitoringEnabled} /> Monitor this source for changes (needs a URL)</label>

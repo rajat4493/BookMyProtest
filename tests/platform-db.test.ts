@@ -296,6 +296,20 @@ describe("regulatory watch", () => {
   });
 });
 
+describe("source lifecycle", () => {
+  it("historical and placeholder sources are never monitored and cannot support or publish a rule", async () => {
+    const hist = await officialSource("Old order", { lifecycle: "HISTORICAL", monitoringEnabled: true });
+    const ph = await officialSource("Future order", { lifecycle: "PLACEHOLDER", canonicalUrl: null });
+    expect((await query("SELECT monitoring_enabled FROM sources WHERE id=$1", [hist]))[0].monitoring_enabled).toBe(false);
+    const id = await saveRuleDraft(null, input(), admin);
+    await expect(linkSource(id, hist, { strength: "PRIMARY" }, admin)).rejects.toThrow(/historical source cannot be evidence/);
+    await expect(linkSource(id, ph, { strength: "PRIMARY" }, admin)).rejects.toThrow(/placeholder source cannot be evidence/);
+    // even a forced row cannot satisfy the publish gate
+    await query("INSERT INTO rule_sources (rule_id, source_id, evidence_strength) VALUES ($1,$2,'PRIMARY')", [id, hist]);
+    await expect(publishRule(id, admin)).rejects.toThrow(/official source/);
+  });
+});
+
 describe("document templates are data", () => {
   it("each save creates the next version; selection honours jurisdiction specificity and effective dates", async () => {
     const base = { templateKey: "request-letter", name: "Letter", authorityId: null, disclaimer: "d", sourceId: null };
@@ -316,7 +330,7 @@ describe("migration of V0-shaped data", () => {
   it("rules table keeps the V0 columns and the new model coexists", async () => {
     const cols = (await query("SELECT column_name FROM information_schema.columns WHERE table_name='rules'")).map((r) => r.column_name);
     expect(cols).toEqual(expect.arrayContaining(["description", "required_documents", "deadline_days_before", "rule_family_id", "version", "rule_status", "supersedes_rule_id", "deadline_definition", "legal_certainty"]));
-    expect((await query("SELECT name FROM schema_migrations ORDER BY name")).map((r) => r.name)).toEqual(["db/migrations/002_rules_platform.sql", "db/migrations/003_legal_certainty.sql", "db/schema.sql"]);
+    expect((await query("SELECT name FROM schema_migrations ORDER BY name")).map((r) => r.name)).toEqual(["db/migrations/002_rules_platform.sql", "db/migrations/003_legal_certainty.sql", "db/migrations/004_source_lifecycle.sql", "db/schema.sql"]);
     expect(await rulesForChain([city])).toEqual([]);
   });
 });

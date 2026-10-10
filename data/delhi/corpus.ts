@@ -18,15 +18,45 @@ export const PLACES: { key: PlaceKey; name: string; level: "country" | "region" 
   { key: "JM", name: "Jantar Mantar", level: "venue", parent: "DIST", code: "DL-ND-JM", supported: false },
 ];
 
-export type SourceKey = "SO" | "TRAFFIC" | "NOTIF";
-export interface SourceSpec { key: SourceKey; title: string; type: SourceType; issuer: string; place: PlaceKey; url: string | null; monitoring: "DAILY" | "WEEKLY"; notes: string }
+/** Exact URL supplied by the project owner. Not guessed; the PDF itself was not readable from the build sandbox (proxy 403). */
+export const STANDING_ORDER_URL = "https://delhipolice.gov.in/StandingOrderFiles/83377_Law%20and%20Order-48-2022.pdf";
+
+export type SourceKey = "SO" | "SO_2018" | "PROC_2022" | "CURRENT_PRACTICE" | "NEWS_ANI" | "NEWS_INDIATV" | "TRAFFIC" | "NOTIF";
+export interface SourceSpec {
+  key: SourceKey; title: string; type: SourceType; issuer: string; place: PlaceKey; url: string | null; monitoring: "DAILY" | "WEEKLY" | null; notes: string;
+  lifecycle?: "CURRENT" | "HISTORICAL" | "PLACEHOLDER"; publicationDate?: string; supersededBy?: SourceKey;
+}
 
 export const SOURCES: SourceSpec[] = [
   {
     key: "SO", title: "Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar", type: "OFFICIAL_ADMINISTRATIVE_RULE", issuer: "Delhi Police", place: "NCT",
-    url: null, // supplied at load time (DELHI_STANDING_ORDER_URL); never guessed
-    monitoring: "WEEKLY",
-    notes: "Official PDF. REVIEWER TO CHECK: (1) some reports date the governing standing order 28 April 2023 rather than 2022 — confirm the citation and whether L&O/48/2022 was reissued or amended; (2) one report mentions a 7-day lead time, the owner's review of the PDF says 10 days excluding the event day; (3) a separate official Standing Order No. 10/2018 (delhipolice.gov.in/doc/standing-order/10.pdf) also covers Central Vista/Jantar Mantar/Boat Club and may interact; (4) reports mention Burari for gatherings above 50,000 — not loaded, not in the supplied summary.",
+    url: STANDING_ORDER_URL, monitoring: "WEEKLY", publicationDate: "2022-04-28",
+    notes: "Governing instrument for Jantar Mantar. Order title and date are corroborated by the official Delhi Police Standing Orders index (per the project owner): \"Guidelines for organizing protests or demonstrations at or near Central Vista including Jantar Mantar and Boat Club\", order date 28 April 2022. Current Delhi Police reporting and Delhi High Court records cite this order number. URL supplied by the project owner. The PDF could not be read from the build sandbox, so section references and excerpts are still to be added by a reviewer. It supersedes Standing Order No. 10/2018 (kept as history). The 10-day lead time is evidenced separately (see the current-practice source). Reports mention Burari for gatherings above 50,000: not in the supplied summary and not loaded.",
+  },
+  {
+    key: "SO_2018", title: "Delhi Police Standing Order No. 10/2018 — protests at Central Vista, Jantar Mantar and Boat Club (historical)", type: "OFFICIAL_ADMINISTRATIVE_RULE", issuer: "Delhi Police", place: "NCT",
+    url: "https://delhipolice.gov.in/doc/standing-order/10.pdf", monitoring: null, lifecycle: "HISTORICAL", supersededBy: "SO",
+    notes: "HISTORY ONLY. Governed Jantar Mantar after the 2018 Supreme Court judgment (Mazdoor Kisan Shakti Sangathan v. Union of India). Superseded by L&O/48/2022; later Delhi High Court proceedings refer to the 2022 order. Never evidence for a current rule, never monitored, and must not be used to derive the 10-day lead time or any other current requirement.",
+  },
+  {
+    key: "PROC_2022", title: "Delhi Police order dated 25 May 2022 — Guidelines for regulation of rallies/procession in Delhi (research placeholder)", type: "OFFICIAL_ADMINISTRATIVE_RULE", issuer: "Delhi Police", place: "NCT",
+    url: null, monitoring: null, lifecycle: "PLACEHOLDER", publicationDate: "2022-05-25",
+    notes: "RESEARCH PLACEHOLDER. Listed on the official Delhi Police Standing Orders index (per the project owner). PDF URL not yet supplied and content not yet extracted. Once extracted it becomes the governing source for generic Delhi procession/march logic (see DEL-PROC-001). Until then, march outcomes come only from the Jantar Mantar-specific rules DEL-JM-008 and DEL-JM-009. A placeholder cannot be attached to a rule as evidence.",
+  },
+  {
+    key: "CURRENT_PRACTICE", title: "Current Delhi Police statements and refusal letters confirming the 10-day application requirement", type: "OFFICIAL_CURRENT_PRACTICE", issuer: "Delhi Police", place: "NCT",
+    url: null, monitoring: null,
+    notes: "Confirmation of the CURRENT operational deadline, kept apart from the governing instrument. Per the project owner: Delhi Police have repeatedly stated in 2025–26 that applications must be submitted at least 10 days in advance under the current guidelines; statements on 7–9 October 2026 repeat it; a December 2025 refusal letter cited the 10-day requirement together with L&O/48/2022. The statements/letter themselves have not been attached (no URLs or documents supplied): attach them here when available. The event day is excluded from the count.",
+  },
+  {
+    key: "NEWS_ANI", title: "ANI (7 Oct 2026): “Prior permission is mandatory for organizing demonstration, sit-in, or protest at Jantar Mantar”: Delhi Police", type: "SECONDARY_LEAD", issuer: "ANI", place: "NCT",
+    url: "https://aninews.in/news/national/general-news/prior-permission-is-mandatory-for-organizing-demonstration-sit-in-or-protest-at-jantar-mantar-delhi-police20261007185435/", monitoring: null,
+    notes: "News report of a Delhi Police statement. Seen only as a search result by the build assistant (not read in full). A LEAD: it can never verify a rule. Replace with the police statement itself.",
+  },
+  {
+    key: "NEWS_INDIATV", title: "India TV (7 Oct 2026): ‘Permission must be sought 10 days before protest’: Delhi Police amid INDIA bloc stir at Jantar Mantar", type: "SECONDARY_LEAD", issuer: "India TV", place: "NCT",
+    url: "https://www.indiatvnews.com/news/india/permission-must-be-sought-10-days-before-protest-delhi-police-amid-india-bloc-stir-at-jantar-mantar-latest-updates-2026-10-07-1056339", monitoring: null,
+    notes: "News report of a Delhi Police statement. Seen only as a search result by the build assistant (not read in full). A LEAD: it can never verify a rule.",
   },
   {
     key: "TRAFFIC", title: "Delhi Traffic Police — NOC for processions, rallies, meetings and morchas", type: "OFFICIAL_CURRENT_PRACTICE", issuer: "Delhi Traffic Police", place: "NCT",
@@ -53,7 +83,7 @@ const JM_CAP = c("attendance", "lte", 1000);
 export interface RuleSpec {
   family: string; title: string; place: PlaceKey; authority: AuthKey | null; category: Category; level: Level; severity: Severity; certainty: LegalCertainty;
   legal: string; plain: string; action: string; condition: Condition; deadline?: DeadlineDef; docs?: string[]; vendor?: string;
-  sources: { key: SourceKey; strength: "PRIMARY" | "SUPPORTING"; flagOnChange?: boolean }[]; confidence: "low" | "medium" | "high";
+  sources: { key: SourceKey; strength: "PRIMARY" | "SUPPORTING" | "LEAD"; flagOnChange?: boolean; note?: string }[]; confidence: "low" | "medium" | "high";
   /** Leave in UNDER_REVIEW: never shown to users. */
   holdForReview?: boolean; note?: string;
 }
@@ -69,7 +99,15 @@ export const RULES: RuleSpec[] = [
   { ...base, family: "DEL-JM-002", title: "Apply at least 10 days ahead", category: "permissions", level: "REQUIRED", severity: "CRITICAL", condition: cond(JM_CAP),
     legal: "The application must reach the DCP, New Delhi District at least 10 days in advance, excluding the day of the event. A late application may still be considered depending on space and the time available to make arrangements.",
     plain: "Apply at least 10 days before your event, not counting the event day. A late application might still be considered, but only if space and time allow.", action: "Work back from your event date and submit well before the deadline shown.",
-    deadline: { kind: "STRUCTURED", minimumDaysBeforeEvent: 10, dayType: "CALENDAR", specialNotes: "Excluding the event day. Late applications may be considered subject to space and time for arrangements." } },
+    deadline: { kind: "STRUCTURED", minimumDaysBeforeEvent: 10, dayType: "CALENDAR", specialNotes: "Excluding the event day. Late applications may be considered subject to space and time for arrangements. Confirmed as the current requirement by Delhi Police practice in 2025–26; older 2018 material does not override it." },
+    // Evidence chain, kept separate: governing instrument + current-practice confirmation + press leads (which can never verify anything).
+    sources: [
+      { key: "SO", strength: "PRIMARY", note: "Governing instrument (L&O/48/2022): 10 days in advance, excluding the event day." },
+      { key: "CURRENT_PRACTICE", strength: "SUPPORTING", flagOnChange: false, note: "Current deadline confirmation: Delhi Police statements and a Dec 2025 refusal letter. Documents not yet attached." },
+      { key: "NEWS_ANI", strength: "LEAD", flagOnChange: false, note: "Press report of the 7 Oct 2026 police statement. Lead only." },
+      { key: "NEWS_INDIATV", strength: "LEAD", flagOnChange: false, note: "Press report of the 7 Oct 2026 police statement. Lead only." },
+    ],
+    note: "10 calendar days, excluding the event day, as the CURRENT operational deadline. Governing instrument = Standing Order L&O/48/2022; current confirmation = Delhi Police statements/refusal letters (stored as a separate source). Do NOT derive the 10 days from Standing Order No. 10/2018 (historical). Section reference not recorded — reviewer to add." },
   { ...base, family: "DEL-JM-003", title: "Applications go to the DCP, New Delhi District", category: "permissions", level: "REQUIRED", severity: "REQUIRED", condition: cond(JM_CAP),
     legal: "Jantar Mantar permission applications are made to the Deputy Commissioner of Police (DCP), New Delhi District.",
     plain: "Your application goes to the DCP, New Delhi District. We have not verified how it is submitted (in person, email or portal).", action: "Confirm the submission method with the DCP's office." },
@@ -142,6 +180,9 @@ export const RULES: RuleSpec[] = [
   { family: "DEL-RAM-002", title: "Ramlila Ground booking and land-owner authority workflow", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "UNVERIFIED",
     legal: "", plain: "Not yet verified. No steps are given.", action: "", condition: cond(c("attendance", "gt", 1000)), sources: [], confidence: "low", holdForReview: true,
     note: "GAP RECORD. No clean current official page found for the end-to-end Ramlila Ground booking or land-owner form. Kept UNDER_REVIEW so it never reaches users. Do not guess steps." },
+  { family: "DEL-PROC-001", title: "Delhi rallies and processions (generic march rules)", place: "NCT", authority: null, category: "permissions", level: "UNKNOWN", severity: "RECOMMENDED", certainty: "UNVERIFIED",
+    legal: "", plain: "Not yet extracted. No rules are given.", action: "", condition: cond(c("march", "eq", true)), sources: [], confidence: "low", holdForReview: true,
+    note: "GAP RECORD. The official Delhi Police order dated 25 May 2022, \"Guidelines for regulation of rallies/procession in Delhi\", is registered as a research placeholder source. Once extracted it will govern generic Delhi march/procession logic. Until then a march at Jantar Mantar is covered only by DEL-JM-008 and DEL-JM-009 (from L&O/48/2022); marches elsewhere in Delhi have no verified rules. Kept UNDER_REVIEW so it never reaches users." },
 ];
 
 export const TEMPLATES = [
