@@ -93,6 +93,7 @@ export function RequirementRow({ item, eventId, buses = 0, leadDeadline = null }
           <summary className="cursor-pointer text-sm font-semibold underline underline-offset-2">Details</summary>
           <div className="mt-2 space-y-2 text-[0.95rem]">
             <p>{fill(r.description)}</p>
+            {r.facts && r.facts.length > 0 && <dl className="grid gap-x-4 gap-y-1 border-y border-hair py-2 sm:grid-cols-[auto_1fr]">{r.facts.map((f) => <div key={f.label} className="contents"><dt className="label text-mute">{f.label}</dt><dd className="font-semibold">{f.value}</dd></div>)}</dl>}
             {r.userAction && <p><span className="label">What to do: </span>{fill(r.userAction)}</p>}
             {r.submissionMethod && <p><span className="label">How to submit: </span>{r.submissionMethod}</p>}
             {r.requiredDocuments.length > 0 && <p><span className="label">Documents: </span>{r.requiredDocuments.join(", ")}</p>}

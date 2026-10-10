@@ -1,6 +1,7 @@
 // v0.9 acceptance run: a first-time organizer, Jantar Mantar, 500 people, static, 2 buses, ~3 weeks out. Drives the real UI and dumps
 // what the organizer actually sees to docs/acceptance/evidence/*.txt (+ screenshots). Test DB with the Delhi corpus SIMULATED as verified.
 import { chromium } from "playwright-core";
+import { recordPermission, submitApplication } from "./ui-helpers.mjs";
 import pg from "pg";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 const BASE = process.env.BASE ?? "http://localhost:3101";
@@ -33,6 +34,7 @@ const planUrl = p.url(); const eventId = planUrl.split("/").pop();
 await p.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
 await p.evaluate(() => document.querySelectorAll("button[aria-expanded='false']").forEach((b) => b.click()));
 await dump("10-dashboard");
+const readinessAtStart = await p.getByTestId("readiness-state").getAttribute("data-state");
 
 // --- 3. pack
 await p.goto(planUrl + "/pack"); await settle();
@@ -44,7 +46,7 @@ await p.goto(planUrl); await settle();
 const evalCount = async () => (await db.query("SELECT count(*)::int AS n FROM event_evaluations WHERE event_id=$1", [eventId])).rows[0].n;
 const firstEval = (await db.query("SELECT id, answers, requirements FROM event_evaluations WHERE event_id=$1 ORDER BY evaluated_at LIMIT 1", [eventId])).rows[0];
 const n0 = await evalCount();
-await p.getByRole("button", { name: /I.ve submitted my application/ }).click(); await settle(); await dump("30-after-submitted");
+await submitApplication(p); await dump("30-after-submitted");
 await p.goto(planUrl + "/details"); await settle(); await p.fill("#d-organizerPhone", "9810000001"); await p.getByRole("button", { name: /Save and recheck/ }).click(); await p.waitForURL(/updated=1/); await dump("31-after-nonmaterial-edit");
 const nonMaterialBanner = await p.getByTestId("change-banner").count();
 await p.goto(planUrl + "/details"); await settle(); await p.fill("#d-attendance", "800"); await p.getByRole("button", { name: /Save and recheck/ }).click(); await p.waitForURL(/updated=1/); await dump("32-after-material-edit");
@@ -61,5 +63,19 @@ writeFileSync(`${EV}/33-tracking-facts.json`, JSON.stringify({ snapshotsBefore: 
 await p.goto(planUrl); await settle();
 await p.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
 await dump("40-dashboard-final");
-console.log(JSON.stringify({ eventId, planUrl, date }));
+// --- permission lifecycle, as the organizer would record it (nothing is inferred)
+const stateOf = async () => ({ state: await p.getByTestId("readiness-state").getAttribute("data-state"), permission: await p.getByTestId("permission-panel").getAttribute("data-status") });
+const life = { start: readinessAtStart };
+await p.goto(planUrl); await settle();
+life.afterSubmitted = await stateOf(); // (submitted earlier in the journey)
+await recordPermission(p, "ACKNOWLEDGED", { reference: "ACK/NDD/0457", evidenceRef: "stamped copy photographed on my phone" }); life.afterAcknowledged = await stateOf(); await dump("41-acknowledged");
+// tick every checklist item as an organizer might: still NOT_READY
+await p.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+const btns = p.locator('button[aria-label^="Mark as done"]'); let n = await btns.count();
+for (let i = 0; i < n; i++) { await p.locator('button[aria-label^="Mark as done"]').first().click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(250); }
+await p.goto(planUrl); await settle(); life.allTickedNoApproval = await stateOf(); await dump("42-all-ticked-not-approved");
+await recordPermission(p, "APPROVED", { reference: "PERM/NDD/2026/1182", approvalDate: new Date(Date.now() - 864e5).toISOString().slice(0, 10), conditions: "Programme 10:30 to 15:30 only. Maximum 500 persons. Buses to park as directed at Jai Singh Road." });
+life.approvedTickedFeedUnread = await stateOf(); await dump("43-approved-feed-unread");
+writeFileSync(`${EV}/44-lifecycle.json`, JSON.stringify(life, null, 1));
+console.log(JSON.stringify({ eventId, planUrl, date, life }));
 await db.end(); await browser.close();

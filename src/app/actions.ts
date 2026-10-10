@@ -6,9 +6,10 @@ import { z } from "zod";
 import { endSession, ensureAnonId, getUser, requireAdmin, startSession } from "@/lib/auth";
 import { loadOwnedEvent } from "@/lib/access";
 import { acknowledgeChanges, markApplicationSubmitted, markApprovalRecorded, updateEventDetails } from "@/lib/event-changes";
+import { recordPermission } from "@/lib/permissions";
+import { runChecks } from "@/lib/readiness-service";
 import { recordOfficialCheck, saveVenueSignal, setSchedulingMode, venueAvailability } from "@/lib/venue-signals";
 import { SCHEDULING_MODES, SIGNAL_TYPES, EVENT_STATUSES, type Availability } from "@/lib/engine/availability";
-import { runRestrictionCheck } from "@/lib/restriction-checks";
 import { one } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { allow } from "@/lib/ratelimit";
@@ -71,7 +72,7 @@ export async function createPlanAction(cityId: string, raw: unknown, venueId: st
   const id = await createEvent(anon, user?.id ?? null, city.id, parsed.answers, venue);
   const created = (await getEvent(id))!;
   await generateEvaluation(created, "GENERATED"); // immutable record of the rule versions this plan was built on
-  await runRestrictionCheck(created, "PLAN_GENERATED");
+  await runChecks(created, "PLAN_GENERATED");
   await track("complete_questionnaire", anon, { eventId: id, city: city.name, attendance: parsed.answers.attendance, kind: parsed.answers.kind });
   redirect(`/plan/${id}`);
 }
@@ -89,7 +90,7 @@ export async function toggleRequirementAction(formData: FormData) {
 export async function recheckPlanAction(formData: FormData) {
   const event = await loadOwnedEvent(String(formData.get("eventId")));
   await recheckEvent(event);
-  await runRestrictionCheck(event, "RECHECK");
+  await runChecks(event, "RECHECK");
   revalidatePath(`/plan/${event.id}`);
   redirect(`/plan/${event.id}?rechecked=1`);
 }
@@ -99,9 +100,19 @@ export async function generatePackAction(formData: FormData) {
   const event = await loadOwnedEvent(eventId);
   const templates = await selectTemplateMap(await chainFor(event), event.date);
   for (const d of DOC_KINDS) await recordDocument(eventId, d.slug, templates[d.slug]?.id.startsWith("builtin:") ? null : templates[d.slug]?.id ?? null, templates[d.slug]?.version ?? null);
-  await runRestrictionCheck(event, "DOCUMENT_GENERATION");
+  await runChecks(event, "DOCUMENT_GENERATION");
   await track("generate_document", await ensureAnonId(), { eventId, kinds: DOC_KINDS.length });
   redirect(`/plan/${eventId}/pack?ready=1`);
+}
+
+export async function recordPermissionAction(eventId: string, raw: { status?: string; occurredAt?: string | null; method?: string | null; reference?: string; evidenceRef?: string; approvalDate?: string | null; conditions?: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const event = await loadOwnedEvent(eventId);
+  try {
+    await recordPermission(event, { status: raw.status as any, occurredAt: raw.occurredAt ?? null, method: (raw.method || null) as any, reference: raw.reference, evidenceRef: raw.evidenceRef, approvalDate: raw.approvalDate || null, conditions: raw.conditions });
+  } catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Could not record that." }; }
+  await runChecks((await getEvent(event.id))!, "RECHECK");
+  revalidatePath(`/plan/${event.id}`);
+  return { ok: true };
 }
 
 export async function markApplicationAction(formData: FormData) {
@@ -341,6 +352,7 @@ export async function saveSourceAction(fd: FormData) {
       sourceCode: nullable(str(fd, "sourceCode")), orderNumber: str(fd, "orderNumber"), documentUrl: httpOrNull(str(fd, "documentUrl")), indexUrl: httpOrNull(str(fd, "indexUrl")),
       lifecycle: oneOf(str(fd, "lifecycle"), ["CURRENT", "HISTORICAL", "PLACEHOLDER"] as const, "CURRENT"), supersededBySourceId: uuidOrNull(str(fd, "supersededBySourceId")),
       monitoringEnabled: fd.get("monitoringEnabled") === "on", monitoringFrequency: oneOf(str(fd, "monitoringFrequency"), ["DAILY", "WEEKLY", "MONTHLY", "MANUAL"] as const, "WEEKLY"), notes: str(fd, "notes"),
+      ...(fd.has("flagsPresent") ? { verificationFlags: fd.getAll("verificationFlags").map(String).filter((f) => ["SOURCE_VERIFIED", "FETCH_IN_THIS_ENVIRONMENT_BLOCKED", "PARSER_REAL_PAGE_VERIFICATION_PENDING", "PARSER_REAL_PAGE_VERIFIED"].includes(f)) } : {}),
     }, actor);
     return `/admin/sources/${sid}?saved=1`;
   });

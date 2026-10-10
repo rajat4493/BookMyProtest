@@ -161,6 +161,8 @@ export interface Rule {
   deadlineNote: string;
   officialLink: string | null;
   officialLinkLabel?: string;
+  /** Labelled facts shown under Details (issuer context, submission route, certainty note). */
+  facts?: { label: string; value: string }[];
   requiredDocuments: string[];
   vendorCategory: string | null;
   lastVerifiedAt: string | null;

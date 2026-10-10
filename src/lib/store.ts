@@ -90,7 +90,7 @@ function mapRule(r: any, sources: RuleSource[], docs: string[]): Rule {
     elseLevel: (r.else_level as Level) ?? null, severity: r.severity as Severity,
     condition: normCond(r.condition ?? EMPTY), completeWhen: r.complete_when ? normCond(r.complete_when) : null,
     deadlineDaysBefore: deadline.kind === "STRUCTURED" ? deadline.minimumDaysBeforeEvent ?? null : null, deadlineNote: deadline.specialNotes ?? "",
-    officialLink: r.official_link, officialLinkLabel: r.official_link_label ?? "", requiredDocuments: docs, vendorCategory: r.vendor_category,
+    officialLink: r.official_link, officialLinkLabel: r.official_link_label ?? "", facts: r.facts ?? [], requiredDocuments: docs, vendorCategory: r.vendor_category,
     lastVerifiedAt: r.last_verified_at ?? null,
     needsReview: r.needs_review, confidence: r.confidence as Confidence, ruleOwner: r.rule_owner,
     adminNotes: r.admin_notes, sources, sort: r.sort,

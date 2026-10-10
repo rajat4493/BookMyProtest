@@ -41,11 +41,16 @@ describe("1. submission: HAX Branch, DCP/New Delhi District", () => {
     const a = await one("SELECT office_address, contact_phone, submission_method, contact_email, submission_url FROM authorities WHERE name LIKE 'DCP, New Delhi District%'");
     expect(a).toEqual({ office_address: "Office Complex, Police Station Parliament Street, Sansad Marg, New Delhi 110001", contact_phone: "011-23747777", submission_method: "IN_PERSON", contact_email: "", submission_url: null });
   });
-  it("stores the official Delhi Police contact source, without inventing a URL for it", async () => {
-    const s = await one("SELECT source_type, canonical_url, notes, lifecycle FROM sources WHERE title LIKE 'Delhi Police — DCP/New Delhi District: official district details%'");
-    expect(s).toMatchObject({ source_type: "OFFICIAL_CURRENT_PRACTICE", canonical_url: null, lifecycle: "CURRENT" });
-    expect(s!.notes).toMatch(/URL was NOT supplied and none is invented/);
+  it("stores the official Delhi Police contact source with its URL and retrieval date; no email is stored or displayed", async () => {
+    const s = await one("SELECT source_type, canonical_url, document_url, retrieved_at::date::text AS ra, notes, lifecycle FROM sources WHERE title LIKE 'Delhi Police RTI Manual-16%'");
+    expect(s).toMatchObject({ source_type: "OFFICIAL_CURRENT_PRACTICE", canonical_url: "https://delhipolice.gov.in/RTImanualFiles/77308_Manual-16.pdf", ra: "2026-10-10", lifecycle: "CURRENT" });
+    expect(s!.notes).toMatch(/011-23747777/);
+    expect(s!.notes).toMatch(/NOT fetched here/);
+    expect(s!.notes).toMatch(/NO email is stored or displayed/);
     expect(s!.notes).toMatch(/does not establish that email/);
+    expect(await query("SELECT 1 FROM authorities WHERE contact_email <> ''")).toEqual([]);
+    const text = [...RULES.flatMap((r) => [r.legal, r.plain, r.action, r.submit ?? ""]), ...AUTHORITIES.map((a) => a.notes)].join("\n");
+    expect(text).not.toMatch(/[\w.]+@delhipolice\.gov\.in/i);
   });
   it("the dashboard row tells the organizer where and how to submit, with the telephone number", async () => {
     const p = await plan();
@@ -178,16 +183,27 @@ describe("5. multiple protests: capacity is not an entitlement", () => {
 });
 
 describe("7. land-owner NOC", () => {
-  it("stays REQUIRED / CRITICAL (Annexure B requires it) with the exact unverified-route wording", async () => {
+  it("stays REQUIRED / CRITICAL with NDMC as issuer context and the route UNKNOWN", async () => {
     const i = (await plan()).by.get("DEL-JM-022")!;
     expect(i).toMatchObject({ level: "REQUIRED" });
     expect(i.rule.severity).toBe("CRITICAL");
-    expect(i.rule.description).toBe("Land-owner NOC is required by Annexure B. We have not yet verified the current submission route for obtaining it.");
+    expect(i.rule.description).toBe("Annexure B requires a land-owner NOC. NDMC is identified in judicial material as the land-owning agency for the Jantar Mantar area. BookMyProtest has not yet verified the current NDMC application channel for obtaining this NOC.");
+    expect(Object.fromEntries((i.rule.facts ?? []).map((f) => [f.label, f.value]))).toEqual({ Requirement: "REQUIRED (Annexure B)", "Issuer context": "NDMC (per judicial material)", "Submission route": "UNKNOWN: not yet verified", Certainty: "COURT_VERIFIED_CONTEXT + OPERATIONAL_ROUTE_UNVERIFIED" });
     expect(await sectionOf("DEL-JM-022")).toMatch(/Annexure B/);
   });
-  it("names no issuer and offers no application route anywhere in the corpus", () => {
-    const text = [...RULES.flatMap((r) => [r.legal, r.plain, r.action, r.submit ?? "", r.note ?? ""]), ...SOURCES.map((s) => s.notes), ...TEMPLATES.map((t) => t.content)].join("\n");
-    expect(text).not.toMatch(/NDMC/);
-    expect(text).not.toMatch(/NOC application (is )?available|apply for the (land-owner )?NOC (here|online)/i);
+  it("the NDMC claim is recorded as owner-supplied judicial context, flagged as not corroborated, without an invented URL", async () => {
+    const s = await one("SELECT source_type, canonical_url, notes FROM sources WHERE title LIKE 'Supreme Court (2018) and NGT (2017)%'");
+    expect(s).toMatchObject({ source_type: "BINDING_CASE_LAW", canonical_url: null });
+    expect(s!.notes).toMatch(/Owner-supplied/);
+    expect(s!.notes).toMatch(/NOT independently corroborated/);
+    expect(s!.notes).toMatch(/no passage that states land ownership/);
+  });
+  it("offers no NDMC service page or application route anywhere", () => {
+    const urls = [...SOURCES.flatMap((x) => [x.url, x.documentUrl, x.indexUrl]), ...RULES.flatMap((r) => [r.link?.url])].filter((u): u is string => !!u);
+    expect(urls.filter((u) => /ndmc/i.test(u))).toEqual([]);
+    const text = [...RULES.flatMap((r) => [r.legal, r.plain, r.action, r.submit ?? ""]), ...TEMPLATES.map((t) => t.content)].join("\n");
+    expect(text).not.toMatch(/NOC application (is )?available|apply (for the (land-owner )?NOC )?(here|online)|NDMC (portal|service|website)/i);
+    // NDMC is named only on the land-owner NOC row
+    expect(RULES.filter((r) => /NDMC/.test([r.legal, r.plain, r.action].join(" "))).map((r) => r.family)).toEqual(["DEL-JM-022"]);
   });
 });

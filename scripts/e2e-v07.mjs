@@ -1,6 +1,7 @@
 // v0.7.0 journeys through the real UI: large-event step, Ramlila workflow + warning, live-restriction check, change-after-application, admin order parsing.
 // Run against an app on the test DB with the Delhi corpus loaded (admin from .env.local): BASE=http://localhost:3101 node scripts/e2e-v07.mjs
 import { chromium } from "playwright-core";
+import { submitApplication } from "./ui-helpers.mjs";
 import { mkdirSync, readdirSync, readFileSync, existsSync } from "node:fs";
 for (const f of [".env.local", ".env"]) {
   if (!existsSync(f)) continue;
@@ -73,8 +74,8 @@ ok(!/no restrictions? (are|is) in force|all clear/i.test(txt), "check never clai
 await panel.scrollIntoViewIfNeeded(); await p.screenshot({ path: `${OUT}/3-live-restriction-check.png` });
 
 // 4. change after application
-await p.getByRole("button", { name: /I.ve submitted my application/ }).click(); await settle(p);
-ok(await has(p, "Marked as submitted"), "application can be marked as submitted");
+await submitApplication(p);
+ok((await p.getByTestId("permission-panel").getAttribute("data-status")) === "SUBMITTED", "permission status can be recorded as submitted");
 ok(await has(p, "re-confirm with the issuing authority"), "the standing re-confirm advice is shown on the dashboard");
 await p.getByRole("link", { name: "Edit plan details" }).click(); await settle(p);
 ok(await p.getByTestId("reconfirm-note").count() === 1, "details page warns that material changes need re-confirming");

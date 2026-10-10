@@ -1,6 +1,7 @@
 // axe-core scan of the v0.7.0 screens: large-event step, Ramlila dashboard (heads-up, check panel, change banner), details form, admin restrictions.
 // Usage (app on the Delhi test DB): BASE=http://localhost:3101 node scripts/a11y-v07.mjs
 import { chromium } from "playwright-core";
+import { submitApplication } from "./ui-helpers.mjs";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 for (const f of [".env.local"]) if (existsSync(f)) for (const line of readFileSync(f, "utf8").split("\n")) { const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2]; }
 const BASE = process.env.BASE ?? "http://localhost:3101";
@@ -32,7 +33,7 @@ await p.fill("#oname", "Asha Rao"); await p.fill("#oemail", "asha@example.com");
 await p.getByRole("button", { name: /show my readiness/i }).click(); await p.waitForURL(/\/plan\/[0-9a-f-]{36}$/);
 const url = p.url();
 await scan(p, "Ramlila dashboard");
-await p.getByRole("button", { name: /I.ve submitted my application/ }).click(); await p.waitForTimeout(800);
+await submitApplication(p);
 await p.goto(url + "/details"); await scan(p, "details form");
 await p.fill("#d-speakers", "Someone new"); await p.getByRole("button", { name: /Save and recheck/ }).click(); await p.waitForURL(/updated=1/);
 await scan(p, "dashboard with change banner");

@@ -1,0 +1,19 @@
+{
+ "start": "NOT_READY",
+ "afterSubmitted": {
+  "state": "NOT_READY",
+  "permission": "SUBMITTED"
+ },
+ "afterAcknowledged": {
+  "state": "NOT_READY",
+  "permission": "ACKNOWLEDGED"
+ },
+ "allTickedNoApproval": {
+  "state": "NOT_READY",
+  "permission": "ACKNOWLEDGED"
+ },
+ "approvedTickedFeedUnread": {
+  "state": "STATUS_UNKNOWN",
+  "permission": "APPROVED"
+ }
+}

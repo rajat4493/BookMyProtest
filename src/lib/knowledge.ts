@@ -78,7 +78,7 @@ export interface Source {
   active: boolean; monitoringEnabled: boolean; monitoringFrequency: "DAILY" | "WEEKLY" | "MONTHLY" | "MANUAL"; notes: string;
   lifecycle: "CURRENT" | "HISTORICAL" | "PLACEHOLDER"; supersededBySourceId: string | null;
   sourceCode: string | null; orderNumber: string; documentUrl: string | null; indexUrl: string | null;
-  parser: "ORDER_NOTICES" | null; feedRole: "LIVE_RESTRICTIONS" | null;
+  parser: "ORDER_NOTICES" | null; feedRole: "LIVE_RESTRICTIONS" | null; verificationFlags: string[];
 }
 const mapSource = (r: any): Source => ({
   id: r.id, title: r.title, sourceType: r.source_type, issuingAuthority: r.issuing_authority, jurisdictionId: r.jurisdiction_id, canonicalUrl: r.canonical_url,
@@ -86,7 +86,7 @@ const mapSource = (r: any): Source => ({
   active: r.active, monitoringEnabled: r.monitoring_enabled, monitoringFrequency: r.monitoring_frequency, notes: r.notes,
   lifecycle: r.lifecycle, supersededBySourceId: r.superseded_by_source_id,
   sourceCode: r.source_code, orderNumber: r.order_number, documentUrl: r.document_url, indexUrl: r.index_url,
-  parser: r.parser ?? null, feedRole: r.feed_role ?? null,
+  parser: r.parser ?? null, feedRole: r.feed_role ?? null, verificationFlags: r.verification_flags ?? [],
 });
 const SRC_SELECT = `SELECT *, to_char(publication_date,'YYYY-MM-DD') AS pd, to_char(effective_date,'YYYY-MM-DD') AS ed, to_char(retrieved_at,'YYYY-MM-DD') AS ra FROM sources`;
 
@@ -98,9 +98,9 @@ export async function getSource(id: string): Promise<Source | null> {
   const r = await one(`${SRC_SELECT} WHERE id=$1`, [id]);
   return r ? mapSource(r) : null;
 }
-export type SourceInput = Omit<Source, "id" | "lastCheckedAt" | "contentHash" | "lifecycle" | "supersededBySourceId" | "sourceCode" | "orderNumber" | "documentUrl" | "indexUrl" | "parser" | "feedRole"> & {
+export type SourceInput = Omit<Source, "id" | "lastCheckedAt" | "contentHash" | "lifecycle" | "supersededBySourceId" | "sourceCode" | "orderNumber" | "documentUrl" | "indexUrl" | "parser" | "feedRole" | "verificationFlags"> & {
   lifecycle?: Source["lifecycle"]; supersededBySourceId?: string | null; sourceCode?: string | null; orderNumber?: string; documentUrl?: string | null; indexUrl?: string | null;
-  parser?: Source["parser"]; feedRole?: Source["feedRole"];
+  parser?: Source["parser"]; feedRole?: Source["feedRole"]; verificationFlags?: string[];
 };
 export async function saveSource(id: string | null, i: SourceInput, actor: Actor): Promise<string> {
   assertHuman(actor);
@@ -109,19 +109,20 @@ export async function saveSource(id: string | null, i: SourceInput, actor: Actor
   // History and placeholders are never monitored: nothing downstream may depend on them.
   const p = [i.title, i.sourceType, i.issuingAuthority, i.jurisdictionId, url, i.publicationDate, i.effectiveDate, i.retrievedAt, i.active, i.monitoringEnabled && !!url && lifecycle === "CURRENT", i.monitoringFrequency, i.notes, lifecycle, i.supersededBySourceId ?? null,
     i.sourceCode ? i.sourceCode.trim() : null, i.orderNumber ?? "", i.documentUrl && /^https?:\/\//i.test(i.documentUrl) ? i.documentUrl : null, i.indexUrl && /^https?:\/\//i.test(i.indexUrl) ? i.indexUrl : null,
-    i.parser ?? null, i.feedRole ?? null];
+    i.parser ?? null, i.feedRole ?? null, i.verificationFlags ?? []];
   return tx(async (q) => {
     const before = id ? (await q(`${SRC_SELECT} WHERE id=$1`, [id]))[0] : null;
     // A form that does not mention the feed settings must not wipe them.
     if (before && i.parser === undefined) p[18] = before.parser ?? null;
     if (before && i.feedRole === undefined) p[19] = before.feed_role ?? null;
+    if (before && i.verificationFlags === undefined) p[20] = before.verification_flags ?? [];
     let sid = id;
     if (id) {
       await q(`UPDATE sources SET title=$2, source_type=$3, issuing_authority=$4, jurisdiction_id=$5, canonical_url=$6, publication_date=$7, effective_date=$8, retrieved_at=$9,
-        active=$10, monitoring_enabled=$11, monitoring_frequency=$12, notes=$13, lifecycle=$14, superseded_by_source_id=$15, source_code=$16, order_number=$17, document_url=$18, index_url=$19, parser=$20, feed_role=$21 WHERE id=$1`, [id, ...p]);
+        active=$10, monitoring_enabled=$11, monitoring_frequency=$12, notes=$13, lifecycle=$14, superseded_by_source_id=$15, source_code=$16, order_number=$17, document_url=$18, index_url=$19, parser=$20, feed_role=$21, verification_flags=$22 WHERE id=$1`, [id, ...p]);
     } else {
-      sid = (await q(`INSERT INTO sources (title, source_type, issuing_authority, jurisdiction_id, canonical_url, publication_date, effective_date, retrieved_at, active, monitoring_enabled, monitoring_frequency, notes, lifecycle, superseded_by_source_id, source_code, order_number, document_url, index_url, parser, feed_role)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`, p))[0].id;
+      sid = (await q(`INSERT INTO sources (title, source_type, issuing_authority, jurisdiction_id, canonical_url, publication_date, effective_date, retrieved_at, active, monitoring_enabled, monitoring_frequency, notes, lifecycle, superseded_by_source_id, source_code, order_number, document_url, index_url, parser, feed_role, verification_flags)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING id`, p))[0].id;
     }
     await auditQ(q, actor.userId, id ? "source.update" : "source.create", "source", sid!, { before, after: i });
     return sid!;
@@ -182,6 +183,7 @@ export interface RuleInput {
   submissionMethod: string;
   officialLink: string | null;
   officialLinkLabel?: string;
+  facts?: { label: string; value: string }[];
   documents: { name: string; required: boolean; conditional: boolean; templateKey: string | null; notes: string }[];
   vendorCategory: string | null;
   effectiveFrom: string | null;
@@ -220,14 +222,14 @@ export async function saveRuleDraft(id: string | null, i: RuleInput, actor: Acto
       await q(`UPDATE rules SET jurisdiction_id=$2, authority_id=$3, assembly_type=$4, title=$5, description=$6, legal_statement=$7, user_action=$8, category=$9, requirement_type=$10,
         level=$11, else_level=$12, severity=$13, condition=$14, complete_when=$15, deadline_definition=$16, submission_method=$17, official_link=$18, vendor_category=$19,
         effective_from=$20, effective_until=$21, last_verified_at=$22, needs_review=$23, confidence=$24, rule_owner=$25, admin_notes=$26, sort=$27, inheritance_mode=$28,
-        overrides_family_id=$29, legal_certainty=$30, official_link_label=$31, updated_at=now() WHERE id=$1`, [id, ...params, i.officialLinkLabel ?? ""]);
+        overrides_family_id=$29, legal_certainty=$30, official_link_label=$31, facts=$32, updated_at=now() WHERE id=$1`, [id, ...params, i.officialLinkLabel ?? "", JSON.stringify(i.facts ?? [])]);
     } else {
       const family = (i.ruleFamilyId ?? "").trim().toUpperCase() || newFamilyId();
       if ((await q("SELECT 1 FROM rules WHERE rule_family_id=$1", [family])).length) throw new Error(`Rule family ${family} already exists. Clone it as a new version instead.`);
       ruleId = (await q(`INSERT INTO rules (rule_family_id, version, rule_status, jurisdiction_id, authority_id, assembly_type, title, description, legal_statement, user_action, category,
         requirement_type, level, else_level, severity, condition, complete_when, deadline_definition, submission_method, official_link, vendor_category, effective_from, effective_until,
-        last_verified_at, needs_review, confidence, rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, legal_certainty, official_link_label)
-        VALUES ($30,1,'DRAFT',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$31) RETURNING id`, [...params.slice(0, 28), i.legalCertainty, family, i.officialLinkLabel ?? ""]))[0].id;
+        last_verified_at, needs_review, confidence, rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, legal_certainty, official_link_label, facts)
+        VALUES ($30,1,'DRAFT',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$31,$32) RETURNING id`, [...params.slice(0, 28), i.legalCertainty, family, i.officialLinkLabel ?? "", JSON.stringify(i.facts ?? [])]))[0].id;
     }
     await replaceDocs(q, ruleId!, i.documents);
     await auditQ(q, actor.userId, id ? "rule.update_draft" : "rule.create", "rule", ruleId!, { before, after: { title: i.title, jurisdictionId: i.jurisdictionId } });
@@ -255,10 +257,10 @@ export async function cloneAsNewVersion(ruleId: string, actor: Actor): Promise<s
     if (open > 0) throw new Error("This family already has a draft version in progress.");
     const id = (await q(`INSERT INTO rules (rule_family_id, version, rule_status, jurisdiction_id, authority_id, assembly_type, title, description, legal_statement, user_action, category,
         requirement_type, level, else_level, severity, condition, complete_when, deadline_definition, submission_method, official_link, vendor_category, needs_review, confidence,
-        rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, supersedes_rule_id, official_link_label)
+        rule_owner, admin_notes, sort, inheritance_mode, overrides_family_id, supersedes_rule_id, official_link_label, facts)
       SELECT rule_family_id, $2, 'DRAFT', jurisdiction_id, authority_id, assembly_type, title, description, legal_statement, user_action, category, requirement_type, level, else_level,
         severity, condition, complete_when, deadline_definition, submission_method, official_link, vendor_category, true, confidence, rule_owner, admin_notes, sort, inheritance_mode,
-        overrides_family_id, id, official_link_label FROM rules WHERE id=$1 RETURNING id`, [ruleId, v + 1]))[0].id;
+        overrides_family_id, id, official_link_label, facts FROM rules WHERE id=$1 RETURNING id`, [ruleId, v + 1]))[0].id;
     await q(`INSERT INTO rule_sources (rule_id, source_id, evidence_strength, relevance, excerpt, section_ref, interpretation_note)
              SELECT $2, source_id, evidence_strength, relevance, excerpt, section_ref, interpretation_note FROM rule_sources WHERE rule_id=$1`, [ruleId, id]);
     await q(`INSERT INTO rule_documents (rule_id, name, required, conditional, template_key, authority_id, notes, source_reference)

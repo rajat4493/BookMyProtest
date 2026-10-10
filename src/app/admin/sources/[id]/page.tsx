@@ -44,6 +44,10 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
         </div>
         <label className="flex items-center gap-2"><input type="checkbox" name="monitoringEnabled" defaultChecked={src?.monitoringEnabled} /> Monitor this source for changes (needs a URL)</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="active" defaultChecked={src?.active ?? true} /> Active</label>
+        <fieldset className="sm:col-span-2"><legend className="label mb-1">Integration status (kept distinct, never collapsed into "unknown")</legend><input type="hidden" name="flagsPresent" value="1" />
+          {[["SOURCE_VERIFIED", "The source exists and publishes what we need"], ["FETCH_IN_THIS_ENVIRONMENT_BLOCKED", "Automatic fetching is blocked in the environment we build in"], ["PARSER_REAL_PAGE_VERIFICATION_PENDING", "The parser has not yet been run against the real page"], ["PARSER_REAL_PAGE_VERIFIED", "`npm run probe:feed` succeeded outside a restricted environment and a person checked the result"]].map(([v, t]) => (
+            <label key={v} className="flex items-start gap-2 py-1"><input type="checkbox" name="verificationFlags" value={v} defaultChecked={src?.verificationFlags?.includes(v)} className="mt-1 size-5" /><span><span className="font-mono text-xs">{v}</span> <span className="text-mute">{t}</span></span></label>))}
+        </fieldset>
         <Field label="Notes"><textarea name="notes" defaultValue={src?.notes} className="field" /></Field>
         <button className="btn w-fit">Save source</button>
       </form>

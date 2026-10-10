@@ -7,6 +7,7 @@ import { one, pool, query } from "../src/lib/db";
 import { recordSourceContent, saveRestriction, listCandidates, parseOrderText } from "../src/lib/knowledge";
 import { getEvent } from "../src/lib/store";
 import { listChecks, runDueEventChecks, runRestrictionCheck } from "../src/lib/restriction-checks";
+import { assessReadiness } from "../src/lib/readiness-service";
 
 async function main() {
 const EV = "docs/acceptance/evidence", IMG = "docs/acceptance/images", BASE = "http://localhost:3101";
@@ -15,7 +16,7 @@ const event = (await getEvent(ev))!;
 const admin = { userId: (await one<{ id: string }>("SELECT id FROM users WHERE role='admin' LIMIT 1"))!.id };
 const feed = (await one<{ id: string; title: string }>("SELECT id, title FROM sources WHERE feed_role='LIVE_RESTRICTIONS'"))!;
 const out: Record<string, unknown> = {};
-const stamp = async (k: string, now = new Date()) => { const c = await runRestrictionCheck(event, "RECHECK", now); out[k] = c ? { status: c.status, message: c.message, pendingReview: c.pendingReview, feedLastCheckedAt: c.feedLastCheckedAt } : null; };
+const stamp = async (k: string, now = new Date()) => { const c = await runRestrictionCheck(event, "RECHECK", now); const r = (await assessReadiness(event)).readiness; out[k] = c ? { status: c.status, message: c.message, pendingReview: c.pendingReview, feedLastCheckedAt: c.feedLastCheckedAt, readiness: r.state, firstReason: r.reasons[0]?.text ?? null } : null; };
 
 await stamp("1-feed-never-checked");
 await recordSourceContent(feed.id, "Notifications\nOrder about office timings only."); // baseline: the feed has now been read
@@ -50,7 +51,8 @@ await query("UPDATE temporary_restrictions SET status='ARCHIVED' WHERE id=$1", [
 const rules = await query<{ id: string }>("SELECT unnest(rule_ids) AS id FROM event_evaluations WHERE event_id=$1 ORDER BY evaluated_at DESC LIMIT 100", [ev]);
 const latest = (await one<{ rule_ids: string[] }>("SELECT rule_ids FROM event_evaluations WHERE event_id=$1 ORDER BY evaluated_at DESC LIMIT 1", [ev]))!;
 for (const id of latest.rule_ids) await query("INSERT INTO event_requirements (event_id, rule_id, done) VALUES ($1,$2,true) ON CONFLICT (event_id, rule_id) DO UPDATE SET done=true", [ev, id]);
-await shot("51-dashboard-everything-ticked");
+out["5-restriction-archived-feed-fresh"] = { readiness: (await assessReadiness(event)).readiness.state };
+await shot("51-dashboard-restriction-cleared");
 writeFileSync(`${EV}/52-restriction-and-schedule-facts.json`, JSON.stringify(out, null, 1));
 console.log(JSON.stringify(out, null, 1));
 await b.close(); await pool().end();

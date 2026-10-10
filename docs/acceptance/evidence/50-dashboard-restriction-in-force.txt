@@ -10,11 +10,13 @@ TIME
 10:30–15:30
 LOCATION
 Jantar Mantar · Jantar Mantar, New Delhi, New Delhi District, NCT Delhi
-0%
+100%
 
-YOU'VE GOT WORK TO DO.
+NOT READY.
 
-Paperwork first. Megaphones later. 5 blockers to clear.
+A temporary restriction may conflict with your event: SYNTHETIC: Section 163 order, New Delhi District.
+
+THE NUMBER IS CHECKLIST PROGRESS, NOT PERMISSION.
 
 GENERATE MY PREPARATION PACK
 GET QUOTES
@@ -27,7 +29,9 @@ A temporary restriction may affect your event
 
 24 hours before · 2026-10-30 05:00 UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.
 
-Check history (11)
+Our automatic reading of this feed is not yet verified against the live page, so a person reviews every notification before it counts.
+
+Check history (14)
 
 DATE CONFLICT CHECK
 
@@ -56,40 +60,70 @@ Save your plan
 Create a free account to keep it safe and come back from any device.
 
 SAVE WITH AN ACCOUNT
-Your application
 
-Marked as submitted on 10 October 2026. If the crowd, speakers, purpose, route or nature of the event materially changes, re-confirm with the issuing authority.
+EVENT-DAY READINESS
 
-UNDO: I HAVEN’T APPLIED
-I’VE RECEIVED AN APPROVAL
+Not ready
+
+Not ready: A temporary restriction may conflict with your event: SYNTHETIC: Section 163 order, New Delhi District.
+
+BLOCKINGA temporary restriction may conflict with your event: SYNTHETIC: Section 163 order, New Delhi District.
+Next: Read the order, then confirm with the issuing authority.
+WARNINGYour permission records conditions. Check your plan against them.
+Next: Programme 10:30 to 15:30 only. Maximum 500 persons. Buses to park as directed at Jai Singh Road.
+
+Based on your recorded permission status, current restrictions, venue and date, and your critical items: never on the percentage.
+
+POLICE PERMISSION
+
+Approved
+
+Approved on 2026-10-09. Reference: PERM/NDD/2026/1182. Conditions: Programme 10:30 to 15:30 only. Maximum 500 persons. Buses to park as directed at Jai Singh Road.
+
+Only record what has actually happened. Ticking your checklist never marks permission as approved. If the crowd, speakers, purpose, route or nature of the event materially changes after you apply, re-confirm with the issuing authority.
+
+RECORD
+Choose what happened
+Withdrawn
+Expired
+RECORD STATUS
+History (3)
 EDIT PLAN DETAILS
-NEXT ACTION
-Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by 21 October 2026.
-Prior police permission
+
+SCHEDULED RECHECKS
+
+What we found at 72 and 24 hours before
+24 hours before · 2026-10-30 05:00 UTC · Not ready
+Permission: approved. A temporary restriction may conflict with your event: SYNTHETIC: Section 163 order, New Delhi District. Your permission records conditions. Check your plan against them.
+72 hours before · 2026-10-28 05:00 UTC · Not ready
+Permission: approved. A temporary restriction may conflict with your event: SYNTHETIC: Section 163 order, New Delhi District. Your permission records conditions. Check your plan against them.
+
+Each recheck looks at permission status, restrictions and feed freshness, the venue and date, changes to your plan, and unresolved critical items.
+
 Progress by category
 PERMISSIONS
 
-0 / 7
+7 / 7
 
-0 OF 7 COMPLETE
+7 OF 7 COMPLETE
 
 DOCUMENTS
 
-0 / 3
+3 / 3
 
-0 OF 3 COMPLETE
+3 OF 3 COMPLETE
 
 LOGISTICS
 
-0 / 7
+7 / 7
 
-0 OF 7 COMPLETE
+7 OF 7 COMPLETE
 
 SAFETY
 
-0 / 7
+7 / 7
 
-0 OF 7 COMPLETE
+7 OF 7 COMPLETE
 
 Timeline
 
@@ -107,286 +141,20 @@ EVENT DATE
 
 CRITICAL DEADLINES
 
-21 October 2026 — Apply at least 10 days ahead
+No fixed deadlines on file
+
+Ask the authority about notice periods. Dates appear here when a rule has one.
+
 What needs doing
 
 Based on currently configured local requirements for New Delhi District, NCT Delhi.
 
 Generated 10 October 2026 using rules verified on 1 October 2026.
 
-Critical
-5 · THESE BLOCK EVERYTHING ELSE.
-Prior police permission
-■
-CRITICAL
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
+Everything on your list is done
 
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3
+Verify details with the relevant authority before the day.
 
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Apply at least 10 days ahead
-■
-CRITICAL
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Organizer undertaking
-■
-CRITICAL
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Land-owner NOC
-■
-CRITICAL
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Traffic NOC for rallies, meetings and protest gatherings
-■
-CRITICAL
-REQUIRED
-· DELHI TRAFFIC POLICE — DCP (HEADQUARTERS)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Traffic Police — NOC for processions, rallies, meetings and morchas
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Required
-18 · EXPECTED FOR YOUR PLAN.
-Applications go to the DCP, New Delhi District
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(i), PDF page 3 (addressee DCP/NDD; the clause for the HAX Branch location is not separately recorded)
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Maximum 1,000 participants
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 5(i)-(ii)
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Protest window 10:00–17:00
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 9
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-No continuous multi-day programme
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-No tents, shamiana or temporary structures
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Maximum 25 protester buses
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 4(i), PDF page 4
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-GET QUOTES
-Designated parking only
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 4(ii), PDF page 4
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Prohibited vehicles and animals
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Banner, flag and stick size limits
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-GET QUOTES
-No weapons
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-No provocative or incendiary speech
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-No damage to property
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-No burning, cooking or littering
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-GET QUOTES
-Carry the original permission
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Name a police liaison
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Drinking water and first aid
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-GET QUOTES
-Volunteers and contact list
-▲
-REQUIRED
-REQUIRED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Annexure B, PDF pages 11–14
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-GET QUOTES
-Check for current Section 163 or other temporary orders
-▲
-REQUIRED
-RECOMMENDED
-
-Current · Official guidance · Last verified: 1 October 2026 · Delhi Police — Notifications (Section 163 BNSS orders) · Medium confidence. Please verify with the relevant authority.
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
-Recommended
-1 · NOT MANDATORY, BUT YOU'LL WANT THEM.
-First come, first served, subject to police assessment
-●
-RECOMMENDED
-RECOMMENDED
-· DCP, NEW DELHI DISTRICT (DELHI POLICE)
-
-Current · Primary source verified · Last verified: 1 October 2026 · Delhi Police Standing Order L&O/48/2022 — protests at Jantar Mantar, Section 3(ii) (first come, first served; assessment); Section 3(iii)-(vi) (DCP/NDD decision), PDF page 3
-
-TEMPORARY RESTRICTIONA temporary restriction may change this requirement. Please verify with the relevant authority.
-
-Details
+Done (24)
 
 BookMyProtest helps organizers understand and prepare for public-assembly requirements. Final permissions and approvals are issued solely by the relevant authorities.

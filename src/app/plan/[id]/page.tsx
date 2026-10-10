@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { acknowledgeChangesAction, markApplicationAction, markApprovalAction, recheckPlanAction } from "@/app/actions";
+import { acknowledgeChangesAction, recheckPlanAction } from "@/app/actions";
+import { one } from "@/lib/db";
+import { PermissionPanel } from "@/components/permission-panel";
+import { currentPermission, permissionHistory } from "@/lib/permissions";
+import { nextStatuses } from "@/lib/engine/permission";
+import { READINESS_LABEL } from "@/lib/engine/event-readiness";
+import { assessReadiness, listReadinessSnapshots } from "@/lib/readiness-service";
 import { Footer, TrustNote, Wordmark } from "@/components/chrome";
 import { Score, SubmitButton, Tracker } from "@/components/client";
 import { EmptyState } from "@/components/empty";
@@ -10,7 +16,7 @@ import { headline } from "@/lib/engine/readiness";
 import { addDays, isActionable, isWarning } from "@/lib/engine/evaluate";
 import { AvailabilityPanel } from "@/components/availability";
 import { venueAvailability } from "@/lib/venue-signals";
-import { RECONFIRM_ADVICE, applicationSubmittedAt, approvalRecordedAt, openChangeNotices } from "@/lib/event-changes";
+import { RECONFIRM_ADVICE, openChangeNotices } from "@/lib/event-changes";
 import { TRIGGER_LABEL } from "@/lib/engine/restriction-check";
 import { listChecks } from "@/lib/restriction-checks";
 import { PLANNING_BUFFER_DAYS, daysUntil, fillText, formatDate, loadPlan, LEVEL_LABEL } from "@/lib/plan";
@@ -31,9 +37,10 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
   const done = items.filter((i) => isActionable(i) && i.done);
   const notes = items.filter((i) => !isActionable(i) && !isWarning(i));
   const warnings = items.filter(isWarning);
-  const [checks, submittedAt, changeNotices] = await Promise.all([listChecks(event.id), applicationSubmittedAt(event.id), openChangeNotices(event.id)]);
+  const [checks, changeNotices, perm, permHistory, live, scheduled] = await Promise.all([listChecks(event.id), openChangeNotices(event.id), currentPermission(event.id), permissionHistory(event.id), assessReadiness(event), listReadinessSnapshots(event.id, true)]);
+  const readiness = live.readiness;
   const latestCheck = checks[0];
-  const approvedAt = await approvalRecordedAt(event.id);
+  const feedFlags: string[] = latestCheck?.feedSourceId ? ((await one<{ verification_flags: string[] }>("SELECT verification_flags FROM sources WHERE id=$1", [latestCheck.feedSourceId]))?.verification_flags ?? []) : [];
   const dateCheck = event.venueJurisdictionId ? await venueAvailability(event.venueJurisdictionId, event.date, a.startTime, a.endTime, { attendance: a.attendance, excludeEventId: event.id }) : null;
   const next = r.blockers[0] ?? r.required[0] ?? r.recommended[0];
   const target = addDays(event.date, -PLANNING_BUFFER_DAYS);
@@ -66,8 +73,9 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
             <div className="mt-8 grid items-end gap-6 md:grid-cols-[auto_1fr] md:gap-12">
               <Score value={r.pct} className="numeral rise text-[clamp(7.5rem,29vw,15rem)] text-accent" />
               <div className="rise pb-2 md:pb-5" style={{ "--i": 2 } as React.CSSProperties}>
-                <p className="display text-[clamp(1.9rem,5.6vw,3.9rem)]">{h.title}</p>
-                <p className="mt-3 text-lg text-paper/80">{h.sub}</p>
+                <p className="display text-[clamp(1.9rem,5.6vw,3.9rem)]" data-testid="readiness-state" data-state={readiness.state}>{READINESS_LABEL[readiness.state]}.</p>
+                <p className="mt-3 text-lg text-paper/80">{readiness.reasons[0]?.text ?? readiness.headline}</p>
+                <p className="label mt-2 text-paper/55">The number is checklist progress, not permission.</p>
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Link href={`/plan/${event.id}/pack`} className="btn btn-accent">Generate my preparation pack <Arrow /></Link>
                   <Link href={`/plan/${event.id}/vendors`} className="btn btn-ghost !border-paper/50 !text-paper hover:!bg-paper hover:!text-ink">Get quotes</Link>
@@ -103,6 +111,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
               <h2 id="live-h" className="heading mt-1 text-lg">{latestCheck.status === "RESTRICTIONS_APPLY" ? "A temporary restriction may affect your event" : latestCheck.status === "FEED_STALE" ? "We could not confirm the latest orders" : latestCheck.status === "REVIEW_PENDING" ? "New notifications are awaiting review" : "No restriction recorded for your date and place"}</h2>
               <p className="mt-1 text-mute">{latestCheck.message}</p>
               <p className="mt-1 text-sm text-mute">{TRIGGER_LABEL[latestCheck.trigger]} · {latestCheck.checkedAt.slice(0, 16).replace("T", " ")} UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.</p>
+              {feedFlags.includes("PARSER_REAL_PAGE_VERIFICATION_PENDING") && <p className="mt-1 text-sm text-mute">Our automatic reading of this feed is not yet verified against the live page, so a person reviews every notification before it counts.</p>}
               {checks.length > 1 && (
                 <details className="mt-2"><summary className="cursor-pointer text-sm underline">Check history ({checks.length})</summary>
                   <ul className="mt-2 text-sm">{checks.map((c) => <li key={c.id} className="border-t border-hair py-1">{c.checkedAt.slice(0, 16).replace("T", " ")} · {TRIGGER_LABEL[c.trigger]} · {c.status.replace(/_/g, " ").toLowerCase()}</li>)}</ul>
@@ -133,15 +142,36 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
             </aside>
           )}
 
-          <section className="panel p-5" aria-labelledby="app-h">
-            <h2 id="app-h" className="heading text-lg">Your application</h2>
-            <p className="mt-1 text-sm text-mute">{submittedAt ? `Marked as submitted on ${formatDate(submittedAt.slice(0, 10))}.` : "Mark it once you have applied, so we can warn you if a later change matters."} If the crowd, speakers, purpose, route or nature of the event materially changes, re-confirm with the issuing authority.</p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              <form action={markApplicationAction}><input type="hidden" name="eventId" value={event.id} /><input type="hidden" name="submitted" value={submittedAt ? "false" : "true"} /><SubmitButton className="btn btn-sm" pending="Saving…">{submittedAt ? "Undo: I haven’t applied" : "I’ve submitted my application"}</SubmitButton></form>
-              {submittedAt && <form action={markApprovalAction}><input type="hidden" name="eventId" value={event.id} /><input type="hidden" name="approved" value={approvedAt ? "false" : "true"} /><SubmitButton className="btn btn-sm btn-ghost" pending="Saving…">{approvedAt ? "Undo: approval not received" : "I’ve received an approval"}</SubmitButton></form>}
-              <Link href={`/plan/${event.id}/details`} className="btn btn-sm btn-ghost">Edit plan details</Link>
-            </div>
+          <section className="panel p-5" aria-labelledby="ready-h" data-testid="readiness-panel" data-state={readiness.state}>
+            <p className="label text-mute">Event-day readiness</p>
+            <h2 id="ready-h" className="heading mt-1 text-lg">{READINESS_LABEL[readiness.state]}</h2>
+            <p className="mt-1 text-mute">{readiness.headline}</p>
+            {readiness.reasons.length > 0 && (
+              <ul className="mt-3 divide-y divide-hair border-y border-hair text-sm">
+                {readiness.reasons.slice(0, 12).map((x, i) => (
+                  <li key={i} className="py-2"><span className={`chip mr-2 ${x.kind === "BLOCKING" ? "chip-critical" : x.kind === "UNKNOWN" ? "chip-required" : "chip-note"}`}>{x.kind === "BLOCKING" ? "Blocking" : x.kind === "UNKNOWN" ? "Cannot confirm" : "Warning"}</span>{x.text}{x.next && <span className="block text-mute">Next: {x.next}</span>}</li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-sm text-mute">Based on your recorded permission status, current restrictions, venue and date, and your critical items: never on the percentage.</p>
           </section>
+
+          <PermissionPanel eventId={event.id} current={perm} history={permHistory} next={nextStatuses(perm.status)} advice="If the crowd, speakers, purpose, route or nature of the event materially changes after you apply, re-confirm with the issuing authority." />
+          <div><Link href={`/plan/${event.id}/details`} className="btn btn-sm btn-ghost">Edit plan details</Link></div>
+
+          {scheduled.length > 0 && (
+            <section className="panel p-5" aria-labelledby="sched-h" data-testid="scheduled-rechecks">
+              <p className="label text-mute">Scheduled rechecks</p>
+              <h2 id="sched-h" className="heading mt-1 text-lg">What we found at 72 and 24 hours before</h2>
+              <ul className="mt-3 divide-y divide-hair border-y border-hair text-sm">
+                {scheduled.map((sn) => (
+                  <li key={sn.id} className="py-2"><span className="font-semibold">{sn.trigger === "T_72H" ? "72 hours before" : "24 hours before"}</span> · {sn.computedAt.slice(0, 16).replace("T", " ")} UTC · <span className="font-semibold">{READINESS_LABEL[sn.state]}</span>
+                    <span className="block text-mute">Permission: {String(sn.inputs.permissionStatus ?? "").replace(/_/g, " ").toLowerCase()}. {sn.reasons.slice(0, 3).map((x) => x.text).join(" ")}</span></li>
+                ))}
+              </ul>
+              <p className="mt-2 text-sm text-mute">Each recheck looks at permission status, restrictions and feed freshness, the venue and date, changes to your plan, and unresolved critical items.</p>
+            </section>
+          )}
 
           {next && (
             <section aria-labelledby="next-h">

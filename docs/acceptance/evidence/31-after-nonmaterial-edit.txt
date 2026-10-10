@@ -1,4 +1,4 @@
-URL: http://localhost:3101/plan/41cb6cfd-1392-4e25-8961-d1294e7129ae?updated=1
+URL: http://localhost:3101/plan/49d48c23-89e8-4fdb-83a3-7a3de333e445?updated=1
 
 BOOKMYPROTEST
 HOME
@@ -14,9 +14,11 @@ LOCATION
 Jantar Mantar · Jantar Mantar, New Delhi, New Delhi District, NCT Delhi
 0%
 
-YOU'VE GOT WORK TO DO.
+NOT READY.
 
-Paperwork first. Megaphones later. 5 blockers to clear.
+Police permission is not approved (status: Submitted). Your application is submitted; no approval has been recorded.
+
+THE NUMBER IS CHECKLIST PROGRESS, NOT PERMISSION.
 
 GENERATE MY PREPARATION PACK
 GET QUOTES
@@ -29,9 +31,11 @@ We could not confirm the latest orders
 
 We could not confirm the latest orders: the Delhi Police — Notifications (Section 163 BNSS orders) has not been checked yet. Please check it yourself before the event.
 
-Plan rechecked · 2026-10-10 11:51 UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.
+Plan rechecked · 2026-10-10 20:31 UTC. Checked again on recheck, when documents are generated, and 72 and 24 hours before the event.
 
-Check history (3)
+Our automatic reading of this feed is not yet verified against the live page, so a person reviews every notification before it counts.
+
+Check history (4)
 
 DATE CONFLICT CHECK
 
@@ -52,12 +56,51 @@ Save your plan
 Create a free account to keep it safe and come back from any device.
 
 SAVE WITH AN ACCOUNT
-Your application
 
-Marked as submitted on 10 October 2026. If the crowd, speakers, purpose, route or nature of the event materially changes, re-confirm with the issuing authority.
+EVENT-DAY READINESS
 
-UNDO: I HAVEN’T APPLIED
-I’VE RECEIVED AN APPROVAL
+Not ready
+
+Not ready: Police permission is not approved (status: Submitted). Your application is submitted; no approval has been recorded.
+
+BLOCKINGPolice permission is not approved (status: Submitted). Your application is submitted; no approval has been recorded.
+Next: Record the approval once you have the permission in hand.
+BLOCKINGCritical item not done: Apply at least 10 days ahead.
+Next: Work back from your event date and submit well before the deadline shown.
+BLOCKINGCritical item not done: Organizer undertaking.
+Next: Open the official Annexure B, gather the details it asks for, and sign it for your application.
+BLOCKINGCritical item not done: Land-owner NOC.
+Next: Plan for the NDMC land-owner NOC as a required enclosure and allow time to obtain it. The application channel is not verified: do not assume one.
+BLOCKINGCritical item not done: Traffic NOC for rallies, meetings and protest gatherings.
+Next: Contact DCP (Headquarters), Delhi Traffic Police HQ, Todapur, to apply.
+CANNOT CONFIRMWe could not confirm the latest orders: the restriction feed has not been checked recently.
+Next: Check the Delhi Police notifications yourself.
+WARNINGRequired item not done: Applications go to the DCP, New Delhi District.
+WARNINGRecommended item not done: First come, first served, subject to police assessment.
+WARNINGRequired item not done: Maximum 1,000 participants.
+WARNINGRequired item not done: Protest window 10:00–17:00.
+WARNINGRequired item not done: No continuous multi-day programme.
+WARNINGRequired item not done: No tents, shamiana or temporary structures.
+
+Based on your recorded permission status, current restrictions, venue and date, and your critical items: never on the percentage.
+
+POLICE PERMISSION
+
+Submitted
+
+Recorded 2026-10-10 20:31. In person. Reference: DIARY/001.
+
+Only record what has actually happened. Ticking your checklist never marks permission as approved. If the crowd, speakers, purpose, route or nature of the event materially changes after you apply, re-confirm with the issuing authority.
+
+RECORD
+Choose what happened
+Acknowledged
+Approved
+Rejected
+Withdrawn
+Expired
+Application prepared
+RECORD STATUS
 EDIT PLAN DETAILS
 NEXT ACTION
 Submit your Jantar Mantar permission application to the HAX Branch, DCP/New Delhi District, by 21 October 2026.

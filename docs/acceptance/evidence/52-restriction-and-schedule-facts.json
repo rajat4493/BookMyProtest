@@ -3,36 +3,44 @@
   "status": "FEED_STALE",
   "message": "We could not confirm the latest orders: the Delhi Police — Notifications (Section 163 BNSS orders) has not been checked yet. Please check it yourself before the event.",
   "pendingReview": 0,
-  "feedLastCheckedAt": null
+  "feedLastCheckedAt": null,
+  "readiness": "STATUS_UNKNOWN",
+  "firstReason": "We could not confirm the latest orders: the restriction feed has not been checked recently."
  },
  "2-feed-checked-nothing-recorded": {
   "status": "NO_RESTRICTION_RECORDED",
-  "message": "No temporary restriction is recorded for your date and place as of 2026-10-10 11:52 UTC, based on the Delhi Police — Notifications (Section 163 BNSS orders) (last checked 2026-10-10 11:52 UTC). New orders can be issued at short notice: check again before the event.",
+  "message": "No temporary restriction is recorded for your date and place as of 2026-10-10 20:32 UTC, based on the Delhi Police — Notifications (Section 163 BNSS orders) (last checked 2026-10-10 20:32 UTC). New orders can be issued at short notice: check again before the event.",
   "pendingReview": 0,
-  "feedLastCheckedAt": "2026-10-10T11:52:12.912Z"
+  "feedLastCheckedAt": "2026-10-10T20:32:13.945Z",
+  "readiness": "READY_WITH_WARNINGS",
+  "firstReason": "Your permission records conditions. Check your plan against them."
  },
  "3-unreviewed-notification-exists": {
   "status": "REVIEW_PENDING",
   "message": "No temporary restriction is recorded for your date and place, but 1 new notification is awaiting review. Please check the Delhi Police — Notifications (Section 163 BNSS orders) yourself.",
   "pendingReview": 1,
-  "feedLastCheckedAt": "2026-10-10T11:52:12.912Z"
+  "feedLastCheckedAt": "2026-10-10T20:32:13.945Z",
+  "readiness": "STATUS_UNKNOWN",
+  "firstReason": "New notifications are awaiting review, so we cannot say whether a restriction applies."
  },
  "4-restriction-found": {
   "status": "RESTRICTIONS_APPLY",
   "message": "1 temporary restriction may affect your event: SYNTHETIC: Section 163 order, New Delhi District. Please verify with the relevant authority.",
   "pendingReview": 0,
-  "feedLastCheckedAt": "2026-10-10T11:52:12.912Z"
+  "feedLastCheckedAt": "2026-10-10T20:32:13.945Z",
+  "readiness": "NOT_READY",
+  "firstReason": "A temporary restriction may conflict with your event: SYNTHETIC: Section 163 order, New Delhi District."
  },
  "t72": [
   {
-   "eventId": "41cb6cfd-1392-4e25-8961-d1294e7129ae",
+   "eventId": "49d48c23-89e8-4fdb-83a3-7a3de333e445",
    "trigger": "T_72H",
    "recorded": true
   }
  ],
  "t24": [
   {
-   "eventId": "41cb6cfd-1392-4e25-8961-d1294e7129ae",
+   "eventId": "49d48c23-89e8-4fdb-83a3-7a3de333e445",
    "trigger": "T_24H",
    "recorded": true
   }
@@ -47,7 +55,13 @@
   "RECHECK FEED_STALE",
   "RECHECK FEED_STALE",
   "RECHECK FEED_STALE",
+  "RECHECK FEED_STALE",
+  "RECHECK FEED_STALE",
+  "RECHECK FEED_STALE",
   "DOCUMENT_GENERATION FEED_STALE",
   "PLAN_GENERATED FEED_STALE"
- ]
+ ],
+ "5-restriction-archived-feed-fresh": {
+  "readiness": "READY_WITH_WARNINGS"
+ }
 }

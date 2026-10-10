@@ -1,5 +1,6 @@
 // v0.8.0 venue date-conflict journeys through the real UI. App on the Delhi test DB, admin from .env.local: BASE=http://localhost:3101 node scripts/e2e-venues.mjs
 import { chromium } from "playwright-core";
+import { submitApplication } from "./ui-helpers.mjs";
 import { mkdirSync, readdirSync, readFileSync, existsSync } from "node:fs";
 for (const f of [".env.local"]) if (existsSync(f)) for (const line of readFileSync(f, "utf8").split("\n")) { const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2]; }
 const BASE = process.env.BASE ?? "http://localhost:3101";
@@ -102,7 +103,7 @@ async function plan(venue) {
   await u.getByRole("button", { name: /show my readiness/i }).click(); await u.waitForURL(/\/plan\/[0-9a-f-]{36}$/); await settle(u);
 }
 await plan("Jantar Mantar");
-await u.getByRole("button", { name: /I.ve submitted my application/ }).click(); await settle(u);
+await submitApplication(u);
 const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 } }); const u2 = await ctx2.newPage();
 await u2.goto(BASE + "/plan"); await settle(u2);
 await u2.selectOption("#city", { label: "New Delhi District, NCT Delhi" }); await u2.locator("#venue").waitFor(); await u2.selectOption("#venue", { label: "Jantar Mantar" });
