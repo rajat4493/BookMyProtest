@@ -539,7 +539,12 @@ export async function listRestrictions(chain?: string[]): Promise<TemporaryRestr
 export type RestrictionInput = Omit<TemporaryRestriction, "id">;
 export async function saveRestriction(id: string | null, i: RestrictionInput, actor: Actor): Promise<string> {
   assertHuman(actor);
-  if (i.status === "ACTIVE" && !i.sourceId) throw new Error("An active restriction needs a source.");
+  if (i.status === "ACTIVE") {
+    // A restriction taken from a feed is its own piece of evidence: it must carry its own order number, legal basis and source text before it can bind anyone.
+    if (!i.sourceId) throw new Error("An active restriction needs a source.");
+    const lacking = [!(i.orderReference ?? "").trim() && "order number", !i.legalBasis.trim() && "legal basis", !(i.sourceExcerpt ?? "").trim() && "supporting excerpt from the order"].filter(Boolean);
+    if (lacking.length) throw new Error(`An active restriction needs its own ${lacking.join(", ")}.`);
+  }
   const p = [i.jurisdictionId, i.title, i.geographicScope, i.startsAt, i.endsAt, i.legalBasis, i.affectedActivities, i.effect, i.plainExplanation, i.sourceId, i.status, i.issuingAuthority ?? "", i.orderDate ?? null, i.orderReference ?? "", i.sourceExcerpt ?? ""];
   return tx(async (q) => {
     let rid = id;

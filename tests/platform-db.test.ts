@@ -215,7 +215,7 @@ describe("temporary restrictions through the stack", () => {
   it("is stored per jurisdiction and applies to events in its window", async () => {
     await liveRule({ condition: { all: [{ field: "sound", op: "eq", value: true }], any: [] } });
     const src = await officialSource("Public order notification", { sourceType: "OFFICIAL_ADMINISTRATIVE_RULE", canonicalUrl: "https://example.org/notice" });
-    await saveRestriction(null, { jurisdictionId: region, title: "Temporary order", geographicScope: "Central district", startsAt: "2026-11-30T00:00:00Z", endsAt: "2026-12-02T00:00:00Z", legalBasis: "Test order 1", affectedActivities: ["SOUND"], effect: "PROHIBITED", plainExplanation: "No amplified sound", sourceId: src, status: "ACTIVE" }, admin);
+    await saveRestriction(null, { jurisdictionId: region, title: "Temporary order", geographicScope: "Central district", startsAt: "2026-11-30T00:00:00Z", endsAt: "2026-12-02T00:00:00Z", legalBasis: "Test order 1", affectedActivities: ["SOUND"], effect: "PROHIBITED", plainExplanation: "No amplified sound", sourceId: src, orderReference: "55/Ord/2026", sourceExcerpt: "Order under Section 163 BNSS prohibiting assembly (test excerpt)", status: "ACTIVE" }, admin);
     const ans = { ...baseAnswers, sound: true };
     expect((await applicableFor([country, region, city], "2026-12-01", ans)).overlays).toHaveLength(1);
     expect((await applicableFor([country, region, city], "2026-12-05", ans)).overlays).toHaveLength(0);

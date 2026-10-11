@@ -25,21 +25,21 @@ async function main() {
     gate("0 Engineering baseline", r.status === 0 ? "PASS" : "FAIL:ENGINEERING", [tail || "vitest produced no summary"]);
   } else gate("0 Engineering baseline", "PASS", ["not run (pass --with-tests to run the suite)"]);
 
-  // 1. Real notifications-feed probe
+  // 1. Real notifications-feed probe (live-feed evidence class: official feed URL, SOURCE_VERIFIED, PARSER_REAL_PAGE_VERIFIED, a successful retrieval; plus the saved real page)
   {
+    const { feedEvidence } = await import("../src/lib/rule-verification");
     const d: string[] = []; let ok = true;
-    const feed = await one<{ id: string; title: string; verification_flags: string[] }>("SELECT id, title, verification_flags FROM sources WHERE feed_role='LIVE_RESTRICTIONS' AND active ORDER BY created_at LIMIT 1");
+    const feed = await one<{ id: string }>("SELECT id FROM sources WHERE feed_role='LIVE_RESTRICTIONS' AND active ORDER BY created_at LIMIT 1");
     const fixture = "tests/fixtures/live/notifications.txt";
     if (!feed) { ok = false; d.push("no live-restriction feed source in this database"); }
+    else { const ev = await feedEvidence(feed.id); for (const m of ev?.missing ?? []) { ok = false; d.push(`missing ${m}`); } for (const n of ev?.notes.filter((x) => /^latest/.test(x)) ?? []) d.push(n); }
     if (!existsSync(fixture) || readFileSync(fixture, "utf8").trim().length < 200) { ok = false; d.push(`${fixture} is missing or empty: \`npm run probe:feed\` has not been run from a network that can reach the site`); }
-    if (feed && !feed.verification_flags.includes("PARSER_REAL_PAGE_VERIFIED")) { ok = false; d.push(`source flags are [${feed.verification_flags.join(", ")}]: PARSER_REAL_PAGE_VERIFIED has not been recorded by a person`); }
-    if (feed && feed.verification_flags.includes("PARSER_REAL_PAGE_VERIFICATION_PENDING") && feed.verification_flags.includes("PARSER_REAL_PAGE_VERIFIED")) { ok = false; d.push("both PENDING and VERIFIED are set: clear PENDING"); }
-    gate("1 Real notifications-feed probe", ok ? "PASS" : "BLOCKED:OWNER", d.length ? d : ["fixture present, parser flag recorded"]);
+    gate("1 Real notifications-feed probe", ok ? "PASS" : "BLOCKED:OWNER", d.length ? d : ["fixture present, feed evidence complete"]);
   }
 
-  // 2. Delhi rules: every rule not held for review is ACTIVE, and every ACTIVE one passes the verification gate
+  // 2. Delhi rules: every rule not held for review is ACTIVE, and every ACTIVE one passes the evidence gate FOR ITS OWN SOURCE TYPE
   {
-    const { verificationReport } = await import("../src/lib/rule-verification");
+    const { verificationReport, EVIDENCE_CLASS_LABEL } = await import("../src/lib/rule-verification");
     const { RULES } = await import("../data/delhi/corpus");
     const held = new Set(RULES.filter((r) => r.holdForReview).map((r) => r.family));
     const report = await verificationReport("DEL-");
@@ -50,13 +50,20 @@ async function main() {
     const notActive = expected.filter((f) => !active.has(f));
     if (notActive.length) { ok = false; d.push(`${notActive.length} of ${expected.length} launch rules are not ACTIVE`); }
     const unverified = report.filter((r) => r.status === "ACTIVE" && !r.ready);
-    if (unverified.length) { ok = false; d.push(`${unverified.length} ACTIVE rule(s) fail the verification gate (no section reference + excerpt recorded): ${unverified.slice(0, 5).map((r) => r.family).join(", ")}${unverified.length > 5 ? "…" : ""}`); }
+    if (unverified.length) ok = false;
     const heldActive = report.filter((r) => held.has(r.family) && r.status === "ACTIVE");
     if (heldActive.length) { ok = false; d.push(`held-for-review rule(s) are ACTIVE: ${heldActive.map((r) => r.family).join(", ")}`); }
     const live = await one<{ supported: boolean }>("SELECT supported FROM jurisdictions WHERE name ILIKE 'New Delhi District' LIMIT 1");
     d.push(`New Delhi District selectable in the planner: ${live?.supported ? "yes" : "no"} (going live is a separate owner decision this check does not make)`);
-    const missing = report.filter((r) => r.status !== "ACTIVE" && !held.has(r.family)).map((r) => `${r.family}: ${r.missing.join("; ")}`);
-    if (missing.length) d.push(`first unpublished: ${missing.slice(0, 3).join(" || ")}${missing.length > 3 ? ` (+${missing.length - 3} more; run \`npm run delhi:verify-gate\`)` : ""}`);
+    const open = report.filter((r) => !held.has(r.family) && !(r.status === "ACTIVE" && r.ready));
+    for (const cls of ["CLAUSE_INSTRUMENT", "OFFICIAL_WEBPAGE", "LIVE_FEED"] as const) {
+      const rs = open.filter((r) => r.evidenceClass === cls);
+      if (rs.length) d.push(`${EVIDENCE_CLASS_LABEL[cls]}: ${rs.length} rule(s) missing evidence: ${rs.slice(0, 4).map((r) => r.family).join(", ")}${rs.length > 4 ? "…" : ""}`);
+    }
+    const noClass = open.filter((r) => !r.evidenceClass);
+    if (noClass.length) d.push(`no official source at all: ${noClass.map((r) => r.family).join(", ")}`);
+    for (const f of ["DEL-TRAFFIC-001", "DEL-LIVE-001"]) { const r = report.find((x) => x.family === f); if (r && !r.ready) d.push(`${f} [${r.status}] still missing: ${r.missing.map((m) => m.replace(/^[^:]+: missing /, "")).join("; ")}`); }
+    d.push("run `npm run delhi:verify-gate` for every rule's exact missing evidence");
     gate("2 Delhi rules verified and published", ok ? "PASS" : "BLOCKED:OWNER", d);
   }
 

@@ -138,7 +138,7 @@ describe("live-restriction checks", () => {
 
     const [cand] = await listCandidates("PENDING");
     const rid = await acceptCandidate(cand.id, { jurisdictionId: district, title: "Order 55/Ord/2026", geographicScope: "", startsAt: "2026-12-08T00:00:00Z", endsAt: "2026-12-12T23:59:00Z", legalBasis: "Section 163 BNSS", affectedActivities: ["ASSEMBLY"], effect: "PROHIBITED", plainExplanation: "", issuingAuthority: "CP Delhi", orderDate: "2026-12-05", orderReference: "55" }, actor);
-    await saveRestriction(rid, { jurisdictionId: district, title: "Order 55/Ord/2026", geographicScope: "", startsAt: "2026-12-08T00:00:00Z", endsAt: "2026-12-12T23:59:00Z", legalBasis: "Section 163 BNSS", affectedActivities: ["ASSEMBLY"], effect: "PROHIBITED", plainExplanation: "", sourceId: feedId, status: "ACTIVE" }, actor);
+    await saveRestriction(rid, { jurisdictionId: district, title: "Order 55/Ord/2026", geographicScope: "", startsAt: "2026-12-08T00:00:00Z", endsAt: "2026-12-12T23:59:00Z", legalBasis: "Section 163 BNSS", affectedActivities: ["ASSEMBLY"], effect: "PROHIBITED", plainExplanation: "", sourceId: feedId, orderReference: "55/Ord/2026", sourceExcerpt: "Order under Section 163 BNSS prohibiting assembly (test excerpt)", status: "ACTIVE" }, actor);
     const hit = (await runRestrictionCheck(ev, "RECHECK"))!;
     expect(hit.status).toBe("RESTRICTIONS_APPLY");
     expect(hit.overlayIds).toEqual([rid]);

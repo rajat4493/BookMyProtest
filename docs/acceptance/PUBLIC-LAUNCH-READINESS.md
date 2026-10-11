@@ -41,18 +41,29 @@ Why blocked: the build environment's egress policy returns 403 for `delhipolice.
 - [ ] (Engineering, only if wrong) If any field is mis-parsed, fix `order-parser.ts` against the saved page, keep the fixture, make `tests/notifications-feed.test.ts` hold the parser to it. Then the owner repeats the probe.
 - [ ] (Owner) Commit `tests/fixtures/live/notifications.txt` to the candidate branch.
 - [ ] (Owner) In Admin → Sources → the live-restrictions feed: remove `PARSER_REAL_PAGE_VERIFICATION_PENDING`, add `PARSER_REAL_PAGE_VERIFIED`. A person records this; code does not.
-- Pass condition (`rc:check`): fixture present and non-trivial, source has `PARSER_REAL_PAGE_VERIFIED`, `PENDING` cleared.
+- Pass condition (`rc:check`): the feed source meets the live-feed class (URL, `SOURCE_VERIFIED`, `PARSER_REAL_PAGE_VERIFIED`, `PENDING` cleared, a successful retrieval recorded) and the fixture is present and non-trivial. The retrieval timestamp is recorded when the feed is fetched or the real page text is pasted into Admin → Sources.
 
 ### 3.2 Gate 2: Delhi rules verified and published (OWNER / designated reviewer)
-Why blocked: 0 of 38 unpublished rules pass the verification gate. The corpus records no section reference or excerpt for the Standing Order, whose PDF has never been readable from the build environment. A load date is not verification.
+The verification gate is **source-type-aware** (evidence strength appropriate to the source, not a statute-shaped schema). The class is taken from the rule's source link, not from the rule:
+
+| Evidence class | Source types | A rule passes only with |
+|---|---|---|
+| Clause-based instrument | `PRIMARY_LAW`, `BINDING_CASE_LAW`, `OFFICIAL_ADMINISTRATIVE_RULE` | canonical https URL · verified date · section/page/clause reference · supporting excerpt |
+| Official webpage / current practice | `OFFICIAL_CURRENT_PRACTICE` (no feed role) | canonical official https URL · page title · supporting excerpt · retrieved/verified date. A heading/section identifier is noted if present; a statutory section number is **not** required |
+| Live feed / regulatory watch | any source with the live-restriction feed role | canonical official feed URL · `SOURCE_VERIFIED` · `PARSER_REAL_PAGE_VERIFIED` (and `…_PENDING` cleared) · a successful retrieval timestamp (a FETCH_FAILED snapshot does not count). No legal section reference is required |
+
+Individual restrictions extracted from a feed keep their own evidence: an ACTIVE restriction now requires its own **order number, legal basis and supporting excerpt** plus a source (drafts are unaffected). A load date alone never counts; a verified date is necessary, not sufficient. The page title is read from the source record and cannot be machine-confirmed against the live page; the verbatim excerpt is the part only a reader can supply.
+
+Current state (dev database, read-only run): 0 of 38 unpublished rules pass. For the 47 clause-instrument links in the Delhi corpus, 24 already record a clause reference (from the owner's primary-source review) and **none records an excerpt**; 23 record neither. (The earlier "no section reference and excerpt" wording over-stated the gap for the 24.)
 
 - [ ] (Owner) Obtain the instruments (L&O/48/2022 PDF at the corpus URL; the L&O/10/2022 document is not yet recovered, so its clause rules stay held).
-- [ ] (Reviewer) For each rule, read the instrument and record **section reference + excerpt** on its PRIMARY source link (Admin → Rules → the rule → sources). If the instrument does not say it, the rule does not publish; correct or archive it.
-- [ ] (Owner) `npm run delhi:verify-gate` (report) and review every HOLD reason.
-- [ ] (Owner) `npm run delhi:verify-gate -- --publish` as the named admin (`ADMIN_EMAIL`). Publishes only rules that pass; the rest stay DRAFT.
-- [ ] (Owner) **Decide the two already-active pointer rules** `DEL-LIVE-001` (check current Section 163 orders; cites the notifications page) and `DEL-TRAFFIC-001` (Traffic NOC; cites the Traffic Police page). They were activated earlier by the loader and fail the new gate because they have no section/excerpt. Either record the page section and excerpt (DEL-LIVE-001's evidence is only meaningful after Gate 1), or archive them. Engineering will not relax the gate to make them pass.
+- [ ] (Reviewer) Clause rules: read the instrument; record the **reference** (where missing) and a verbatim **excerpt** on the PRIMARY source link (Admin → Rules → the rule → sources). If the instrument does not say it, the rule does not publish; correct or archive it.
+- [ ] (Reviewer) **DEL-TRAFFIC-001** (official webpage, ACTIVE): the only evidence still missing is the **verbatim excerpt** from the Traffic Police page (`traffic.delhipolice.gov.in/node/80`). The URL, title and dates are recorded; no section number is needed. The page could not be fetched from the build environment.
+- [ ] (Owner) **DEL-LIVE-001** (live-feed monitoring requirement, ACTIVE): `SOURCE_VERIFIED` is recorded; still missing **`PARSER_REAL_PAGE_VERIFIED`** and a **successful retrieval timestamp**. Both come from Gate 1; no section or excerpt is wanted for this rule.
+- [ ] (Owner) `npm run delhi:verify-gate` (report; prints each rule's evidence class and exactly what is missing), review every HOLD reason.
+- [ ] (Owner) `npm run delhi:verify-gate -- --publish` as the named admin (`ADMIN_EMAIL`). Publishes only rules that pass for their own source type; the rest stay DRAFT.
 - [ ] (Owner) Decide separately whether to make New Delhi District selectable (`db:load-delhi -- --go-live`). This check never does it.
-- Pass condition: every non-held launch rule ACTIVE; no ACTIVE rule failing the gate; no held-for-review rule ACTIVE.
+- Pass condition: every non-held launch rule ACTIVE; no ACTIVE rule failing the evidence gate for its own source type; no held-for-review rule ACTIVE.
 
 ### 3.3 Gate 3: email delivery (OWNER, then ENGINEERING on failure)
 Why blocked: no provider is configured; confirmation links are written to `email_outbox` and not sent, so on a real deployment nobody can publish or have support counted.

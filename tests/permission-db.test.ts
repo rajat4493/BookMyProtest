@@ -106,7 +106,7 @@ describe("event-day readiness on the Jantar Mantar / 500 plan", () => {
     expect(ready.state).toBe("READY");
     expect(ready.reasons).toEqual([]);
 
-    const rid = await saveRestriction(null, { jurisdictionId: district, title: "Section 163 order (test)", geographicScope: "", startsAt: "2026-12-08T00:00:00Z", endsAt: "2026-12-12T23:59:00Z", legalBasis: "Section 163 BNSS", affectedActivities: ["ASSEMBLY"], effect: "PROHIBITED", plainExplanation: "", sourceId: feed, status: "ACTIVE" }, actor);
+    const rid = await saveRestriction(null, { jurisdictionId: district, title: "Section 163 order (test)", geographicScope: "", startsAt: "2026-12-08T00:00:00Z", endsAt: "2026-12-12T23:59:00Z", legalBasis: "Section 163 BNSS", affectedActivities: ["ASSEMBLY"], effect: "PROHIBITED", plainExplanation: "", sourceId: feed, orderReference: "55/Ord/2026", sourceExcerpt: "Order under Section 163 BNSS prohibiting assembly (test excerpt)", status: "ACTIVE" }, actor);
     const blocked = await state(e);
     expect(blocked.state).toBe("NOT_READY");
     expect(blocked.reasons.map((x) => x.code)).toContain("RESTRICTION");
@@ -171,7 +171,7 @@ describe("T-72h / T-24h rechecks are persisted and shown", () => {
   it("the recheck sees an active restriction, a pending notification and a venue conflict that arrived since the plan was made", async () => {
     const e = await jmEvent();
     await recordSourceContent(feed, "Notifications\nnothing of note");
-    await saveRestriction(null, { jurisdictionId: district, title: "Order X", geographicScope: "", startsAt: "2026-12-08T00:00:00Z", endsAt: "2026-12-12T23:59:00Z", legalBasis: "", affectedActivities: ["ASSEMBLY"], effect: "PROHIBITED", plainExplanation: "", sourceId: feed, status: "ACTIVE" }, actor);
+    await saveRestriction(null, { jurisdictionId: district, title: "Order X", geographicScope: "", startsAt: "2026-12-08T00:00:00Z", endsAt: "2026-12-12T23:59:00Z", legalBasis: "Section 163 BNSS", affectedActivities: ["ASSEMBLY"], effect: "PROHIBITED", plainExplanation: "", sourceId: feed, orderReference: "55/Ord/2026", sourceExcerpt: "Order under Section 163 BNSS prohibiting assembly (test excerpt)", status: "ACTIVE" }, actor);
     await query("UPDATE sources SET last_checked_at=$2 WHERE id=$1", [feed, new Date(T.t72.getTime() - 3_600_000)]);
     await runDueEventChecks(T.t72);
     const [s] = await listReadinessSnapshots(e.id, true);

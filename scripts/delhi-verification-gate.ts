@@ -12,8 +12,8 @@ async function main() {
   const report = await verificationReport("DEL-");
   const ready = report.filter((r) => r.ready && r.status !== "ACTIVE"), held = report.filter((r) => !r.ready && r.status !== "ACTIVE");
   console.log(`Delhi rules: ${report.length} total · ${report.filter((r) => r.status === "ACTIVE").length} active · ${ready.length} verification complete (not yet published) · ${held.length} not ready`);
-  for (const r of held) console.log(`  HOLD ${r.family} [${r.status}] ${r.title}\n       - ${r.missing.join("\n       - ")}`);
-  for (const r of ready) console.log(`  READY ${r.family} ${r.title}`);
+  for (const r of held) console.log(`  HOLD ${r.family} [${r.status}] ${r.title}  (${r.evidenceClass ?? "no official source"})\n       - ${r.missing.join("\n       - ")}`);
+  for (const r of ready) console.log(`  READY ${r.family} (${r.evidenceClass}) ${r.title}`);
   if (publish) {
     const email = (process.env.ADMIN_EMAIL ?? "").toLowerCase();
     const admin = await one<{ id: string }>("SELECT id FROM users WHERE email=$1 AND role='admin'", [email]);
