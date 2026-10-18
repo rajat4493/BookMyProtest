@@ -279,12 +279,15 @@ export const ANALYTICS_EVENTS = [
   // v1.0 public launch events. Dimensions are city, state, category, date, organizer type, visibility, permission status and support type: never ideology.
   "PROTEST_PLAN_STARTED", "PROTEST_PLAN_COMPLETED", "PUBLIC_PAGE_CREATED", "PUBLIC_PAGE_PUBLISHED", "PUBLIC_PAGE_VIEWED", "PROTEST_FOLLOWED", "PROTEST_INTERESTED", "PROTEST_ATTEND_INTENT",
   "PROTEST_SHARED", "TOOLKIT_GENERATED", "SUPPORT_ACTION_CLICKED", "OFFICIAL_LINK_CLICKED",
+  // v1.1 (behind feature flags). Same dimensions as above: place and subject area only, never ideology or identity.
+  "ISSUE_VIEWED", "ISSUE_SEARCHED", "ISSUE_FOLLOWED", "ISSUE_SUGGESTED", "CAMPAIGN_CREATED", "CAMPAIGN_PUBLISHED", "CAMPAIGN_VIEWED", "CAMPAIGN_FOLLOWED", "CAMPAIGN_INTERESTED", "ACTION_INTENDED", "ACTION_SELF_REPORTED",
 ] as const;
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
 
 /** Dimensions the v1.0 public events may carry. Anything else is dropped: there is no field for ideology, identity or affiliation. */
 export const PUBLIC_EVENT_PROP_KEYS = ["city", "state", "category", "date", "organizerType", "visibility", "permissionStatus", "supportType"] as const;
-const PUBLIC_EVENTS = new Set<string>(["PROTEST_PLAN_STARTED", "PROTEST_PLAN_COMPLETED", "PUBLIC_PAGE_CREATED", "PUBLIC_PAGE_PUBLISHED", "PUBLIC_PAGE_VIEWED", "PROTEST_FOLLOWED", "PROTEST_INTERESTED", "PROTEST_ATTEND_INTENT", "PROTEST_SHARED", "TOOLKIT_GENERATED", "SUPPORT_ACTION_CLICKED", "OFFICIAL_LINK_CLICKED"]);
+const PUBLIC_EVENTS = new Set<string>(["PROTEST_PLAN_STARTED", "PROTEST_PLAN_COMPLETED", "PUBLIC_PAGE_CREATED", "PUBLIC_PAGE_PUBLISHED", "PUBLIC_PAGE_VIEWED", "PROTEST_FOLLOWED", "PROTEST_INTERESTED", "PROTEST_ATTEND_INTENT", "PROTEST_SHARED", "TOOLKIT_GENERATED", "SUPPORT_ACTION_CLICKED", "OFFICIAL_LINK_CLICKED",
+  "ISSUE_VIEWED", "ISSUE_SEARCHED", "ISSUE_FOLLOWED", "ISSUE_SUGGESTED", "CAMPAIGN_CREATED", "CAMPAIGN_PUBLISHED", "CAMPAIGN_VIEWED", "CAMPAIGN_FOLLOWED", "CAMPAIGN_INTERESTED", "ACTION_INTENDED", "ACTION_SELF_REPORTED"]);
 export function sanitizeProps(name: string, props: Record<string, unknown>): Record<string, unknown> {
   if (!PUBLIC_EVENTS.has(name)) return props;
   return Object.fromEntries(Object.entries(props).filter(([k, v]) => (PUBLIC_EVENT_PROP_KEYS as readonly string[]).includes(k) && (typeof v === "string" || typeof v === "number" || typeof v === "boolean")).map(([k, v]) => [k, typeof v === "string" ? v.slice(0, 80) : v]));

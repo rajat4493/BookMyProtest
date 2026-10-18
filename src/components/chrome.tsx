@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
+import { findYourHillEnabled, hitWhereItHurtsEnabled } from "@/lib/flags";
 
 export function Wordmark({ invert = false }: { invert?: boolean }) {
   return (
@@ -15,7 +16,10 @@ export async function Header({ invert = false }: { invert?: boolean }) {
     <header className={`relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-8 ${invert ? "on-ink text-paper" : ""}`}>
       <Wordmark invert={invert} />
       <nav className="flex items-center gap-4 label" aria-label="Main">
+        {findYourHillEnabled() && <Link href="/issues" className="underline-offset-4 hover:underline">Find Your Hill</Link>}
         <Link href="/protests" className="underline-offset-4 hover:underline">Discover</Link>
+        {hitWhereItHurtsEnabled() && <Link href="/actions" className="underline-offset-4 hover:underline">Digital Actions</Link>}
+        {user && (findYourHillEnabled() || hitWhereItHurtsEnabled()) && <Link href="/activity" className="underline-offset-4 hover:underline">My Activity</Link>}
         {user ? (
           <>
             {user.role === "admin" && <Link href="/admin" className="underline-offset-4 hover:underline">Admin</Link>}

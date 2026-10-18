@@ -2,7 +2,7 @@
  * Provenance: where a publicly shown fact comes from. Pure.
  * An organizer's claim is never presented as BookMyProtest-verified; a calculated date always says what it was calculated from.
  */
-export const PROVENANCE_CLASSES = ["ORGANIZER_PROVIDED", "BOOKMYPROTEST_SOURCE_CHECKED", "OFFICIAL_SOURCE_LINK", "SYSTEM_DERIVED", "UNKNOWN"] as const;
+export const PROVENANCE_CLASSES = ["ORGANIZER_PROVIDED", "BOOKMYPROTEST_SOURCE_CHECKED", "OFFICIAL_SOURCE_LINK", "EXTERNAL_SOURCE_LINK", "SYSTEM_DERIVED", "UNKNOWN"] as const;
 export type ProvenanceClass = (typeof PROVENANCE_CLASSES)[number];
 
 export interface Provenance {
@@ -28,6 +28,7 @@ export function provenanceLabel(p: Provenance): string {
     case "ORGANIZER_PROVIDED": return `${p.reported ? "Reported by organizer" : "Provided by organizer"}${when ? ` · updated ${when}` : ""}`;
     case "BOOKMYPROTEST_SOURCE_CHECKED": return `Official information checked on ${when || "an earlier date"}${p.source ? ` · ${p.source.title}${p.source.section ? `, ${p.source.section}` : ""}` : ""}`;
     case "OFFICIAL_SOURCE_LINK": return `Link to official source${p.source ? ` · ${p.source.title}` : ""}`;
+    case "EXTERNAL_SOURCE_LINK": return `Link to independent source${p.source ? ` · ${p.source.title}` : ""}`;
     case "SYSTEM_DERIVED": return `Calculated${p.source ? ` from ${p.source.title}${p.source.section ? `, ${p.source.section}` : ""}` : " by BookMyProtest"}`;
     default: return "Source not stated";
   }

@@ -14,6 +14,9 @@ import { provenanceLabel } from "@/lib/engine/provenance";
 import { MODERATION_REASONS, SUPPORT_KIND_LABEL, SUPPORT_KINDS, SUPPORT_TYPES } from "@/lib/engine/public-protest";
 import { formatDate } from "@/lib/plan";
 import { isEmailVerified } from "@/lib/verification";
+import { findYourHillEnabled } from "@/lib/flags";
+import { issueForProtest } from "@/lib/issues";
+import { query } from "@/lib/db";
 import { getPublicProtest, listUpdates, officialInfoForSlug, otherListedSameDate, viewerState } from "@/lib/protests";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +42,7 @@ export default async function ProtestPage({ params, searchParams }: { params: Pr
   if (!found) notFound();
   const { protest: p, isOwner, hiddenNotice } = found;
   const verified = await isEmailVerified(user?.id);
+  const relatedIssue = findYourHillEnabled() ? (await issueForProtest((await query<{ event_id: string }>("SELECT event_id FROM public_protests WHERE slug=$1", [slug]))[0]?.event_id ?? "00000000-0000-0000-0000-000000000000")) : null;
   const [updates, others, official, mine] = await Promise.all([listUpdates(slug), otherListedSameDate(slug), officialInfoForSlug(slug), viewerState(slug, user?.id ?? null)]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
@@ -83,6 +87,7 @@ export default async function ProtestPage({ params, searchParams }: { params: Pr
         </div>
 
         <div className="mx-auto max-w-5xl space-y-12 px-4 py-10 sm:px-8">
+          {relatedIssue && <p data-testid="related-issue" className="text-lg">This protest is about an issue documented on Find Your Hill: <Link className="underline" href={`/issues/${relatedIssue.slug}`}>{relatedIssue.title}</Link>. Linking is the organizer&rsquo;s choice and is not an endorsement.</p>}
           <section aria-labelledby="org-h" data-testid="organizer-signals">
             <h2 id="org-h" className="heading text-2xl">About the organizer</h2>
             <p className="mt-3 text-lg font-semibold">{p.organizerDisplayName}</p>

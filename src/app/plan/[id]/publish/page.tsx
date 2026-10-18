@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { linkProtestIssueAction } from "@/app/actions-hill";
+import { findYourHillEnabled } from "@/lib/flags";
+import { issueForProtest } from "@/lib/issues";
+import { query } from "@/lib/db";
 import { generateToolkitAction, resendVerificationAction, postProtestUpdateAction, savePublicProtestAction, setProtestVisibilityAction } from "@/app/actions";
 import { Footer, Header } from "@/components/chrome";
 import { Back } from "@/components/icons";
@@ -38,6 +42,7 @@ export default async function Publish({ params, searchParams }: { params: Promis
   const toolkit = sp.toolkit && owner ? await toolkitForEvent(event, origin) : null;
   const updates = p ? await listUpdates(p.slug) : [];
   const a = event.answers;
+  const hill = findYourHillEnabled() && p ? { current: await issueForProtest(id), issues: await query<{ slug: string; title: string }>("SELECT slug, title FROM issues WHERE status='PUBLISHED' AND moderation_status='OK' ORDER BY title") } : null;
   const opt = (t: string) => p?.supportOptions.find((o) => o.type === t);
   return (
     <>
@@ -77,6 +82,15 @@ export default async function Publish({ params, searchParams }: { params: Promis
           </dl>
           <p className="mt-3 text-sm text-mute">It follows your tracker, labelled &ldquo;reported by organizer&rdquo;. Not yet approved? You can still publish: the page says so. Only record <em>Approved</em> in your tracker when you hold the permission. BookMyProtest does not check or confirm this status.</p>
         </section>
+
+        {hill && hill.issues.length > 0 && (
+          <section className="panel mt-6 p-5" aria-labelledby="issue-link-h" data-testid="issue-link">
+            <h2 id="issue-link-h" className="heading text-lg">Link to an issue (optional)</h2>
+            <p className="mt-1 text-sm text-mute">If your protest is about a documented issue on Find Your Hill, link it so people can read the facts. Linking is not an endorsement by BookMyProtest in either direction.</p>
+            <form action={linkProtestIssueAction} className="mt-3 flex flex-wrap items-end gap-2"><input type="hidden" name="eventId" value={event.id} />
+              <label className="text-sm">Issue<select name="issueSlug" defaultValue={hill.current?.slug ?? ""} className="field"><option value="">None</option>{hill.issues.map((i) => <option key={i.slug} value={i.slug}>{i.title}</option>)}</select></label>
+              <button className="btn btn-secondary">Save link</button></form>
+          </section>)}
 
         <form action={savePublicProtestAction} className="mt-6 space-y-5" aria-label="Public page details">
           <input type="hidden" name="eventId" value={event.id} />
